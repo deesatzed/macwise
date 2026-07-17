@@ -258,6 +258,54 @@ def _usage_finding(audit: AuditDocument, subject_id: str) -> Finding | None:
     )
 
 
+_OBSERVED_USE_RANK = {
+    UsageLabel.USER_CONFIRMED_UNUSED: 0,
+    UsageLabel.POSSIBLY_UNUSED: 1,
+    UsageLabel.CONFIGURED_BUT_IDLE: 2,
+    UsageLabel.PROBABLY_USED: 3,
+    UsageLabel.RECENTLY_USED: 4,
+    UsageLabel.ACTIVELY_USED: 5,
+}
+
+
+def _actual_use_comparison(audit: AuditDocument, records: Sequence[SoftwareRecord]) -> str:
+    """Compare direct-use evidence conservatively and independently of input order."""
+    ranked: list[tuple[int, SoftwareRecord]] = []
+    for record in records:
+        finding = _usage_finding(audit, record.id)
+        if (
+            finding is None
+            or finding.usage_label is None
+            or finding.usage_label is UsageLabel.NO_RELIABLE_EVIDENCE
+        ):
+            return "Actual-use comparison: unresolved because usage evidence is missing."
+        if finding.usage_label is UsageLabel.INDIRECTLY_REQUIRED:
+            return (
+                "Actual-use comparison: unresolved because dependency evidence is not "
+                "direct-use evidence."
+            )
+        ranked.append((_OBSERVED_USE_RANK[finding.usage_label], record))
+
+    strongest_rank = max(rank for rank, _ in ranked)
+    strongest = [record for rank, record in ranked if rank == strongest_rank]
+    if len(strongest) != 1:
+        return "Actual-use comparison: unresolved; the strongest observed-use evidence is tied."
+
+    winner = strongest[0]
+    others = [record for _, record in ranked if record.id != winner.id]
+    winner_name = safe_display_text(winner.display_name)
+    if len(others) == 1:
+        other_label = safe_display_text(others[0].display_name)
+        return (
+            f"Actual-use comparison: {winner_name} has stronger observed use evidence "
+            f"than {other_label}."
+        )
+    return (
+        f"Actual-use comparison: {winner_name} has the strongest observed use evidence "
+        "among the selected items."
+    )
+
+
 def _relation_for(
     audit: AuditDocument,
     left_subject_id: str,
@@ -605,6 +653,8 @@ def compare(
                 f"  Usage: {_human_label(finding.usage_label.value)} "
                 f"({_human_label(finding.basis.value)}, {finding.confidence.value} confidence)"
             )
+
+    typer.echo(f"\n{_actual_use_comparison(audit, selected)}")
 
     for left, right in combinations(selected, 2):
         typer.echo(

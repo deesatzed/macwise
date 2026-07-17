@@ -270,6 +270,7 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
             ),
             relations=(),
             recommendations=(),
+            limitations=("Synthetic catalog ambiguity remains unresolved.",),
         )
 
     audit = AuditService(
@@ -329,6 +330,9 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
     assert findings[formula.id].usage_label is UsageLabel.ACTIVELY_USED
     storage_status = next(item for item in audit.collectors if item.collector == "storage")
     assert storage_status.state is CollectorState.PARTIAL
+    overlap_status = next(item for item in audit.collectors if item.collector == "overlap")
+    assert overlap_status.state is CollectorState.PARTIAL
+    assert overlap_status.limitations == ("Synthetic catalog ambiguity remains unresolved.",)
 
 
 def test_unexpected_collector_failure_does_not_discard_other_inventory() -> None:

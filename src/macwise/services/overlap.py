@@ -10,7 +10,7 @@ from macwise.catalog import (
     RELATIONS,
     CatalogEntry,
     CatalogRelation,
-    match_catalog_entry,
+    catalog_match,
 )
 from macwise.models import (
     CatalogAssessment,
@@ -276,9 +276,12 @@ def analyze_overlaps(
     """Match exact catalog roles, build relations, and emit guarded guidance."""
     matched: list[tuple[SoftwareRecord, CatalogEntry]] = []
     assessments: list[CatalogAssessment] = []
+    ambiguous_match_found = False
     for record in software:
-        entry = match_catalog_entry(record)
+        outcome = catalog_match(record)
+        entry = outcome.entry
         if entry is None:
+            ambiguous_match_found = ambiguous_match_found or bool(outcome.ambiguous_keys)
             continue
         matched.append((record, entry))
         assessments.append(_assessment(record, entry))
@@ -326,6 +329,7 @@ def analyze_overlaps(
     covered_subjects = {
         subject_id
         for recommendation in recommendations
+        if recommendation.action is not RecommendationAction.NO_RECOMMENDATION
         for subject_id in recommendation.subject_ids
     }
     for assessment in assessments:
@@ -367,4 +371,12 @@ def analyze_overlaps(
         assessments=tuple(assessments),
         relations=tuple(relations),
         recommendations=tuple(recommendations),
+        limitations=(
+            (
+                "One or more software records matched multiple catalog roles; "
+                "those roles remain unknown."
+            ),
+        )
+        if ambiguous_match_found
+        else (),
     )

@@ -49,6 +49,14 @@ class CatalogRelation:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class CatalogMatch:
+    """One unique catalog match or sanitized metadata about an ambiguous tie."""
+
+    entry: CatalogEntry | None
+    ambiguous_keys: tuple[str, ...] = ()
+
+
 def _app(
     *names: str,
     identifiers: tuple[str, ...] = (),
@@ -402,14 +410,21 @@ def _match_score(record: SoftwareRecord, matcher: CatalogMatcher) -> int:
     return 0
 
 
-def match_catalog_entry(record: SoftwareRecord) -> CatalogEntry | None:
-    """Return one highest-priority exact match; ambiguity remains unknown."""
+def catalog_match(record: SoftwareRecord) -> CatalogMatch:
+    """Return a typed exact-match outcome without resolving tied catalog roles."""
     scored = [
         (max((_match_score(record, matcher) for matcher in entry.matchers), default=0), entry)
         for entry in CATALOG
     ]
     best_score = max((score for score, _ in scored), default=0)
     if best_score == 0:
-        return None
+        return CatalogMatch(entry=None)
     best = [entry for score, entry in scored if score == best_score]
-    return best[0] if len(best) == 1 else None
+    if len(best) == 1:
+        return CatalogMatch(entry=best[0])
+    return CatalogMatch(entry=None, ambiguous_keys=tuple(sorted(entry.key for entry in best)))
+
+
+def match_catalog_entry(record: SoftwareRecord) -> CatalogEntry | None:
+    """Return one highest-priority exact match; ambiguity remains unknown."""
+    return catalog_match(record).entry

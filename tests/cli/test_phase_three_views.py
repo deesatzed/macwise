@@ -128,11 +128,73 @@ def test_compare_shows_role_category_actual_use_unique_value_and_guarded_guidanc
     assert "Daemonless container workflow" in result.stdout
     assert "Usage: actively used (verified" in result.stdout
     assert "Usage: possibly unused (inferred" in result.stdout
+    assert (
+        "Actual-use comparison: Docker Desktop has stronger observed use evidence than Podman."
+        in result.stdout
+    )
     assert "Learning value:" in result.stdout
     assert "Review consolidation" in result.stdout
     assert "does not authorize removal" in result.stdout
     assert "safe to remove" not in result.stdout.casefold()
     assert "never used" not in result.stdout.casefold()
+
+
+def test_compare_actual_use_result_is_independent_of_argument_order(
+    phase_three_cli: AuditDocument,
+) -> None:
+    result = RUNNER.invoke(
+        cli.app,
+        ["compare", "formula:podman", "app:Docker"],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    assert (
+        "Actual-use comparison: Docker Desktop has stronger observed use evidence than Podman."
+        in result.stdout
+    )
+
+
+def test_compare_actual_use_calls_ties_and_missing_evidence_unresolved(
+    phase_three_cli: AuditDocument,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    tied_findings = tuple(
+        finding.model_copy(
+            update={
+                "usage_label": UsageLabel.RECENTLY_USED,
+                "basis": ClaimBasis.VERIFIED,
+            }
+        )
+        if finding.subject_id in {"application:docker", "homebrew_formula:podman"}
+        else finding
+        for finding in phase_three_cli.findings
+    )
+    tied = phase_three_cli.model_copy(update={"findings": tied_findings})
+    monkeypatch.setattr(cli, "_service_factory", lambda: StaticAuditService(tied))
+    tie_result = RUNNER.invoke(cli.app, ["compare", "app:Docker", "formula:podman"])
+
+    missing = phase_three_cli.model_copy(
+        update={
+            "findings": tuple(
+                finding
+                for finding in phase_three_cli.findings
+                if finding.subject_id != "homebrew_formula:podman"
+            )
+        }
+    )
+    monkeypatch.setattr(cli, "_service_factory", lambda: StaticAuditService(missing))
+    missing_result = RUNNER.invoke(cli.app, ["compare", "app:Docker", "formula:podman"])
+
+    assert tie_result.exit_code == 0, tie_result.stdout
+    assert (
+        "Actual-use comparison: unresolved; the strongest observed-use evidence is tied."
+        in tie_result.stdout
+    )
+    assert missing_result.exit_code == 0, missing_result.stdout
+    assert (
+        "Actual-use comparison: unresolved because usage evidence is missing."
+        in missing_result.stdout
+    )
 
 
 def test_compare_requires_two_distinct_unambiguous_installed_items(

@@ -49,12 +49,18 @@ def app(
     )
 
 
-def formula(subject_id: str, name: str) -> SoftwareRecord:
+def formula(
+    subject_id: str,
+    name: str,
+    *,
+    executables: tuple[str, ...] = (),
+) -> SoftwareRecord:
     return SoftwareRecord(
         id=subject_id,
         entity_type=EntityType.HOMEBREW_FORMULA,
         name=name,
         display_name=name,
+        executables=executables,
     )
 
 
@@ -154,6 +160,21 @@ def test_fuzzy_or_unknown_identity_produces_no_catalog_conclusion() -> None:
     assert result.recommendations == ()
 
 
+def test_ambiguous_catalog_identity_stays_unknown_and_surfaces_public_limitation() -> None:
+    result = analyze_overlaps(
+        (formula("formula:custom", "custom runtime", executables=("python3",)),),
+        usage_findings=(),
+    )
+
+    assert result.assessments == ()
+    assert result.relations == ()
+    assert result.recommendations == ()
+    assert result.limitations == (
+        "One or more software records matched multiple catalog roles; those roles remain unknown.",
+    )
+    assert "custom" not in result.limitations[0].casefold()
+
+
 def test_active_substitute_and_cautious_non_use_yield_review_not_removal() -> None:
     docker = app("app:docker", "Docker Desktop", identifier="com.docker.docker")
     podman = formula("formula:podman", "podman")
@@ -202,3 +223,28 @@ def test_complements_stay_together_and_unknown_high_value_item_can_be_learned() 
     )
     assert learned.learning_value.value == "high"
     assert all("never used" not in item.statement.casefold() for item in result.recommendations)
+
+
+def test_neutral_pair_guidance_does_not_hide_non_conflicting_learning_value() -> None:
+    docker = app("app:docker", "Docker Desktop", identifier="com.docker.docker")
+    podman = formula("formula:podman", "podman")
+
+    result = analyze_overlaps(
+        (docker, podman),
+        usage_findings=(
+            usage(docker.id, UsageLabel.NO_RELIABLE_EVIDENCE),
+            usage(podman.id, UsageLabel.NO_RELIABLE_EVIDENCE),
+        ),
+    )
+
+    assert any(
+        item.action is RecommendationAction.NO_RECOMMENDATION
+        and set(item.subject_ids) == {docker.id, podman.id}
+        for item in result.recommendations
+    )
+    learned_subjects = {
+        item.subject_ids[0]
+        for item in result.recommendations
+        if item.action is RecommendationAction.LEARN and len(item.subject_ids) == 1
+    }
+    assert {docker.id, podman.id} <= learned_subjects

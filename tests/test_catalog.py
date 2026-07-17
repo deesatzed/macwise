@@ -7,6 +7,7 @@ from macwise.catalog import (
     CATALOG_SOURCE,
     CATALOG_VERSION,
     RELATIONS,
+    catalog_match,
     match_catalog_entry,
 )
 from macwise.models import EntityType, OverlapCategory, SoftwareRecord
@@ -117,6 +118,10 @@ def test_ambiguous_low_priority_executable_match_stays_unknown() -> None:
         executables=("python3",),
     )
 
+    outcome = catalog_match(generic_python)
+
+    assert outcome.entry is None
+    assert outcome.ambiguous_keys == ("homebrew-python", "homebrew-python-legacy")
     assert match_catalog_entry(generic_python) is None
 
 
