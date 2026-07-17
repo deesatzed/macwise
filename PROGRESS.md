@@ -54,6 +54,7 @@
 | Build MW-400 execution journal | Done | Codex | Separate append-only SQLite manifest revisions require the exact shared lock, canonical integrity, monotonic identity/state transitions, and safe refusal for stale, corrupt, future, symlinked, or unresolved state. |
 | Build MW-400 fresh revalidation | Done | Codex | Read-only preparation rebuilds schema-2 policy from current audit evidence, reconstructs canonical operations, captures Trash inode/device identity and startup plist hashes/prior state, and blocks changed targets, new blockers, cross-device moves, occupied destinations, and risky/unknown cask behavior. |
 | Build MW-400 Trash execution slice | Done | Codex | A closed descriptor-relative adapter uses exclusive no-replace same-filesystem renames for approved roots, verifies device/inode identity, and reverses exactly; the coordinator locks, journals before mutation, verifies, records failure, rejects replay, and separately approves undo. |
+| Build MW-400 command execution slice | Done | Codex | Closed fixed-path Homebrew and current-user launchctl adapters accept only structured safe identities, use bounded shell-free fake-runner-tested invocations, require fresh before/after observations, preserve startup/removal and reverse undo ordering, and journal verification or undo failure before stopping. |
 | Complete Phases 5–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -66,7 +67,7 @@ Phase 5 approval-gated reversible apply, action-time verification, manifests, an
 
 ## Next Actions
 
-1. Execute MW-400 Task 1 test-first: schema-2 ordered plans, opt-in supported startup previews, canonical full digests, and the shared advisory state lock.
+1. Execute MW-400 Task 7 test-first: approval-gated `apply` and `undo` CLI integration with explicit recovery UX and fully injected tests.
 2. Re-run hosted Linux/macOS CI once a Git remote/runner is authorized and available; do not treat the workflow definition as a run result.
 3. Keep public Homebrew/release proof deferred until tap/artifact authority exists.
 
@@ -154,3 +155,5 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-18 MW-400 Task 4 gate: 222 tests passed; 21 focused collector/model/revalidation tests passed; Ruff format/lint, Pyright, and `git diff --check` passed. Preparation performed no mutation.
 - 2026-07-18 MW-400 Task 5 RED/GREEN: missing filesystem/coordinator imports, synthetic exclusive rename/undo, occupied destination, inode replacement, symlink source, destination race, journal-before-move, verified undo, adapter failure journaling, and same-plan replay each failed before passing.
 - 2026-07-18 MW-400 Task 5 gate: 227 tests passed; Ruff format/lint, Pyright, and `git diff --check` passed. The only real mutation was an exclusive rename and reverse rename of a synthetic `.app` inside pytest's canonical temporary root; no installed app or real Trash was touched.
+- 2026-07-18 MW-400 Task 6 RED/GREEN: the mutating-command import and coordinator constructor first failed; exact fake runners then proved allowlisted formula/cask install and uninstall, Homebrew service stop/start, current-user LaunchAgent disable/bootout and enable/bootstrap, safe environment, fixed executables, structured-token rejection, output bounds, prepared-action substitution refusal, fresh before/after verification, stop-on-failure, startup-before-removal ordering, reverse-order undo, and durable undo-failure state.
+- 2026-07-18 MW-400 Task 6 gate: 248 tests passed; Ruff format/lint, Pyright, and `git diff --check` passed repository-wide. Every Homebrew and launchctl mutation used an injected recording fake; no real Homebrew package, service, LaunchAgent, installed app, or user Trash was touched.
