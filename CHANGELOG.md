@@ -22,10 +22,13 @@ MacWise follows Semantic Versioning. The project is pre-alpha; unreleased behavi
 - Bounded Spotlight/known-Library-path usage evidence, conservative launch/Homebrew startup ownership, and deterministic multi-signal usage labels.
 - Time Machine configuration, available-destination, last-verifiable-timestamp, and related-path exclusion facts without a coverage claim.
 - Read-only `explain`, `review unused`, `startup`, and `backups` views plus verified/inferred/user-confirmed/unknown Markdown sections.
+- Schema-version-4 catalog assessments, overlap relations, guarded recommendations, and schema-1–3 migration.
+- Versioned exact-match role catalog spanning container, local-AI, Markdown, launcher/automation, and Python tool families.
+- All required role-aware overlap categories with explicit unknown and ambiguity handling.
+- Read-only `compare` and `review duplicates` views with observed-use comparison, unique capabilities, learning value, and removal-safe guidance.
 
 ### Not yet available
 
-- Role-aware overlap recommendations.
 - Cleanup planning, apply, verification, and undo.
 - One-command Codex setup and typed local integration.
 - Published pipx package, Homebrew tap, and signed release artifacts.

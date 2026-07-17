@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-58% complete – MacWise now has a locally accepted schema-3 Phase 2 explain/review slice: multi-signal usage findings, startup ownership, bounded related paths, honest Time Machine facts, and deterministic read-only CLI/Markdown views. MW-100 passed its Python 3.12/3.13, quality, build, privacy, skill, clean-wheel, hostile, and real-Mac gates. MW-011 remains PARTIAL because no hosted/Linux runner or Git remote exists; Phase 3+ and public release remain open.
+67% complete – MacWise now has a locally accepted schema-4 Phase 3 intelligence slice: an exact-match role catalog, every required overlap category, observed-use comparison, learning value, guarded recommendations, and deterministic read-only CLI/Markdown views. MW-200 passed its Python 3.12/3.13, independent-review, quality, build, privacy, skill, clean-wheel, hostile, and real-Mac gates. MW-011 remains PARTIAL because no hosted/Linux runner or Git remote exists; Phases 4–7 and public release remain open.
 
 ## Current Assumptions
 
@@ -39,19 +39,22 @@
 | Build MW-100 explain/review views | Done | Codex | Explain, review unused, startup, backups, help, and four-basis Markdown views pass focused, hostile-render, and 118-test full gates. |
 | Run MW-100 acceptance | Done | Codex | `docs/phase-2-acceptance.md` records a local PASS from 118 tests on Python 3.12/3.13, quality/build/privacy/skill/clean-wheel gates, and aggregate-only real scans. |
 | Design and plan MW-200 overlap intelligence | Done | Codex | Exact-match catalog and guarded-recommendation design plus seven-task TDD plan are saved under `docs/plans/`; D-022/D-023 record the boundaries. |
-| Complete Phases 2–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
+| Build MW-200 role-aware overlap intelligence | Done | Codex | Schema 4, catalog, analyzer, compare/review/explain/report views, ambiguity propagation, and guarded guidance pass the 142-test gate. |
+| Adjudicate independent MW-200 review | Done | Codex | Three recommendations were Accepted and Resolved: ambiguity visibility, explicit actual-use comparison, and neutral-pair learning guidance. No critical finding remained. |
+| Run MW-200 acceptance | Done | Codex | `docs/phase-3-acceptance.md` records a local PASS from 142 tests on Python 3.12/3.13, quality/build/privacy/skill/clean-wheel gates, independent review, and aggregate-only real scans. |
+| Complete Phases 4–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
 
-- D-001 through D-021 are in `DECISIONS.md`.
+- D-001 through D-023 are in `DECISIONS.md`.
 
 ## Current Milestone
 
-Phase 3 role-aware overlap intelligence while the external hosted-CI/public-release gates remain explicitly open.
+Phase 4 persistent cleanup planning and exact previews while every mutation and the external hosted-CI/public-release gates remain explicitly open.
 
 ## Next Actions
 
-1. Plan MW-200 role-aware overlap categories, active-use comparison, learning value, and guarded recommendations without enabling cleanup actions.
+1. Design and plan MW-300 persistent cleanup plans, exact action previews, dependency/backup/ambiguity/protection/data/rollback preflight, and zero-mutation proof.
 2. Re-run hosted Linux/macOS CI once a Git remote/runner is authorized and available; do not treat the workflow definition as a run result.
 3. Keep public Homebrew/release proof deferred until tap/artifact authority exists.
 
@@ -116,3 +119,9 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-17 MW-100 acceptance: 118 tests passed on Python 3.12.11 and 3.13.13; Ruff/Pyright/build/privacy/skill/workflow/clean-wheel gates passed; the installed wheel rendered Phase 2 evidence correctly.
 - 2026-07-17 MW-100 real smokes: an in-memory audit produced 325 findings for 325 software records, 28 startup records, 97 bounded related paths, six usage-label kinds, schema round-trip, and exact safe headings in 25.54 seconds. A 19.2-second aggregate rerun showed 3 complete and 3 explicitly partial collectors; no inventory was saved.
 - 2026-07-17 MW-100 claim validation: PASS for the local read-only Phase 2 scope; overall product, hosted CI, publication, and Phase 3+ claims remain open in `docs/phase-2-acceptance.md`.
+- 2026-07-17 MW-200 TDD: schema-4 migration, immutable overlap models, exact catalog matching, role-aware relations, guarded recommendations, audit integration, compare/review/explain views, and Markdown reporting each failed for their intended missing behavior before passing focused tests.
+- 2026-07-17 MW-200 identity RED/GREEN: two application paths sharing a bundle identifier initially collapsed to one stable ID; the regression failed before path-scoped application identity preserved distinct installations.
+- 2026-07-17 MW-200 independent review: three important findings were Accepted and Resolved test-first—typed ambiguity propagation to partial state, order-independent actual-use comparison with explicit unresolved cases, and non-conflicting learning guidance after neutral pair guidance. No critical finding remained.
+- 2026-07-17 MW-200 acceptance: 142 tests passed on Python 3.12.11 and 3.13.13; Ruff/Pyright/build/privacy/skill/workflow/clean-wheel gates passed; scoped stub and skipped-test scans were clean.
+- 2026-07-17 MW-200 real smoke: an aggregate-only schema-4 audit produced 325 distinct software records, 25 catalog assessments, 6 relations, 21 guarded recommendations, exact safe headings, JSON round-trip, and 3 complete/4 partial collector states in 19.18 seconds. No names, paths, or inventory were saved.
+- 2026-07-17 MW-200 claim validation: PASS for the local read-only Phase 3 scope; overall product, hosted CI, publication, and Phases 4–7 remain open in `docs/phase-3-acceptance.md`.

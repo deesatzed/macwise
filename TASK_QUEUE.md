@@ -17,8 +17,8 @@ Tasks are ordered. Start the first `ready` task, preserve the full goal, and upd
 | MW-010 | 1 | Add malicious metadata and cross-parser/rendering security fixtures | done | 98-test gate plus hostile plist/Homebrew/disk/prompt fixtures prove containment, raw JSON preservation, Markdown/terminal neutralization, inert CLI matching, and the future prompt boundary |
 | MW-011 | 1 | Re-run Phase 1 requirement and clean-platform acceptance | partial | Python 3.12/3.13 macOS, full local gate, clean wheel, and actual isolated pipx pass; no remote/hosted Linux runner or active local container engine exists |
 | MW-100 | 2 | Explain/review with usage, startup, related data, and backups | done | Local PASS: Python 3.12/3.13 118-test gates, build/privacy/skill/clean-wheel proof, and aggregate-only real smokes in `docs/phase-2-acceptance.md` |
-| MW-200 | 3 | Role-aware overlap and learning-value intelligence | ready | Required comparison fixture suite |
-| MW-300 | 4 | Persistent cleanup plan and exact previews, no actions | pending | Safety/preflight tests prove zero mutation |
+| MW-200 | 3 | Role-aware overlap and learning-value intelligence | done | Local PASS: Python 3.12/3.13 142-test gates, independent review closure, build/privacy/skill/clean-wheel proof, and aggregate-only real smoke in `docs/phase-3-acceptance.md` |
+| MW-300 | 4 | Persistent cleanup plan and exact previews, no actions | ready | Safety/preflight tests prove zero mutation |
 | MW-400 | 5 | Approval-gated reversible apply/verify/undo | pending | Isolated filesystem/Homebrew adapter tests and manual safe demo |
 | MW-500 | 6 | Bundled Codex skill, setup, and typed read-only integration | pending | Clean-home integration tests and `$macwise` workflow proof |
 | MW-600 | 7 | Public docs, privacy/security review, packaging, CI, Homebrew, release candidate | pending | Clean installs, CI, release artifacts, public acceptance audit |
