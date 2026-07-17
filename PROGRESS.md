@@ -50,6 +50,7 @@
 | Design MW-400 reversible cleanup | Done | Codex | Fingerprint approval, fresh revalidation, append-only crash-visible manifests, allowlisted Trash/Homebrew/startup adapters, stop-on-failure, and separately approved undo are saved under `docs/plans/`; D-026 through D-030 record the boundaries. |
 | Plan MW-400 reversible cleanup | Done | Codex | Ranked options and loophole review tightened the design; the eight-task TDD plan and current implementation packet define exact files, proof gates, commits, rollback, and no-live-mutation stop rules. |
 | Build MW-400 execution-ready plans | Done | Codex | Plan schema 2 adds deterministic action order and opt-in supported startup previews; schema-1 duplicate adds refresh from current evidence, canonical full digests are public, and plan writes share a symlink-safe advisory lock. |
+| Build MW-400 execution manifest models | Done | Codex | Strict frozen run/action/observation/inverse models enforce ordered references, approval fingerprint integrity, and truthful verified/undone states; pure approval helpers reject every non-exact phrase. |
 | Complete Phases 5–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -142,3 +143,5 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-18 MW-300 claim validation: PASS for local Phase 4 cleanup-planning scope; hosted CI, publication, all action execution/approval/verification/undo, Codex integration, and Phases 5–7 remain open in `docs/phase-4-acceptance.md`.
 - 2026-07-18 MW-400 Task 1 RED/GREEN: shared-lock imports, canonical digest exports, schema-2 ordered actions, supported LaunchAgent/Homebrew-service previews, unsupported-startup blocking, schema-1 refresh, and CLI multi-action rendering each failed for the intended missing behavior before passing focused tests.
 - 2026-07-18 MW-400 Task 1 gate: 197 tests passed; Ruff format/lint, Pyright, and `git diff --check` passed repository-wide. No host action executor exists and no installed software was changed.
+- 2026-07-18 MW-400 Task 2 RED/GREEN: execution/approval imports failed before strict run/action/observation/inverse models and exact 16-character approval phrases were implemented; 10 focused tests then passed.
+- 2026-07-18 MW-400 Task 2 gate: 207 tests passed; Ruff format/lint, Pyright, and `git diff --check` passed repository-wide. Models contain no generic command, executable, shell, or argv field.

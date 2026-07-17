@@ -14,6 +14,16 @@ from macwise.models.analysis import (
 )
 from macwise.models.audit import AuditDocument, CollectorState, CollectorStatus
 from macwise.models.evidence import Evidence, Reliability
+from macwise.models.execution import (
+    ActionObservation,
+    ActionState,
+    ExecutionAction,
+    ExecutionRun,
+    ExecutionState,
+    InverseIntent,
+    InverseKind,
+    VerificationState,
+)
 from macwise.models.overlap import (
     CatalogAssessment,
     GuardedRecommendation,
@@ -41,6 +51,8 @@ from macwise.models.software import EntityType, InstallRole, SoftwareRecord, sta
 from macwise.models.storage import StorageLocation, VolumeRecord, stable_volume_id
 
 __all__ = [
+    "ActionObservation",
+    "ActionState",
     "AuditDocument",
     "BackupStatus",
     "CatalogAssessment",
@@ -49,10 +61,15 @@ __all__ = [
     "CollectorStatus",
     "EntityType",
     "Evidence",
+    "ExecutionAction",
+    "ExecutionRun",
+    "ExecutionState",
     "Finding",
     "FindingTopic",
     "GuardedRecommendation",
     "InstallRole",
+    "InverseIntent",
+    "InverseKind",
     "LearningValue",
     "OverlapCategory",
     "OverlapRelation",
@@ -74,6 +91,7 @@ __all__ = [
     "StartupRecord",
     "StorageLocation",
     "UsageLabel",
+    "VerificationState",
     "VolumeRecord",
     "stable_overlap_id",
     "stable_path_evidence_id",
