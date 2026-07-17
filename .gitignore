@@ -1,0 +1,25 @@
+# Local planning provenance; GOAL.md is the sole active product contract.
+GOAL_old.md
+docpre2.md
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+.venv/
+dist/
+build/
+*.egg-info/
+
+# MacWise local audits and state must never enter the public repository.
+.macwise/
+audits/
+*.macwise.json
+
+# macOS and editors
+.DS_Store
+.idea/
+.vscode/
