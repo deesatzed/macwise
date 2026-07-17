@@ -33,6 +33,13 @@ This file records durable architecture, UX, safety, privacy, dependency, and rel
 | D-018 | 2026-07-17 | Security | Preserve raw evidence in schema-v2 JSON, but pass every human-facing value through a shared Unicode control/format and whitespace neutralizer before Markdown escaping or terminal output. | Raw values are necessary for provenance and future analysis, while C0/C1, ANSI, bidi, zero-width, and newline payloads can forge terminal/report structure. | Sanitize the model/JSON destructively; trust OS metadata; implement separate terminal and Markdown sanitizers. | Accepted |
 | D-019 | 2026-07-17 | Agent Workflow | Treat prompt-shaped strings found in local evidence as untrusted data, never instructions and never shell or action input. | Future AI integration will consume attacker-controlled names/descriptions, so the evidence-to-instruction boundary must be explicit before typed tools exist. | Rely on generic prompt safety; defer the rule until Phase 6. | Accepted |
 
+## MW-100 Decisions
+
+| ID | Date | Category | Decision | Rationale | Alternatives Considered | Status |
+|---|---|---|---|---|---|---|
+| D-020 | 2026-07-17 | Data Model | Emit schema version 3 with raw startup/path/backup facts separate from basis-tagged findings, while migrating v1/v2 documents in memory. | Inventory facts must remain inspectable and reusable even when analysis policy changes; explicit claim basis prevents inference from masquerading as observation. | Add inferred fields directly to software records; keep schema 2 and hide findings in prose. | Accepted |
+| D-021 | 2026-07-17 | Privacy and Performance | Measure related data only in bounded identifier/name-derived Library locations, without following directory symlinks or scanning the whole home directory. | The product needs useful size/recency evidence without turning an audit into an invasive or unbounded content crawl. | Full-home scan; Spotlight-only paths; omit related data. | Accepted |
+
 ## Initial Default Decisions
 
 - MIT license unless a later legal decision selects Apache-2.0.

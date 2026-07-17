@@ -1,0 +1,2 @@
+[Included]  /Users/example/Library/Application Support/Example
+[Excluded]  /Users/example/Library/Caches/org.example.safe

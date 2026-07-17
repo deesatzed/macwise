@@ -111,6 +111,18 @@ class PathEvidence(BaseModel):
     evidence: tuple[Evidence, ...] = ()
 
 
+class BackupStatus(BaseModel):
+    """Observed Time Machine configuration without a path-coverage claim."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    configured: bool | None = None
+    available_destination_volume_ids: tuple[str, ...] = ()
+    last_backup_at: AwareDatetime | None = None
+    evidence: tuple[Evidence, ...] = ()
+    limitations: tuple[str, ...] = ()
+
+
 def _stable_scoped_id(scope: str, *values: str) -> str:
     normalized = "\0".join(value.strip().casefold() for value in values)
     digest = sha256(f"{scope}\0{normalized}".encode()).hexdigest()[:20]

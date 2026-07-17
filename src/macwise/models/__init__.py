@@ -1,6 +1,7 @@
 """Public normalized models used across MacWise interfaces."""
 
 from macwise.models.analysis import (
+    BackupStatus,
     ClaimBasis,
     Finding,
     FindingTopic,
@@ -18,6 +19,7 @@ from macwise.models.storage import StorageLocation, VolumeRecord, stable_volume_
 
 __all__ = [
     "AuditDocument",
+    "BackupStatus",
     "ClaimBasis",
     "CollectorState",
     "CollectorStatus",

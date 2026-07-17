@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-47% complete – MacWise now has a locally verified public-repository foundation, schema-v2 audit migration, enriched read-only application/Homebrew/storage evidence, hostile cross-parser/display fixtures, a valid read-only Codex skill, CI definition, Python 3.12/3.13 and actual isolated pipx/wheel proof, and real read-only scan proof. MW-009 and MW-010 are closed; MW-011 is PARTIAL because no hosted/Linux runner or Git remote exists. Several later evidence fields and public Homebrew/release proof also remain open.
+52% complete – MacWise now has a locally verified public-repository foundation and a schema-3 Phase 2 evidence core: multi-signal usage findings, startup ownership, bounded related-path measurements, and honest Time Machine configuration/exclusion facts. MW-009 and MW-010 are closed; MW-011 remains PARTIAL because no hosted/Linux runner or Git remote exists. MW-100 is in progress with its read-only CLI/reporting views still to complete.
 
 ## Current Assumptions
 
@@ -34,6 +34,8 @@
 | Close MW-009 inventory field gaps | Done | Codex | Schema v2 plus application signing/architecture/process/components/source, Homebrew size/executable/state/reference/location/correlation, and storage topology/ownership/Time Machine facts are fixture-tested and real-smoked. |
 | Complete MW-010 hostile metadata coverage | Done | Codex | Synthetic plist/Homebrew/disk/prompt fixtures prove path containment, raw JSON provenance, Markdown/terminal neutralization, inert CLI matching, and the skill's prompt boundary. |
 | Run MW-011 clean-platform acceptance | Partial | Codex | Python 3.12 and 3.13 pass on macOS; clean wheel and isolated pipx installs pass. Hosted Linux/macOS CI cannot run without a remote runner; Docker/Podman engines are not running. |
+| Build MW-100 evidence and analysis core | Done | Codex | Schema 3, v1/v2 migration, usage/startup collectors, evidence-basis findings, bounded related paths, and backup facts pass the 112-test gate. |
+| Build MW-100 explain/review views | In progress | Codex | Replace the Phase 1 refusal surfaces for explain, review unused, startup, and backups; add schema-3 Markdown sections. |
 | Complete Phases 2–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -46,7 +48,7 @@ Phase 2 explain/review evidence while the external hosted-CI/public-release gate
 
 ## Next Actions
 
-1. Begin MW-100 with stable item matching, direct/indirect usage evidence, startup ownership, related-data estimates, and backup limitations.
+1. Complete MW-100 deterministic CLI and Markdown views for explain, review unused, startup, related paths, and backups.
 2. Re-run hosted Linux/macOS CI once a Git remote/runner is authorized and available; do not treat the workflow definition as a run result.
 3. Keep public Homebrew/release proof deferred until tap/artifact authority exists.
 
@@ -103,3 +105,6 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-17 MW-011 Python matrix: all 98 tests passed under Python 3.12.11 and Python 3.13.13 on macOS; the full Ruff/Pyright/build/skill/workflow gate passed under 3.13.
 - 2026-07-17 MW-011 pipx RED/GREEN: the first ephemeral install refused an incompatible default uv backend; a fresh isolated `pipx --backend pip` install succeeded and version/root/scan help smokes passed without changing the user's PATH.
 - 2026-07-17 MW-011 external audit: no Git remote, hosted runner, running Docker daemon, or Podman VM exists, so Linux/hosted CI remains unverified rather than inferred from workflow YAML.
+- 2026-07-17 MW-100 schema/collector/analysis TDD: schema-3 migration, bounded usage and related-path evidence, launch/Homebrew startup ownership, and evidence-basis usage labels each failed for their intended missing behavior before passing focused tests.
+- 2026-07-17 MW-100 backup RED/GREEN: service tests first rejected the missing backup collector boundary, and a failure-path regression proved that unavailable `tmutil isexcluded` output must preserve an existing path fact rather than replace it with unknown.
+- 2026-07-17 MW-100 evidence-core gate: 112 tests passed; Ruff lint/format passed; Pyright reported 0 errors. Backup facts include configuration, available destinations, last-verifiable timestamp, and path exclusion state but deliberately no coverage field.

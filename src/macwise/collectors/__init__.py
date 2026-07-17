@@ -5,6 +5,7 @@ from macwise.collectors.applications import (
     collect_applications,
     collect_host_applications,
 )
+from macwise.collectors.backups import BackupCollection, collect_backups, parse_latest_backup
 from macwise.collectors.homebrew import (
     HomebrewCollection,
     collect_homebrew,
@@ -26,6 +27,7 @@ from macwise.collectors.usage import UsageCollection, UsageSignal, collect_usage
 
 __all__ = [
     "ApplicationCollection",
+    "BackupCollection",
     "HomebrewCollection",
     "StartupCollection",
     "StartupRoot",
@@ -33,12 +35,14 @@ __all__ = [
     "UsageCollection",
     "UsageSignal",
     "collect_applications",
+    "collect_backups",
     "collect_homebrew",
     "collect_host_applications",
     "collect_startup",
     "collect_storage",
     "collect_usage",
     "parse_homebrew_inventory",
+    "parse_latest_backup",
     "parse_launch_plist",
     "parse_volume_info",
     "resolve_storage_location",

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from macwise.collectors import (
     ApplicationCollection,
+    BackupCollection,
     HomebrewCollection,
     StartupCollection,
     StartupRoot,
@@ -13,10 +14,12 @@ from macwise.collectors import (
 )
 from macwise.models import (
     AuditDocument,
+    BackupStatus,
     CollectorState,
     CollectorStatus,
     EntityType,
     Evidence,
+    PathEvidence,
     Reliability,
     SoftwareRecord,
     StartupKind,
@@ -75,6 +78,25 @@ def empty_startup_collector(
             state=CollectorState.COMPLETE,
             collected_at=collected_at,
             records_count=0,
+        ),
+    )
+
+
+def empty_backup_collector(
+    *,
+    volumes: Sequence[VolumeRecord],
+    path_evidence: Sequence[PathEvidence],
+    collected_at: datetime,
+) -> BackupCollection:
+    del volumes
+    return BackupCollection(
+        backup=BackupStatus(),
+        path_evidence=tuple(path_evidence),
+        status=CollectorStatus(
+            collector="backups",
+            state=CollectorState.COMPLETE,
+            collected_at=collected_at,
+            records_count=1,
         ),
     )
 
@@ -197,8 +219,29 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
             status=status("startup", CollectorState.COMPLETE, 1),
         )
 
+    def backup_collector(
+        *,
+        volumes: Sequence[VolumeRecord],
+        path_evidence: Sequence[PathEvidence],
+        collected_at: datetime,
+    ) -> BackupCollection:
+        assert collected_at == COLLECTED_AT
+        assert tuple(volumes) == (external,)
+        assert tuple(path_evidence) == ()
+        calls.append("backups")
+        return BackupCollection(
+            backup=BackupStatus(
+                configured=True,
+                available_destination_volume_ids=(external.id,),
+                last_backup_at=COLLECTED_AT,
+            ),
+            path_evidence=(),
+            status=status("backups", CollectorState.COMPLETE, 1),
+        )
+
     audit = AuditService(
         application_collector=application_collector,
+        backup_collector=backup_collector,
         homebrew_collector=homebrew_collector,
         storage_collector=storage_collector,
         startup_collector=startup_collector,
@@ -212,7 +255,14 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
         startup_roots=(StartupRoot(StartupKind.LAUNCH_AGENT, Path("/LaunchAgents")),),
     )
 
-    assert calls == ["storage", "applications", "homebrew", "startup", "usage"]
+    assert calls == [
+        "storage",
+        "applications",
+        "homebrew",
+        "startup",
+        "usage",
+        "backups",
+    ]
     assert audit.audit_id == "audit:test"
     assert audit.schema_version == 3
     assert [record.entity_type for record in audit.software] == [
@@ -225,12 +275,14 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
     assert formula.storage_location is StorageLocation.EXTERNAL
     assert [collector.collector for collector in audit.collectors] == [
         "applications",
+        "backups",
         "homebrew",
         "startup",
         "storage",
         "usage",
     ]
     assert audit.startup[0].owner_software_ids == (formula.id,)
+    assert audit.backup is not None and audit.backup.configured is True
     app_record = next(
         record for record in audit.software if record.entity_type is EntityType.APPLICATION
     )
@@ -281,6 +333,7 @@ def test_unexpected_collector_failure_does_not_discard_other_inventory() -> None
 
     audit = AuditService(
         application_collector=application_collector,
+        backup_collector=empty_backup_collector,
         homebrew_collector=broken_homebrew,
         storage_collector=storage_collector,
         startup_collector=empty_startup_collector,
@@ -402,6 +455,7 @@ def _relationship_audit(
 
     return AuditService(
         application_collector=application_collector,
+        backup_collector=empty_backup_collector,
         homebrew_collector=homebrew_collector,
         storage_collector=storage_collector,
         startup_collector=empty_startup_collector,

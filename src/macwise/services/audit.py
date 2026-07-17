@@ -9,11 +9,13 @@ from uuid import uuid4
 
 from macwise.collectors import (
     ApplicationCollection,
+    BackupCollection,
     HomebrewCollection,
     StartupCollection,
     StartupRoot,
     StorageCollection,
     UsageCollection,
+    collect_backups,
     collect_homebrew,
     collect_host_applications,
     collect_startup,
@@ -24,14 +26,17 @@ from macwise.collectors import (
 from macwise.collectors.applications import StorageResolver
 from macwise.models import (
     AuditDocument,
+    BackupStatus,
     CollectorState,
     CollectorStatus,
     EntityType,
     Evidence,
+    PathEvidence,
     Reliability,
     SoftwareRecord,
     StartupKind,
     StorageLocation,
+    VolumeRecord,
 )
 from macwise.services.analysis import analyze_usage
 
@@ -78,6 +83,16 @@ class StartupCollector(Protocol):
         roots: Sequence[StartupRoot],
         collected_at: datetime,
     ) -> StartupCollection: ...
+
+
+class BackupCollector(Protocol):
+    def __call__(
+        self,
+        *,
+        volumes: Sequence[VolumeRecord],
+        path_evidence: Sequence[PathEvidence],
+        collected_at: datetime,
+    ) -> BackupCollection: ...
 
 
 def _utc_now() -> datetime:
@@ -171,6 +186,7 @@ class AuditService:
     """Run read-only collectors and preserve partial results."""
 
     application_collector: ApplicationCollector = collect_host_applications
+    backup_collector: BackupCollector = collect_backups
     homebrew_collector: HomebrewCollector = collect_homebrew
     storage_collector: StorageCollector = collect_storage
     startup_collector: StartupCollector = collect_startup
@@ -281,10 +297,23 @@ class AuditService:
             )
             for record in correlated_software
         )
+        try:
+            backups = self.backup_collector(
+                volumes=storage.volumes,
+                path_evidence=usage.path_evidence,
+                collected_at=collected_at,
+            )
+        except Exception:
+            backup_limitation = "The backup collector failed unexpectedly."
+            backups = BackupCollection(
+                backup=BackupStatus(limitations=(backup_limitation,)),
+                path_evidence=usage.path_evidence,
+                status=_failed_status("backups", collected_at),
+            )
         findings = analyze_usage(
             enriched_software,
             startup=startup.startup,
-            path_evidence=usage.path_evidence,
+            path_evidence=backups.path_evidence,
             collected_at=collected_at,
         )
         software = sorted(
@@ -298,6 +327,7 @@ class AuditService:
         collectors = sorted(
             (
                 applications.status,
+                backups.status,
                 homebrew.status,
                 startup.status,
                 storage.status,
@@ -313,6 +343,7 @@ class AuditService:
             volumes=tuple(volumes),
             collectors=tuple(collectors),
             startup=startup.startup,
-            path_evidence=usage.path_evidence,
+            path_evidence=backups.path_evidence,
             findings=findings,
+            backup=backups.backup,
         )

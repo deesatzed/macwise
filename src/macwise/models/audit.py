@@ -5,7 +5,7 @@ from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
-from macwise.models.analysis import Finding, PathEvidence, StartupRecord
+from macwise.models.analysis import BackupStatus, Finding, PathEvidence, StartupRecord
 from macwise.models.software import SoftwareRecord
 from macwise.models.storage import VolumeRecord
 
@@ -44,3 +44,4 @@ class AuditDocument(BaseModel):
     startup: tuple[StartupRecord, ...] = ()
     path_evidence: tuple[PathEvidence, ...] = ()
     findings: tuple[Finding, ...] = ()
+    backup: BackupStatus | None = None
