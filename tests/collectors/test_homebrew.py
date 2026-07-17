@@ -1,3 +1,4 @@
+import json
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -61,6 +62,37 @@ def test_parses_cask_app_mapping_as_an_explicit_user_item() -> None:
     assert cask.install_role is InstallRole.EXPLICIT
     assert cask.user_selected is True
     assert cask.app_artifacts == ("Example.app",)
+    assert cask.cask_artifact_kinds == ("app", "binary")
+
+
+def test_preserves_risky_and_unknown_cask_artifact_kinds_for_fail_closed_revalidation() -> None:
+    document = json.loads(fixture_text("casks.json"))
+    document["casks"][0]["artifacts"].extend(
+        (
+            {"uninstall": [{"delete": "/Library/PrivilegedHelperTools/example"}]},
+            {"pkg": ["Example.pkg"]},
+            {"zap": [{"trash": "~/Library/Application Support/Example"}]},
+            {"future_artifact": ["unknown"]},
+        )
+    )
+
+    result = parse_homebrew_inventory(
+        formulae_json=fixture_text("formulae.json"),
+        casks_json=json.dumps(document),
+        leaves_text=fixture_text("leaves.txt"),
+        services_json=fixture_text("services.json"),
+        collected_at=COLLECTED_AT,
+    )
+
+    cask = next(record for record in result.software if record.name == "example-app")
+    assert cask.cask_artifact_kinds == (
+        "app",
+        "binary",
+        "future_artifact",
+        "pkg",
+        "uninstall",
+        "zap",
+    )
 
 
 def test_invalid_optional_metadata_is_partial_instead_of_aborting_inventory() -> None:

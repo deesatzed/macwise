@@ -52,6 +52,7 @@
 | Build MW-400 execution-ready plans | Done | Codex | Plan schema 2 adds deterministic action order and opt-in supported startup previews; schema-1 duplicate adds refresh from current evidence, canonical full digests are public, and plan writes share a symlink-safe advisory lock. |
 | Build MW-400 execution manifest models | Done | Codex | Strict frozen run/action/observation/inverse models enforce ordered references, approval fingerprint integrity, and truthful verified/undone states; pure approval helpers reject every non-exact phrase. |
 | Build MW-400 execution journal | Done | Codex | Separate append-only SQLite manifest revisions require the exact shared lock, canonical integrity, monotonic identity/state transitions, and safe refusal for stale, corrupt, future, symlinked, or unresolved state. |
+| Build MW-400 fresh revalidation | Done | Codex | Read-only preparation rebuilds schema-2 policy from current audit evidence, reconstructs canonical operations, captures Trash inode/device identity and startup plist hashes/prior state, and blocks changed targets, new blockers, cross-device moves, occupied destinations, and risky/unknown cask behavior. |
 | Complete Phases 5–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -148,3 +149,5 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-18 MW-400 Task 2 gate: 207 tests passed; Ruff format/lint, Pyright, and `git diff --check` passed repository-wide. Models contain no generic command, executable, shell, or argv field.
 - 2026-07-18 MW-400 Task 3 RED/GREEN: the execution-store import failed before read-only absent state, caller-held locking, canonical digests, monotonic revisions, unresolved-run exclusion, corruption/future-schema refusal, and nested-symlink tests passed.
 - 2026-07-18 MW-400 Task 3 gate: 212 tests passed; Ruff format/lint, Pyright, and `git diff --check` passed repository-wide. The execution journal remains inert; no adapter or host mutation exists.
+- 2026-07-18 MW-400 Task 4 RED/GREEN: cask artifact preservation, missing revalidation imports, schema-1/changed-identity/new-blocker refusal, canonical Trash observations, occupied/cross-device refusal, risky cask blocking, LaunchAgent plist hashing, Homebrew-service prior state, and exact cask entity matching each failed before the read-only implementation passed.
+- 2026-07-18 MW-400 Task 4 gate: 222 tests passed; 21 focused collector/model/revalidation tests passed; Ruff format/lint, Pyright, and `git diff --check` passed. Preparation performed no mutation.

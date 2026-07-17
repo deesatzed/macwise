@@ -150,6 +150,22 @@ def _binary_artifacts(item: dict[str, Any]) -> tuple[str, ...]:
     return tuple(sorted(dict.fromkeys(executables), key=str.casefold))
 
 
+def _cask_artifact_kinds(item: dict[str, Any]) -> tuple[str, ...]:
+    kinds: set[str] = set()
+    artifacts = item.get("artifacts", [])
+    if not isinstance(artifacts, list):
+        return ("unknown_shape",)
+    for raw_artifact in cast(list[object], artifacts):
+        artifact = _mapping(raw_artifact)
+        if artifact is None:
+            kinds.add("unknown_shape")
+            continue
+        for raw_kind in artifact:
+            kind = _text(raw_kind)
+            kinds.add(kind if kind is not None else "unknown_shape")
+    return tuple(sorted(kinds, key=str.casefold))
+
+
 def _tree_size(path: Path) -> int:
     total = path.lstat().st_size
     for current_root, directories, files in os.walk(path, followlinks=False):
@@ -432,6 +448,7 @@ def parse_homebrew_inventory(
                 executables=_binary_artifacts(item),
                 install_role=InstallRole.EXPLICIT,
                 app_artifacts=_app_artifacts(item),
+                cask_artifact_kinds=_cask_artifact_kinds(item),
                 pinned=pinned,
                 caveats=_text(item.get("caveats")),
                 project_references=project_reference_map.get(token, ()),
@@ -440,6 +457,7 @@ def parse_homebrew_inventory(
                         kind="homebrew_cask_metadata",
                         value={
                             "app_artifacts": list(_app_artifacts(item)),
+                            "cask_artifact_kinds": list(_cask_artifact_kinds(item)),
                             "executables": list(_binary_artifacts(item)),
                             "pinned": pinned,
                             "project_references": list(project_reference_map.get(token, ())),

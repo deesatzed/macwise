@@ -61,6 +61,7 @@ class SoftwareRecord(BaseModel):
     reverse_dependencies: tuple[str, ...] = ()
     service_status: str | None = None
     app_artifacts: tuple[str, ...] = ()
+    cask_artifact_kinds: tuple[str, ...] = ()
     linked: bool | None = None
     pinned: bool | None = None
     caveats: str | None = None
