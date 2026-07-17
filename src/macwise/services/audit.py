@@ -21,6 +21,10 @@ from macwise.models import (
     AuditDocument,
     CollectorState,
     CollectorStatus,
+    EntityType,
+    Evidence,
+    Reliability,
+    SoftwareRecord,
     StorageLocation,
 )
 
@@ -64,6 +68,73 @@ def _failed_status(collector: str, collected_at: datetime) -> CollectorStatus:
         collected_at=collected_at,
         records_count=0,
         limitations=(f"The {public_name} collector failed unexpectedly.",),
+    )
+
+
+def _correlate_cask_applications(
+    software: Sequence[SoftwareRecord],
+    *,
+    collected_at: datetime,
+) -> tuple[SoftwareRecord, ...]:
+    applications_by_name: dict[str, list[SoftwareRecord]] = {}
+    casks_by_artifact: dict[str, list[tuple[SoftwareRecord, str]]] = {}
+    for record in software:
+        if record.entity_type is EntityType.APPLICATION and record.install_path is not None:
+            applications_by_name.setdefault(Path(record.install_path).name.casefold(), []).append(
+                record
+            )
+        elif record.entity_type is EntityType.HOMEBREW_CASK:
+            for artifact in record.app_artifacts:
+                if Path(artifact).name != artifact:
+                    continue
+                casks_by_artifact.setdefault(artifact.casefold(), []).append((record, artifact))
+
+    related_ids: dict[str, set[str]] = {
+        record.id: set(record.related_software_ids) for record in software
+    }
+    inferred_sources: dict[str, str] = {}
+    added_evidence: dict[str, list[Evidence]] = {record.id: [] for record in software}
+    for key, applications in applications_by_name.items():
+        cask_claims = casks_by_artifact.get(key, [])
+        if len(applications) != 1 or len(cask_claims) != 1:
+            continue
+        application = applications[0]
+        cask, artifact = cask_claims[0]
+        if application.install_source is not None:
+            continue
+        if (
+            application.version is not None
+            and cask.version is not None
+            and application.version != cask.version
+        ):
+            continue
+        related_ids[application.id].add(cask.id)
+        related_ids[cask.id].add(application.id)
+        inferred_sources[application.id] = f"homebrew_cask:{cask.name}"
+        evidence = Evidence(
+            kind="homebrew_cask_application_match",
+            value={
+                "application_id": application.id,
+                "artifact": artifact,
+                "cask_id": cask.id,
+            },
+            source="Homebrew cask artifact and application bundle metadata",
+            collected_at=collected_at,
+            reliability=Reliability.MEDIUM,
+            limitations=("The match requires a unique artifact basename and compatible version.",),
+        )
+        added_evidence[application.id].append(evidence)
+        added_evidence[cask.id].append(evidence)
+
+    return tuple(
+        record.model_copy(
+            update={
+                "install_source": inferred_sources.get(record.id, record.install_source),
+                "related_software_ids": tuple(sorted(related_ids[record.id])),
+                "evidence": (*record.evidence, *added_evidence[record.id]),
+            }
+        )
+        for record in software
     )
 
 
@@ -119,8 +190,12 @@ class AuditService:
                 status=_failed_status("homebrew", collected_at),
             )
 
-        software = sorted(
+        correlated_software = _correlate_cask_applications(
             (*applications.software, *homebrew.software),
+            collected_at=collected_at,
+        )
+        software = sorted(
+            correlated_software,
             key=lambda record: (
                 record.entity_type.value,
                 record.display_name.casefold(),
