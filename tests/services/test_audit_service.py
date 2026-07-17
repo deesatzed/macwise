@@ -90,7 +90,7 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
 
     assert calls == ["storage", "applications", "homebrew"]
     assert audit.audit_id == "audit:test"
-    assert audit.schema_version == 1
+    assert audit.schema_version == 2
     assert [record.entity_type for record in audit.software] == [
         EntityType.APPLICATION,
         EntityType.HOMEBREW_FORMULA,
