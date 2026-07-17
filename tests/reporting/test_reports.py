@@ -103,13 +103,16 @@ def test_json_report_is_deterministic_versioned_and_round_trips() -> None:
 
     assert first == second
     assert first.endswith("\n")
-    assert '"schema_version": 2' in first
+    assert '"schema_version": 3' in first
     assert restored == audit
 
 
-def test_schema_one_json_is_migrated_and_future_versions_are_rejected() -> None:
+@pytest.mark.parametrize("legacy_version", (1, 2))
+def test_older_json_is_migrated_and_future_versions_are_rejected(
+    legacy_version: int,
+) -> None:
     legacy = sample_audit().model_dump(mode="json")
-    legacy["schema_version"] = 1
+    legacy["schema_version"] = legacy_version
     for record in legacy["software"]:
         for field in (
             "publisher",
@@ -142,13 +145,13 @@ def test_schema_one_json_is_migrated_and_future_versions_are_rejected() -> None:
 
     migrated = parse_json(json.dumps(legacy))
 
-    assert migrated.schema_version == 2
+    assert migrated.schema_version == 3
     assert migrated.software[0].publisher is None
     assert migrated.software[0].architectures == ()
     assert migrated.volumes[0].parent_device_identifier is None
 
-    legacy["schema_version"] = 3
-    with pytest.raises(ValueError, match="Unsupported audit schema version 3"):
+    legacy["schema_version"] = 4
+    with pytest.raises(ValueError, match="Unsupported audit schema version 4"):
         parse_json(json.dumps(legacy))
 
 

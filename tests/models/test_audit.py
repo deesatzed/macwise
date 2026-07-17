@@ -69,7 +69,7 @@ def test_versioned_audit_round_trips_without_losing_provenance() -> None:
 
     restored = AuditDocument.model_validate_json(audit.model_dump_json())
 
-    assert audit.schema_version == 2
+    assert audit.schema_version == 3
     assert restored == audit
     assert restored.software[0].evidence[0].source == "Info.plist"
 

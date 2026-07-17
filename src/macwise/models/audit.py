@@ -5,6 +5,7 @@ from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
+from macwise.models.analysis import Finding, PathEvidence, StartupRecord
 from macwise.models.software import SoftwareRecord
 from macwise.models.storage import VolumeRecord
 
@@ -34,9 +35,12 @@ class AuditDocument(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal[2] = 2
+    schema_version: Literal[3] = 3
     audit_id: str = Field(min_length=1)
     collected_at: AwareDatetime
     software: tuple[SoftwareRecord, ...] = ()
     volumes: tuple[VolumeRecord, ...] = ()
     collectors: tuple[CollectorStatus, ...] = ()
+    startup: tuple[StartupRecord, ...] = ()
+    path_evidence: tuple[PathEvidence, ...] = ()
+    findings: tuple[Finding, ...] = ()

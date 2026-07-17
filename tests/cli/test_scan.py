@@ -41,7 +41,7 @@ def test_scan_supports_all_public_formats(
     assert result.exit_code == 0, result.stdout
     assert service.roots is not None
     if output_format == "json":
-        assert json.loads(result.stdout)["schema_version"] == 2
+        assert json.loads(result.stdout)["schema_version"] == 3
     else:
         assert "MacWise Audit" in result.stdout
         assert "Example App" in result.stdout
