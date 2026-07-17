@@ -6,7 +6,7 @@ from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
-from macwise.models.analysis import UsageLabel
+from macwise.models.analysis import StartupKind, UsageLabel
 from macwise.models.software import EntityType, InstallRole
 
 
@@ -23,6 +23,8 @@ class PlanActionKind(StrEnum):
     MOVE_APPLICATION_TO_TRASH = "move_application_to_trash"
     HOMEBREW_UNINSTALL_FORMULA = "homebrew_uninstall_formula"
     HOMEBREW_UNINSTALL_CASK = "homebrew_uninstall_cask"
+    DISABLE_LAUNCH_AGENT = "disable_launch_agent"
+    STOP_HOMEBREW_SERVICE = "stop_homebrew_service"
 
 
 class PreflightKind(StrEnum):
@@ -88,22 +90,67 @@ class PlannedAction(BaseModel):
     id: str = Field(min_length=1)
     subject_id: str = Field(min_length=1)
     kind: PlanActionKind
+    sequence: int | None = Field(default=None, ge=1)
     source_path: str | None = None
     destination_path: str | None = None
     homebrew_token: str | None = None
+    startup_id: str | None = None
+    startup_kind: StartupKind | None = None
+    startup_label: str | None = None
+    startup_source_path: str | None = None
 
     @model_validator(mode="after")
     def require_kind_specific_identity(self) -> "PlannedAction":
         """Reject mixed or incomplete action identities."""
+        has_startup_identity = any(
+            value is not None
+            for value in (
+                self.startup_id,
+                self.startup_kind,
+                self.startup_label,
+                self.startup_source_path,
+            )
+        )
         if self.kind is PlanActionKind.MOVE_APPLICATION_TO_TRASH:
-            if not self.source_path or not self.destination_path or self.homebrew_token is not None:
+            if (
+                not self.source_path
+                or not self.destination_path
+                or self.homebrew_token is not None
+                or has_startup_identity
+            ):
                 raise ValueError("Trash intent requires only source and destination paths")
+        elif self.kind in {
+            PlanActionKind.HOMEBREW_UNINSTALL_FORMULA,
+            PlanActionKind.HOMEBREW_UNINSTALL_CASK,
+        }:
+            if (
+                not self.homebrew_token
+                or self.source_path is not None
+                or self.destination_path is not None
+                or has_startup_identity
+            ):
+                raise ValueError("Homebrew intent requires only an exact package token")
+        elif self.kind is PlanActionKind.DISABLE_LAUNCH_AGENT:
+            if (
+                not self.startup_id
+                or self.startup_kind is not StartupKind.LAUNCH_AGENT
+                or not self.startup_label
+                or not self.startup_source_path
+                or self.source_path is not None
+                or self.destination_path is not None
+                or self.homebrew_token is not None
+            ):
+                raise ValueError("LaunchAgent intent requires one exact user startup identity")
         elif (
-            not self.homebrew_token
+            not self.startup_id
+            or self.startup_kind is not StartupKind.HOMEBREW_SERVICE
+            or not self.startup_label
+            or not self.homebrew_token
+            or self.startup_source_path is not None
             or self.source_path is not None
             or self.destination_path is not None
         ):
-            raise ValueError("Homebrew intent requires only an exact package token")
+            raise ValueError("Homebrew service intent requires one exact service identity")
         return self
 
 
@@ -143,7 +190,7 @@ class PlanDocument(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal[1] = 1
+    schema_version: Literal[1, 2] = 1
     plan_id: str = Field(min_length=1)
     revision: int = Field(ge=1)
     created_at: AwareDatetime
@@ -168,8 +215,28 @@ class PlanDocument(BaseModel):
         if len(action_ids) != len(set(action_ids)):
             raise ValueError("Plan actions must have unique IDs")
         action_subject_ids = [action.subject_id for action in self.actions]
-        if len(action_subject_ids) != len(set(action_subject_ids)):
-            raise ValueError("A plan may contain only one action per subject")
+        if self.schema_version == 1:
+            if len(action_subject_ids) != len(set(action_subject_ids)):
+                raise ValueError("A plan may contain only one action per subject")
+            if any(
+                action.sequence is not None
+                or action.kind
+                in {
+                    PlanActionKind.DISABLE_LAUNCH_AGENT,
+                    PlanActionKind.STOP_HOMEBREW_SERVICE,
+                }
+                for action in self.actions
+            ):
+                raise ValueError("Plan schema 1 cannot contain ordered or startup actions")
+        else:
+            sequences = [action.sequence for action in self.actions]
+            if sequences != list(range(1, len(self.actions) + 1)):
+                raise ValueError("Plan schema 2 requires a contiguous action sequence")
+            startup_ids = [
+                action.startup_id for action in self.actions if action.startup_id is not None
+            ]
+            if len(startup_ids) != len(set(startup_ids)):
+                raise ValueError("Plan schema 2 requires unique startup action targets")
         if any(action.subject_id not in known_subjects for action in self.actions):
             raise ValueError("Plan action references an unknown subject")
 

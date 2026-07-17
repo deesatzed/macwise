@@ -9,6 +9,7 @@ from platformdirs import user_data_path
 from pydantic import ValidationError
 
 from macwise.models import PlanDocument
+from macwise.persistence.locking import StateLock, StateLockError
 
 _SCHEMA_VERSION = 1
 _SCHEMA = """
@@ -39,7 +40,8 @@ def default_plan_database() -> Path:
     return user_data_path("macwise") / "macwise.db"
 
 
-def _canonical_json(plan: PlanDocument) -> str:
+def canonical_plan_json(plan: PlanDocument) -> str:
+    """Return the one canonical persisted representation of a plan revision."""
     return json.dumps(
         plan.model_dump(mode="json"),
         ensure_ascii=False,
@@ -48,12 +50,19 @@ def _canonical_json(plan: PlanDocument) -> str:
     )
 
 
+def plan_digest(plan: PlanDocument) -> str:
+    """Return the full approval and integrity digest for a plan revision."""
+    return hashlib.sha256(canonical_plan_json(plan).encode()).hexdigest()
+
+
 class PlanStore:
     """Read and append complete immutable plan revisions."""
 
-    def __init__(self, path: Path | None = None) -> None:
+    def __init__(self, path: Path | None = None, *, lock_path: Path | None = None) -> None:
         selected = path if path is not None else default_plan_database()
         self.path = selected.expanduser().absolute()
+        selected_lock = lock_path if lock_path is not None else self.path.parent / "macwise.lock"
+        self.lock_path = selected_lock.expanduser().absolute()
 
     def _reject_symlink_ancestors(self) -> None:
         for ancestor in (self.path.parent, *self.path.parent.parents):
@@ -165,11 +174,24 @@ class PlanStore:
         except (ValidationError, ValueError) as error:
             raise PlanStoreError("The active plan document is invalid.") from error
 
-    def append(self, plan: PlanDocument) -> None:
-        """Atomically append a revision and advance the active pointer."""
+    def append(self, plan: PlanDocument, *, state_lock: StateLock | None = None) -> None:
+        """Atomically append a revision while holding the shared state lock."""
+        if state_lock is not None:
+            if state_lock.path != self.lock_path or not state_lock.is_held:
+                raise PlanStoreError("The supplied MacWise state lock is not held for this store.")
+            self._append_locked(plan)
+            return
+        try:
+            with StateLock(self.lock_path):
+                self._append_locked(plan)
+        except StateLockError as error:
+            raise PlanStoreError(str(error)) from error
+
+    def _append_locked(self, plan: PlanDocument) -> None:
+        """Append one revision after the caller has acquired the state lock."""
         self._validate_path(create_parent=True)
-        document_json = _canonical_json(plan)
-        digest = hashlib.sha256(document_json.encode()).hexdigest()
+        document_json = canonical_plan_json(plan)
+        digest = plan_digest(plan)
         connection: sqlite3.Connection | None = None
         try:
             connection = self._connect()

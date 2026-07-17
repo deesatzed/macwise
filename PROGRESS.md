@@ -49,6 +49,7 @@
 | Run MW-300 acceptance | Done | Codex | `docs/phase-4-acceptance.md` records a local PASS from 186 tests on Python 3.12/3.13, quality/build/privacy/skill/clean-wheel gates, independent review, and an aggregate-only real planner smoke. |
 | Design MW-400 reversible cleanup | Done | Codex | Fingerprint approval, fresh revalidation, append-only crash-visible manifests, allowlisted Trash/Homebrew/startup adapters, stop-on-failure, and separately approved undo are saved under `docs/plans/`; D-026 through D-030 record the boundaries. |
 | Plan MW-400 reversible cleanup | Done | Codex | Ranked options and loophole review tightened the design; the eight-task TDD plan and current implementation packet define exact files, proof gates, commits, rollback, and no-live-mutation stop rules. |
+| Build MW-400 execution-ready plans | Done | Codex | Plan schema 2 adds deterministic action order and opt-in supported startup previews; schema-1 duplicate adds refresh from current evidence, canonical full digests are public, and plan writes share a symlink-safe advisory lock. |
 | Complete Phases 5–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -139,3 +140,5 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-18 MW-300 clean-wheel smoke: a fresh Python 3.12 wheel install passed blocked-plan construction, schema-1 SQLite integrity round-trip, and safe plan-help checks under a canonical non-symlink state root.
 - 2026-07-18 MW-300 real smoke: an aggregate-only schema-4 audit produced 325 software records and 3 complete/4 partial collector states; pure planning produced 1 candidate, 1 action, 10 checks, and 1 rollback blueprint in 20.29 seconds without printing names/paths, persisting state, or mutating the host.
 - 2026-07-18 MW-300 claim validation: PASS for local Phase 4 cleanup-planning scope; hosted CI, publication, all action execution/approval/verification/undo, Codex integration, and Phases 5–7 remain open in `docs/phase-4-acceptance.md`.
+- 2026-07-18 MW-400 Task 1 RED/GREEN: shared-lock imports, canonical digest exports, schema-2 ordered actions, supported LaunchAgent/Homebrew-service previews, unsupported-startup blocking, schema-1 refresh, and CLI multi-action rendering each failed for the intended missing behavior before passing focused tests.
+- 2026-07-18 MW-400 Task 1 gate: 197 tests passed; Ruff format/lint, Pyright, and `git diff --check` passed repository-wide. No host action executor exists and no installed software was changed.

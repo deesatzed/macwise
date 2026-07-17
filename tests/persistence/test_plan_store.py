@@ -20,7 +20,13 @@ from macwise.models import (
     RollbackBlueprint,
     RollbackFeasibility,
 )
-from macwise.persistence import PlanStore, PlanStoreError
+from macwise.persistence import (
+    PlanStore,
+    PlanStoreError,
+    StateLock,
+    canonical_plan_json,
+    plan_digest,
+)
 
 NOW = datetime(2026, 7, 17, 23, 50, tzinfo=UTC)
 
@@ -71,6 +77,17 @@ def plan(revision: int = 1) -> PlanDocument:
         eligibility=PlanEligibility.PREVIEW_READY,
         limitations=("This preview is not approval to make changes.",),
     )
+
+
+def test_canonical_plan_json_and_digest_are_stable_across_round_trip() -> None:
+    expected = plan()
+
+    document_json = canonical_plan_json(expected)
+    restored = PlanDocument.model_validate_json(document_json)
+
+    assert restored == expected
+    assert canonical_plan_json(restored) == document_json
+    assert plan_digest(restored) == hashlib.sha256(document_json.encode()).hexdigest()
 
 
 def test_construction_is_read_only_and_first_append_creates_versioned_store(
@@ -218,6 +235,21 @@ def test_competing_initial_plan_cannot_replace_active_pointer(tmp_path: Path) ->
     assert store.active() == first
     with sqlite3.connect(database) as connection:
         assert connection.execute("SELECT COUNT(*) FROM plan_revisions").fetchone() == (1,)
+
+
+def test_plan_append_uses_shared_state_lock_and_accepts_the_exact_held_lock(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "state" / "macwise.db"
+    lock_path = tmp_path / "state" / "macwise.lock"
+    store = PlanStore(database, lock_path=lock_path)
+
+    with StateLock(lock_path) as held:
+        with pytest.raises(PlanStoreError, match="another MacWise change is in progress"):
+            store.append(plan())
+        store.append(plan(), state_lock=held)
+
+    assert store.active() == plan()
 
 
 def test_transaction_failure_preserves_prior_active_revision(tmp_path: Path) -> None:

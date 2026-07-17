@@ -6,7 +6,7 @@ import pytest
 from typer.testing import CliRunner
 
 import macwise.cli as cli
-from macwise.models import AuditDocument, EntityType, SoftwareRecord
+from macwise.models import AuditDocument, EntityType, SoftwareRecord, StartupKind, StartupRecord
 from macwise.persistence import PlanStore
 
 RUNNER = CliRunner()
@@ -83,6 +83,40 @@ def test_plan_add_persists_and_renders_exact_preview_preflight_and_rollback(
     assert "Startup records left unchanged: 0" in result.stdout
     assert "This preview is not approval" in result.stdout
     assert "No changes were made" in result.stdout
+
+
+def test_plan_add_can_explicitly_preview_supported_startup_before_removal(
+    planning_cli: tuple[PlanStore, StaticAuditService, AuditDocument],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    store, _service, base = planning_cli
+    startup = StartupRecord(
+        id="startup:cli-agent",
+        label="com.example.agent",
+        kind=StartupKind.LAUNCH_AGENT,
+        source_path="/Users/example/Library/LaunchAgents/com.example.agent.plist",
+        owner_software_ids=(base.software[0].id,),
+        enabled=True,
+    )
+    service = StaticAuditService(base.model_copy(update={"startup": (startup,)}))
+    monkeypatch.setattr(cli, "_service_factory", lambda: service)
+
+    result = RUNNER.invoke(
+        cli.app,
+        ["plan", "add", "--include-startup", "app:Example"],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    active = store.active()
+    assert active is not None
+    assert [item.kind for item in active.actions] == [
+        cli.PlanActionKind.DISABLE_LAUNCH_AGENT,
+        cli.PlanActionKind.MOVE_APPLICATION_TO_TRASH,
+    ]
+    assert result.stdout.index("disable user LaunchAgent") < result.stdout.index(
+        "move application bundle"
+    )
+    assert "com.example.agent" in result.stdout
 
 
 def test_duplicate_add_is_idempotent_and_second_subject_appends_revision(

@@ -88,6 +88,8 @@ def add(
     current: PlanDocument | None,
     document: AuditDocument,
     subject_id: str,
+    *,
+    include_startup: bool = False,
 ):
     return add_candidate(
         current,
@@ -96,6 +98,7 @@ def add(
         clock=lambda: NOW,
         plan_id_factory=lambda: "plan:test",
         trash_root=TRASH_ROOT,
+        include_startup=include_startup,
     )
 
 
@@ -134,6 +137,7 @@ def test_standalone_application_gets_exact_trash_preview_and_preserves_data() ->
     )
 
     assert result.changed is True
+    assert result.plan.schema_version == 2
     assert result.plan.revision == 1
     assert result.plan.eligibility is PlanEligibility.PREVIEW_READY
     assert result.plan.candidates[0].source_audit_id == "audit:test"
@@ -141,6 +145,7 @@ def test_standalone_application_gets_exact_trash_preview_and_preserves_data() ->
     assert result.plan.candidates[0].startup_ids == (startup.id,)
     assert len(result.plan.actions) == 1
     action = result.plan.actions[0]
+    assert action.sequence == 1
     assert action.kind is PlanActionKind.MOVE_APPLICATION_TO_TRASH
     assert action.source_path == "/Applications/Example.app"
     assert action.destination_path is not None
@@ -172,6 +177,85 @@ def test_exact_cask_linked_application_gets_one_cask_action_not_trash() -> None:
     assert action.homebrew_token == "docker"
     assert action.source_path is None
     assert result.plan.candidates[0].homebrew_token == "docker"
+
+
+def test_opt_in_supported_launch_agent_is_previewed_before_application_removal() -> None:
+    app = software(
+        "application:startup-example",
+        "Startup Example",
+        install_path="/Applications/Startup Example.app",
+    )
+    startup = StartupRecord(
+        id="startup:example-agent",
+        label="com.example.agent",
+        kind=StartupKind.LAUNCH_AGENT,
+        source_path="/Users/example/Library/LaunchAgents/com.example.agent.plist",
+        owner_software_ids=(app.id,),
+        enabled=True,
+    )
+
+    result = add(None, audit(app, startup=(startup,)), app.id, include_startup=True)
+
+    assert [item.kind for item in result.plan.actions] == [
+        PlanActionKind.DISABLE_LAUNCH_AGENT,
+        PlanActionKind.MOVE_APPLICATION_TO_TRASH,
+    ]
+    assert [item.sequence for item in result.plan.actions] == [1, 2]
+    assert result.plan.actions[0].startup_id == startup.id
+    assert result.plan.actions[0].startup_label == startup.label
+    assert result.plan.actions[0].startup_source_path == startup.source_path
+    assert len(result.plan.rollback) == 2
+
+
+def test_opt_in_homebrew_service_stop_is_previewed_before_formula_uninstall() -> None:
+    formula = software(
+        "homebrew_formula:postgresql",
+        "postgresql@17",
+        EntityType.HOMEBREW_FORMULA,
+        service_status="started",
+    )
+    startup = StartupRecord(
+        id="startup:postgresql-service",
+        label="postgresql@17",
+        kind=StartupKind.HOMEBREW_SERVICE,
+        owner_software_ids=(formula.id,),
+        running=True,
+    )
+
+    result = add(None, audit(formula, startup=(startup,)), formula.id, include_startup=True)
+
+    assert [item.kind for item in result.plan.actions] == [
+        PlanActionKind.STOP_HOMEBREW_SERVICE,
+        PlanActionKind.HOMEBREW_UNINSTALL_FORMULA,
+    ]
+    service_action = result.plan.actions[0]
+    assert service_action.startup_id == startup.id
+    assert service_action.homebrew_token == "postgresql@17"
+    assert [item.sequence for item in result.plan.actions] == [1, 2]
+
+
+def test_opt_in_unsupported_startup_target_blocks_instead_of_becoming_an_action() -> None:
+    app = software(
+        "application:daemon-owner",
+        "Daemon Owner",
+        install_path="/Applications/Daemon Owner.app",
+    )
+    startup = StartupRecord(
+        id="startup:system-daemon",
+        label="com.example.daemon",
+        kind=StartupKind.LAUNCH_DAEMON,
+        source_path="/Library/LaunchDaemons/com.example.daemon.plist",
+        owner_software_ids=(app.id,),
+        enabled=True,
+    )
+
+    result = add(None, audit(app, startup=(startup,)), app.id, include_startup=True)
+
+    assert [item.kind for item in result.plan.actions] == [PlanActionKind.MOVE_APPLICATION_TO_TRASH]
+    assert result.plan.eligibility is PlanEligibility.BLOCKED
+    startup_check = next(item for item in result.plan.checks if item.kind is PreflightKind.STARTUP)
+    assert startup_check.outcome is PreflightOutcome.BLOCK
+    assert "unsupported" in startup_check.statement.casefold()
 
 
 def test_formula_preview_has_exact_token_and_best_effort_rollback_warning() -> None:
@@ -352,3 +436,29 @@ def test_duplicate_add_is_idempotent_and_new_subject_appends_immutable_revision(
     assert initial.plan.candidates == (initial.plan.candidates[0],)
     assert appended.plan.candidates[0].source_audit_id == "audit:test"
     assert appended.plan.candidates[1].source_audit_id == "audit:second"
+
+
+def test_duplicate_add_refreshes_schema_one_plan_into_execution_ready_schema_two() -> None:
+    app = software(
+        "application:legacy",
+        "Legacy Preview",
+        install_path="/Applications/Legacy Preview.app",
+    )
+    current = add(None, audit(app), app.id).plan
+    legacy_actions = tuple(item.model_copy(update={"sequence": None}) for item in current.actions)
+    legacy = PlanDocument.model_validate(
+        {
+            **current.model_dump(),
+            "schema_version": 1,
+            "actions": legacy_actions,
+        }
+    )
+    fresh_audit = audit(app, audit_id="audit:fresh")
+
+    result = add(legacy, fresh_audit, app.id)
+
+    assert result.changed is True
+    assert result.plan.schema_version == 2
+    assert result.plan.revision == legacy.revision + 1
+    assert result.plan.candidates[0].source_audit_id == "audit:fresh"
+    assert result.plan.actions[0].sequence == 1

@@ -25,6 +25,8 @@ from macwise.models import (
     RollbackBlueprint,
     RollbackFeasibility,
     SoftwareRecord,
+    StartupKind,
+    StartupRecord,
     UsageLabel,
     stable_plan_component_id,
 )
@@ -120,6 +122,78 @@ def _valid_application_path(value: str | None) -> bool:
     return path.is_absolute() and path.suffix.casefold() == ".app" and ".." not in path.parts
 
 
+def _safe_launch_agent(startup: StartupRecord, *, home: Path, subject_id: str) -> bool:
+    if (
+        startup.kind is not StartupKind.LAUNCH_AGENT
+        or startup.owner_software_ids != (subject_id,)
+        or startup.source_path is None
+        or "/" in startup.label
+        or any(unicodedata.category(character) in {"Cc", "Cf"} for character in startup.label)
+    ):
+        return False
+    path = Path(startup.source_path)
+    expected_parent = home / "Library" / "LaunchAgents"
+    return (
+        path.is_absolute()
+        and path.parent == expected_parent
+        and path.suffix.casefold() == ".plist"
+        and ".." not in path.parts
+        and not any(
+            unicodedata.category(character) in {"Cc", "Cf"} for character in startup.source_path
+        )
+    )
+
+
+def _startup_actions(
+    plan_id: str,
+    candidate: PlanCandidate,
+    audit: AuditDocument,
+    *,
+    home: Path,
+) -> tuple[PlannedAction, ...]:
+    actions: list[PlannedAction] = []
+    for startup in audit.startup:
+        if startup.id not in candidate.startup_ids:
+            continue
+        if _safe_launch_agent(startup, home=home, subject_id=candidate.subject_id):
+            kind = PlanActionKind.DISABLE_LAUNCH_AGENT
+            actions.append(
+                PlannedAction(
+                    id=stable_plan_component_id(
+                        "action", plan_id, candidate.subject_id, startup.id, kind.value
+                    ),
+                    subject_id=candidate.subject_id,
+                    kind=kind,
+                    startup_id=startup.id,
+                    startup_kind=startup.kind,
+                    startup_label=startup.label,
+                    startup_source_path=startup.source_path,
+                )
+            )
+        elif (
+            startup.kind is StartupKind.HOMEBREW_SERVICE
+            and startup.owner_software_ids == (candidate.subject_id,)
+            and startup.running is True
+            and candidate.homebrew_token is not None
+            and startup.label == candidate.homebrew_token
+        ):
+            kind = PlanActionKind.STOP_HOMEBREW_SERVICE
+            actions.append(
+                PlannedAction(
+                    id=stable_plan_component_id(
+                        "action", plan_id, candidate.subject_id, startup.id, kind.value
+                    ),
+                    subject_id=candidate.subject_id,
+                    kind=kind,
+                    startup_id=startup.id,
+                    startup_kind=startup.kind,
+                    startup_label=startup.label,
+                    homebrew_token=candidate.homebrew_token,
+                )
+            )
+    return tuple(sorted(actions, key=lambda item: item.startup_id or ""))
+
+
 def _action(
     plan_id: str,
     candidate: PlanCandidate,
@@ -170,6 +244,25 @@ def _action(
 
 def _rollback(action: PlannedAction, candidate: PlanCandidate) -> RollbackBlueprint:
     rollback_id = stable_plan_component_id("rollback", action.id)
+    if action.kind is PlanActionKind.DISABLE_LAUNCH_AGENT:
+        return RollbackBlueprint(
+            id=rollback_id,
+            action_id=action.id,
+            feasibility=RollbackFeasibility.REVERSIBLE,
+            strategy="Restore the exact prior user LaunchAgent state.",
+            prerequisites=("The startup plist identity and content must remain unchanged.",),
+            limitations=("Action-time startup state and plist hash revalidation is required.",),
+        )
+    if action.kind is PlanActionKind.STOP_HOMEBREW_SERVICE:
+        return RollbackBlueprint(
+            id=rollback_id,
+            action_id=action.id,
+            feasibility=RollbackFeasibility.REVERSIBLE,
+            strategy="Restore the exact prior Homebrew service state.",
+            homebrew_token=action.homebrew_token,
+            prerequisites=("The exact formula and service identity must remain unchanged.",),
+            limitations=("Action-time service state revalidation is required.",),
+        )
     if action.kind is PlanActionKind.MOVE_APPLICATION_TO_TRASH:
         return RollbackBlueprint(
             id=rollback_id,
@@ -233,10 +326,31 @@ def _preflight(
     action: PlannedAction | None,
     rollback: RollbackBlueprint | None,
     audit: AuditDocument,
+    *,
+    startup_requested: bool,
+    planned_startup_ids: frozenset[str],
 ) -> tuple[PreflightCheck, ...]:
     subject_id = candidate.subject_id
     checks: list[PreflightCheck] = []
 
+    unsupported_startup = set(candidate.startup_ids) - planned_startup_ids
+    startup_outcome = PreflightOutcome.PASS
+    startup_statement = "No owned startup component was collected for this target."
+    if candidate.startup_ids and not startup_requested:
+        startup_outcome = PreflightOutcome.WARNING
+        startup_statement = (
+            "Owned startup components were observed and will not be changed by this plan."
+        )
+    elif unsupported_startup:
+        startup_outcome = PreflightOutcome.BLOCK
+        startup_statement = (
+            "At least one requested startup component has an unsupported or ambiguous target."
+        )
+    elif planned_startup_ids:
+        startup_outcome = PreflightOutcome.WARNING
+        startup_statement = (
+            "Supported startup changes are previewed and require action-time revalidation."
+        )
     checks.append(
         _check(
             plan_id,
@@ -376,12 +490,8 @@ def _preflight(
             revision,
             subject_id,
             PreflightKind.STARTUP,
-            PreflightOutcome.WARNING if candidate.startup_ids else PreflightOutcome.PASS,
-            (
-                "Owned startup components were observed and will not be changed in Phase 4."
-                if candidate.startup_ids
-                else "No owned startup component was collected for this target."
-            ),
+            startup_outcome,
+            startup_statement,
             evidence_ids=candidate.startup_ids,
         )
     )
@@ -428,8 +538,35 @@ def add_candidate(
     clock: Callable[[], datetime],
     plan_id_factory: Callable[[], str],
     trash_root: Path,
+    include_startup: bool = False,
 ) -> PlanningResult:
     """Append one exactly identified candidate to a new immutable preview revision."""
+    if current is not None and current.schema_version == 1:
+        refreshed: PlanDocument | None = None
+        subject_ids = [candidate.subject_id for candidate in current.candidates]
+        if subject_id not in subject_ids:
+            subject_ids.append(subject_id)
+        for current_subject_id in subject_ids:
+            refreshed_result = add_candidate(
+                refreshed,
+                audit,
+                current_subject_id,
+                clock=clock,
+                plan_id_factory=lambda: current.plan_id,
+                trash_root=trash_root,
+                include_startup=include_startup and current_subject_id == subject_id,
+            )
+            refreshed = refreshed_result.plan
+        assert refreshed is not None
+        upgraded = PlanDocument.model_validate(
+            {
+                **refreshed.model_dump(),
+                "revision": current.revision + 1,
+                "created_at": clock(),
+            }
+        )
+        return PlanningResult(plan=upgraded, changed=True)
+
     if current is not None and subject_id in {
         candidate.subject_id for candidate in current.candidates
     }:
@@ -444,6 +581,17 @@ def add_candidate(
     new_candidate = _candidate(audit, record)
     new_action = _action(plan_id, new_candidate, trash_root=trash_root)
     new_rollback = _rollback(new_action, new_candidate) if new_action is not None else None
+    startup_actions = (
+        _startup_actions(
+            plan_id,
+            new_candidate,
+            audit,
+            home=trash_root.parent,
+        )
+        if include_startup
+        else ()
+    )
+    startup_rollbacks = tuple(_rollback(action, new_candidate) for action in startup_actions)
     new_checks = _preflight(
         plan_id,
         revision,
@@ -451,27 +599,24 @@ def add_candidate(
         new_action,
         new_rollback,
         audit,
+        startup_requested=include_startup,
+        planned_startup_ids=frozenset(
+            action.startup_id for action in startup_actions if action.startup_id is not None
+        ),
     )
 
     candidates = (*current.candidates, new_candidate) if current is not None else (new_candidate,)
-    actions = (
-        (*current.actions, new_action)
-        if current is not None and new_action is not None
-        else current.actions
-        if current is not None
-        else (new_action,)
-        if new_action is not None
-        else ()
-    )
+    new_actions = (*startup_actions, *((new_action,) if new_action is not None else ()))
+    actions = (*current.actions, *new_actions) if current is not None else new_actions
     checks = (*current.checks, *new_checks) if current is not None else new_checks
-    rollback = (
-        (*current.rollback, new_rollback)
-        if current is not None and new_rollback is not None
-        else current.rollback
-        if current is not None
-        else (new_rollback,)
-        if new_rollback is not None
-        else ()
+    new_rollbacks = (
+        *startup_rollbacks,
+        *((new_rollback,) if new_rollback is not None else ()),
+    )
+    rollback = (*current.rollback, *new_rollbacks) if current is not None else new_rollbacks
+    ordered_actions = tuple(
+        action.model_copy(update={"sequence": sequence})
+        for sequence, action in enumerate(actions, start=1)
     )
     eligibility = (
         PlanEligibility.BLOCKED
@@ -479,13 +624,14 @@ def add_candidate(
         else PlanEligibility.PREVIEW_READY
     )
     plan = PlanDocument(
+        schema_version=2,
         plan_id=plan_id,
         revision=revision,
         created_at=clock(),
         source_audit_id=audit.audit_id,
         source_audit_collected_at=audit.collected_at,
         candidates=candidates,
-        actions=actions,
+        actions=ordered_actions,
         checks=checks,
         rollback=rollback,
         eligibility=eligibility,

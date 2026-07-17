@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import pytest
 from pydantic import ValidationError
 
-from macwise.models import EntityType, InstallRole, UsageLabel
+from macwise.models import EntityType, InstallRole, StartupKind, UsageLabel
 from macwise.models.plan import (
     PlanActionKind,
     PlanCandidate,
@@ -154,6 +154,67 @@ def test_plan_document_requires_one_action_per_subject_and_one_rollback_per_acti
         )
 
 
+def test_schema_two_allows_ordered_startup_and_removal_actions_for_one_subject() -> None:
+    removal = action().model_copy(update={"sequence": 2})
+    startup = PlannedAction(
+        id="action:disable-startup",
+        subject_id="application:example",
+        kind=PlanActionKind.DISABLE_LAUNCH_AGENT,
+        sequence=1,
+        startup_id="startup:example",
+        startup_kind=StartupKind.LAUNCH_AGENT,
+        startup_label="com.example.agent",
+        startup_source_path="/Users/example/Library/LaunchAgents/com.example.agent.plist",
+    )
+    startup_rollback = RollbackBlueprint(
+        id="rollback:disable-startup",
+        action_id=startup.id,
+        feasibility=RollbackFeasibility.REVERSIBLE,
+        strategy="Restore the exact prior user LaunchAgent state.",
+    )
+
+    plan = PlanDocument.model_validate(
+        {
+            **document().model_dump(),
+            "schema_version": 2,
+            "actions": (startup, removal),
+            "rollback": (startup_rollback, rollback()),
+        }
+    )
+
+    assert [item.sequence for item in plan.actions] == [1, 2]
+    assert plan.actions[0].startup_id == "startup:example"
+
+
+def test_schema_two_requires_unique_contiguous_action_order_and_startup_targets() -> None:
+    startup = PlannedAction(
+        id="action:disable-startup",
+        subject_id="application:example",
+        kind=PlanActionKind.DISABLE_LAUNCH_AGENT,
+        sequence=2,
+        startup_id="startup:example",
+        startup_kind=StartupKind.LAUNCH_AGENT,
+        startup_label="com.example.agent",
+        startup_source_path="/Users/example/Library/LaunchAgents/com.example.agent.plist",
+    )
+    startup_rollback = RollbackBlueprint(
+        id="rollback:disable-startup",
+        action_id=startup.id,
+        feasibility=RollbackFeasibility.REVERSIBLE,
+        strategy="Restore the exact prior user LaunchAgent state.",
+    )
+
+    with pytest.raises(ValidationError, match="contiguous action sequence"):
+        PlanDocument.model_validate(
+            {
+                **document().model_dump(),
+                "schema_version": 2,
+                "actions": (startup, action().model_copy(update={"sequence": 3})),
+                "rollback": (startup_rollback, rollback()),
+            }
+        )
+
+
 @pytest.mark.parametrize(
     ("kind", "values"),
     (
@@ -176,14 +237,16 @@ def test_plan_document_requires_one_action_per_subject_and_one_rollback_per_acti
 )
 def test_action_kind_requires_only_its_typed_identity(
     kind: PlanActionKind,
-    values: dict[str, str],
+    values: dict[str, object],
 ) -> None:
     with pytest.raises(ValidationError):
-        PlannedAction(
-            id="action:invalid",
-            subject_id="application:example",
-            kind=kind,
-            **values,
+        PlannedAction.model_validate(
+            {
+                "id": "action:invalid",
+                "subject_id": "application:example",
+                "kind": kind,
+                **values,
+            }
         )
 
 

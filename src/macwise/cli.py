@@ -25,6 +25,7 @@ from macwise.models import (
     PlanActionKind,
     PlanDocument,
     PlanEligibility,
+    PlannedAction,
     PreflightOutcome,
     SoftwareRecord,
     UsageLabel,
@@ -367,7 +368,9 @@ def _echo_plan(plan: PlanDocument) -> None:
     typer.echo(f"Eligibility: {_human_label(plan.eligibility.value)}")
     typer.echo("This eligibility is not approval or action authority.\n")
 
-    actions = {item.subject_id: item for item in plan.actions}
+    actions: dict[str, list[PlannedAction]] = {}
+    for item in plan.actions:
+        actions.setdefault(item.subject_id, []).append(item)
     for candidate in plan.candidates:
         candidate_kind = {
             EntityType.APPLICATION: "application",
@@ -379,25 +382,51 @@ def _echo_plan(plan: PlanDocument) -> None:
             f"  Candidate snapshot: {candidate.source_audit_collected_at.isoformat()} "
             f"from {safe_display_text(candidate.source_audit_id)}"
         )
-        action = actions.get(candidate.subject_id)
-        if action is None:
+        candidate_actions = actions.get(candidate.subject_id, [])
+        if not candidate_actions:
             typer.echo("  Preview: no exact supported action can be planned.")
-        elif action.kind is PlanActionKind.MOVE_APPLICATION_TO_TRASH:
-            typer.echo(
-                "  Preview: move application bundle from "
-                f"{safe_display_text(action.source_path or 'unknown')} to "
-                f"{safe_display_text(action.destination_path or 'unknown')}"
-            )
-        else:
-            package_kind = (
-                "formula" if action.kind is PlanActionKind.HOMEBREW_UNINSTALL_FORMULA else "cask"
-            )
-            typer.echo(
-                f"  Preview: brew uninstall --{package_kind} "
-                f"{safe_display_text(action.homebrew_token or 'unknown')}"
-            )
+        for action in candidate_actions:
+            if action.sequence is not None:
+                typer.echo(f"  Action order: {action.sequence}")
+            prefix = "  Preview:"
+            if action.kind is PlanActionKind.MOVE_APPLICATION_TO_TRASH:
+                typer.echo(
+                    f"{prefix} move application bundle from "
+                    f"{safe_display_text(action.source_path or 'unknown')} to "
+                    f"{safe_display_text(action.destination_path or 'unknown')}"
+                )
+            elif action.kind in {
+                PlanActionKind.HOMEBREW_UNINSTALL_FORMULA,
+                PlanActionKind.HOMEBREW_UNINSTALL_CASK,
+            }:
+                package_kind = (
+                    "formula"
+                    if action.kind is PlanActionKind.HOMEBREW_UNINSTALL_FORMULA
+                    else "cask"
+                )
+                typer.echo(
+                    f"{prefix} brew uninstall --{package_kind} "
+                    f"{safe_display_text(action.homebrew_token or 'unknown')}"
+                )
+            elif action.kind is PlanActionKind.DISABLE_LAUNCH_AGENT:
+                typer.echo(
+                    f"{prefix} disable user LaunchAgent "
+                    f"{safe_display_text(action.startup_label or 'unknown')} from "
+                    f"{safe_display_text(action.startup_source_path or 'unknown')}"
+                )
+            else:
+                typer.echo(
+                    f"{prefix} stop Homebrew service "
+                    f"{safe_display_text(action.homebrew_token or 'unknown')}"
+                )
         typer.echo(f"  Related data records preserved: {len(candidate.related_path_ids)}")
-        typer.echo(f"  Startup records left unchanged: {len(candidate.startup_ids)}")
+        planned_startup = sum(action.startup_id is not None for action in candidate_actions)
+        if planned_startup:
+            typer.echo(f"  Startup changes previewed: {planned_startup}")
+        typer.echo(
+            "  Startup records left unchanged: "
+            f"{max(0, len(candidate.startup_ids) - planned_startup)}"
+        )
 
     _echo_plan_checks(plan, PreflightOutcome.BLOCK, "Blockers")
     _echo_plan_checks(plan, PreflightOutcome.WARNING, "Warnings")
@@ -924,6 +953,13 @@ def plan_root(ctx: typer.Context) -> None:
 @plan_app.command("add", help=HELP["plan_add"])
 def plan_add(
     name: Annotated[str, typer.Argument(help="One reviewed, unambiguous item name.")],
+    include_startup: Annotated[
+        bool,
+        typer.Option(
+            "--include-startup",
+            help="Also preview supported owned startup changes before removal.",
+        ),
+    ] = False,
 ) -> None:
     store = _plan_store_factory()
     try:
@@ -939,6 +975,7 @@ def plan_add(
         clock=_planning_clock,
         plan_id_factory=_plan_id_factory,
         trash_root=_trash_root_factory(),
+        include_startup=include_startup,
     )
     if result.changed:
         try:
