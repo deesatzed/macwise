@@ -38,6 +38,7 @@
 | Build MW-100 evidence and analysis core | Done | Codex | Schema 3, v1/v2 migration, usage/startup collectors, evidence-basis findings, bounded related paths, and backup facts pass the 112-test gate. |
 | Build MW-100 explain/review views | Done | Codex | Explain, review unused, startup, backups, help, and four-basis Markdown views pass focused, hostile-render, and 118-test full gates. |
 | Run MW-100 acceptance | Done | Codex | `docs/phase-2-acceptance.md` records a local PASS from 118 tests on Python 3.12/3.13, quality/build/privacy/skill/clean-wheel gates, and aggregate-only real scans. |
+| Design and plan MW-200 overlap intelligence | Done | Codex | Exact-match catalog and guarded-recommendation design plus seven-task TDD plan are saved under `docs/plans/`; D-022/D-023 record the boundaries. |
 | Complete Phases 2–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
