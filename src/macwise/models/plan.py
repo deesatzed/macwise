@@ -62,6 +62,8 @@ class PlanCandidate(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     subject_id: str = Field(min_length=1)
+    source_audit_id: str = Field(min_length=1)
+    source_audit_collected_at: AwareDatetime
     entity_type: EntityType
     display_name: str = Field(min_length=1)
     version: str | None = None

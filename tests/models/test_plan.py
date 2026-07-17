@@ -24,6 +24,8 @@ NOW = datetime(2026, 7, 17, 23, 30, tzinfo=UTC)
 def candidate() -> PlanCandidate:
     return PlanCandidate(
         subject_id="application:example",
+        source_audit_id="audit:test",
+        source_audit_collected_at=NOW,
         entity_type=EntityType.APPLICATION,
         display_name="Example App",
         version="2.4.1",
