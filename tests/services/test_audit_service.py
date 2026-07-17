@@ -66,8 +66,13 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
             status=status("applications", CollectorState.COMPLETE, 1),
         )
 
-    def homebrew_collector(*, collected_at: datetime) -> HomebrewCollection:
+    def homebrew_collector(
+        *,
+        collected_at: datetime,
+        project_roots: Sequence[Path],
+    ) -> HomebrewCollection:
         assert collected_at == COLLECTED_AT
+        assert tuple(project_roots) == (Path("/Projects/Approved"),)
         calls.append("homebrew")
         record = SoftwareRecord(
             id=stable_software_id(EntityType.HOMEBREW_FORMULA, "alpha"),
@@ -86,7 +91,10 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
         storage_collector=storage_collector,
         clock=lambda: COLLECTED_AT,
         audit_id_factory=lambda: "audit:test",
-    ).run((Path("/Applications"),))
+    ).run(
+        (Path("/Applications"),),
+        project_roots=(Path("/Projects/Approved"),),
+    )
 
     assert calls == ["storage", "applications", "homebrew"]
     assert audit.audit_id == "audit:test"
@@ -132,8 +140,12 @@ def test_unexpected_collector_failure_does_not_discard_other_inventory() -> None
             ),
         )
 
-    def broken_homebrew(*, collected_at: datetime) -> HomebrewCollection:
-        del collected_at
+    def broken_homebrew(
+        *,
+        collected_at: datetime,
+        project_roots: Sequence[Path],
+    ) -> HomebrewCollection:
+        del collected_at, project_roots
         raise RuntimeError("private implementation detail")
 
     audit = AuditService(

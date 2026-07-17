@@ -75,8 +75,7 @@ def _is_interactive() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def _application_roots(additional: Sequence[Path] = ()) -> tuple[Path, ...]:
-    roots = (Path("/Applications"), Path.home() / "Applications", *additional)
+def _deduplicated_roots(roots: Sequence[Path]) -> tuple[Path, ...]:
     unique: dict[str, Path] = {}
     for root in roots:
         absolute = Path(root).expanduser().absolute()
@@ -84,9 +83,20 @@ def _application_roots(additional: Sequence[Path] = ()) -> tuple[Path, ...]:
     return tuple(unique.values())
 
 
-def _audit(application_roots: Sequence[Path] | None = None) -> AuditDocument:
+def _application_roots(additional: Sequence[Path] = ()) -> tuple[Path, ...]:
+    return _deduplicated_roots((Path("/Applications"), Path.home() / "Applications", *additional))
+
+
+def _audit(
+    application_roots: Sequence[Path] | None = None,
+    *,
+    project_roots: Sequence[Path] = (),
+) -> AuditDocument:
     roots = tuple(application_roots) if application_roots is not None else _application_roots()
-    return _service_factory().run(roots)
+    service = _service_factory()
+    if project_roots:
+        return service.run(roots, project_roots=tuple(project_roots))
+    return service.run(roots)
 
 
 def _render(audit: AuditDocument, output_format: OutputFormat) -> str:
@@ -196,9 +206,19 @@ def scan(
             help="Also scan this explicitly approved application folder (repeatable).",
         ),
     ] = None,
+    project_root: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--project-root",
+            help="Scan this explicitly approved project folder for package references (repeatable).",
+        ),
+    ] = None,
 ) -> None:
     """Create and render one read-only audit."""
-    audit = _audit(_application_roots(app_root or ()))
+    audit = _audit(
+        _application_roots(app_root or ()),
+        project_roots=_deduplicated_roots(project_root or ()),
+    )
     _write_or_print(_render(audit, output_format), output, force)
 
 

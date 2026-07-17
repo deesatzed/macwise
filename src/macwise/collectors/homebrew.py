@@ -1,9 +1,12 @@
 """Read-only Homebrew inventory from machine-readable command output."""
 
 import json
+import os
+import re
 from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Protocol, cast
 
 from macwise.models import (
@@ -128,6 +131,164 @@ def _app_artifacts(item: dict[str, Any]) -> tuple[str, ...]:
     return tuple(dict.fromkeys(applications))
 
 
+def _binary_artifacts(item: dict[str, Any]) -> tuple[str, ...]:
+    executables: list[str] = []
+    artifacts = item.get("artifacts", [])
+    if not isinstance(artifacts, list):
+        return ()
+    for raw_artifact in cast(list[object], artifacts):
+        artifact = _mapping(raw_artifact)
+        if artifact is None or not isinstance(artifact.get("binary"), list):
+            continue
+        values = [
+            value
+            for raw_value in cast(list[object], artifact["binary"])
+            if (value := _text(raw_value)) is not None
+        ]
+        if values:
+            executables.append(Path(values[-1]).name)
+    return tuple(sorted(dict.fromkeys(executables), key=str.casefold))
+
+
+def _tree_size(path: Path) -> int:
+    total = path.lstat().st_size
+    for current_root, directories, files in os.walk(path, followlinks=False):
+        root = Path(current_root)
+        retained: list[str] = []
+        for directory in directories:
+            child = root / directory
+            total += child.lstat().st_size
+            if not child.is_symlink():
+                retained.append(directory)
+        directories[:] = retained
+        for filename in files:
+            total += (root / filename).lstat().st_size
+    return total
+
+
+def _formula_executables(path: Path) -> tuple[str, ...]:
+    executables: set[str] = set()
+    for current_root, directories, files in os.walk(path, followlinks=False):
+        root = Path(current_root)
+        directories[:] = [name for name in directories if not (root / name).is_symlink()]
+        if root.name in {"bin", "sbin"}:
+            executables.update(files)
+            executables.update(name for name in directories if (root / name).is_symlink())
+            directories[:] = []
+    return tuple(sorted(executables, key=str.casefold))
+
+
+def _installation_details(
+    root: Path | None,
+    name: str,
+    limitations: list[str],
+    *,
+    formula: bool,
+) -> tuple[str | None, int | None, tuple[str, ...]]:
+    if root is None:
+        return None, None, ()
+    if Path(name).name != name or name in {".", ".."}:
+        limitations.append(f"Homebrew item {name!r} has an unsafe installed path name.")
+        return None, None, ()
+    candidate = root / name
+    if candidate.is_symlink():
+        limitations.append(f"Homebrew installed path for {name!r} is a symbolic link.")
+        return None, None, ()
+    if not candidate.is_dir():
+        limitations.append(f"Homebrew installed path for {name!r} is unavailable.")
+        return None, None, ()
+    try:
+        size = _tree_size(candidate)
+        executables = _formula_executables(candidate) if formula else ()
+    except OSError:
+        limitations.append(f"Homebrew installed metadata for {name!r} could not be read.")
+        return str(candidate), None, ()
+    return str(candidate), size, executables
+
+
+PROJECT_FILENAMES = {
+    ".bash_profile",
+    ".bashrc",
+    ".tool-versions",
+    ".zprofile",
+    ".zshrc",
+    "Brewfile",
+    "Cargo.toml",
+    "Gemfile",
+    "Pipfile",
+    "go.mod",
+    "package-lock.json",
+    "package.json",
+    "pnpm-lock.yaml",
+    "pyproject.toml",
+    "requirements.txt",
+    "yarn.lock",
+}
+MAX_PROJECT_FILES = 500
+MAX_PROJECT_FILE_BYTES = 1_000_000
+
+
+def _mentions_item(text: str, name: str) -> bool:
+    boundary = r"A-Za-z0-9@._+\-"
+    return (
+        re.search(
+            rf"(?<![{boundary}]){re.escape(name)}(?![{boundary}])",
+            text,
+            flags=re.IGNORECASE,
+        )
+        is not None
+    )
+
+
+def _project_references(
+    names: Sequence[str],
+    roots: Sequence[Path],
+    limitations: list[str],
+) -> dict[str, tuple[str, ...]]:
+    references: dict[str, list[str]] = {name: [] for name in names}
+    files_seen = 0
+    for root in roots:
+        if root.is_symlink() or not root.is_dir():
+            limitations.append(f"The approved project folder {root} is not available.")
+            continue
+        for current_root, directories, files in os.walk(root, followlinks=False):
+            current = Path(current_root)
+            directories[:] = [
+                name
+                for name in sorted(directories, key=str.casefold)
+                if not (current / name).is_symlink()
+            ]
+            for filename in sorted(files, key=str.casefold):
+                if filename not in PROJECT_FILENAMES and not filename.startswith("requirements"):
+                    continue
+                files_seen += 1
+                if files_seen > MAX_PROJECT_FILES:
+                    limitations.append(
+                        f"Approved project scanning stopped after {MAX_PROJECT_FILES} manifests."
+                    )
+                    return {
+                        name: tuple(sorted(paths, key=str.casefold))
+                        for name, paths in references.items()
+                    }
+                path = current / filename
+                try:
+                    if path.is_symlink() or path.stat().st_size > MAX_PROJECT_FILE_BYTES:
+                        limitations.append(f"Approved project manifest {path} was not read.")
+                        continue
+                    text = path.read_text(encoding="utf-8", errors="replace")
+                except OSError:
+                    limitations.append(f"Approved project manifest {path} could not be read.")
+                    continue
+                relative = path.relative_to(root).as_posix()
+                for name in names:
+                    if _mentions_item(text, name):
+                        references[name].append(relative)
+    return {
+        name: tuple(sorted(dict.fromkeys(paths), key=str.casefold))
+        for name, paths in references.items()
+    }
+
+
 def _display_name(item: dict[str, Any], fallback: str) -> str:
     raw_name = item.get("name")
     if isinstance(raw_name, list):
@@ -144,6 +305,9 @@ def parse_homebrew_inventory(
     leaves_text: str,
     services_json: str,
     collected_at: datetime,
+    cellar_root: Path | None = None,
+    caskroom_root: Path | None = None,
+    project_roots: Sequence[Path] = (),
 ) -> HomebrewCollection:
     """Normalize captured Homebrew metadata without accessing the host."""
     limitations: list[str] = []
@@ -164,6 +328,12 @@ def parse_homebrew_inventory(
             service_statuses[name] = status
 
     formula_items = _objects(formulae_document, "formulae", limitations)
+    cask_items = _objects(casks_document, "casks", limitations)
+    item_names = [name for item in formula_items if (name := _text(item.get("name"))) is not None]
+    item_names.extend(
+        token for item in cask_items if (token := _text(item.get("token"))) is not None
+    )
+    project_reference_map = _project_references(item_names, project_roots, limitations)
     dependency_map: dict[str, tuple[str, ...]] = {}
     for item in formula_items:
         name = _text(item.get("name"))
@@ -182,6 +352,15 @@ def parse_homebrew_inventory(
             limitations.append("One Homebrew formula entry did not contain a name.")
             continue
         explicit = name in leaves
+        install_path, size_bytes, executables = _installation_details(
+            cellar_root,
+            name,
+            limitations,
+            formula=True,
+        )
+        linked = _text(item.get("linked_keg")) is not None if "linked_keg" in item else None
+        pinned_value = item.get("pinned")
+        pinned = pinned_value if isinstance(pinned_value, bool) else None
         records.append(
             SoftwareRecord(
                 id=stable_software_id(EntityType.HOMEBREW_FORMULA, name),
@@ -190,13 +369,20 @@ def parse_homebrew_inventory(
                 display_name=name,
                 identifier=name,
                 version=_installed_version(item),
+                install_path=install_path,
                 install_source="homebrew",
                 description=_text(item.get("desc")),
                 homepage=_text(item.get("homepage")),
+                size_bytes=size_bytes,
+                executables=executables,
                 install_role=InstallRole.EXPLICIT if explicit else InstallRole.DEPENDENCY,
                 dependencies=dependency_map.get(name, ()),
                 reverse_dependencies=tuple(sorted(reverse_map.get(name, []))),
                 service_status=service_statuses.get(name),
+                linked=linked,
+                pinned=pinned,
+                caveats=_text(item.get("caveats")),
+                project_references=project_reference_map.get(name, ()),
                 evidence=(
                     Evidence(
                         kind="homebrew_formula_metadata",
@@ -205,6 +391,9 @@ def parse_homebrew_inventory(
                             "explicit_leaf": explicit,
                             "service_status": service_statuses.get(name),
                             "version": _installed_version(item),
+                            "linked": linked,
+                            "pinned": pinned,
+                            "project_references": list(project_reference_map.get(name, ())),
                         },
                         source="brew info --json=v2 --installed; brew leaves",
                         collected_at=collected_at,
@@ -214,11 +403,19 @@ def parse_homebrew_inventory(
             )
         )
 
-    for item in _objects(casks_document, "casks", limitations):
+    for item in cask_items:
         token = _text(item.get("token"))
         if token is None:
             limitations.append("One Homebrew cask entry did not contain a token.")
             continue
+        install_path, size_bytes, _filesystem_executables = _installation_details(
+            caskroom_root,
+            token,
+            limitations,
+            formula=False,
+        )
+        pinned_value = item.get("pinned")
+        pinned = pinned_value if isinstance(pinned_value, bool) else None
         records.append(
             SoftwareRecord(
                 id=stable_software_id(EntityType.HOMEBREW_CASK, token),
@@ -227,16 +424,25 @@ def parse_homebrew_inventory(
                 display_name=_display_name(item, token),
                 identifier=token,
                 version=_installed_version(item),
+                install_path=install_path,
                 install_source="homebrew",
                 description=_text(item.get("desc")),
                 homepage=_text(item.get("homepage")),
+                size_bytes=size_bytes,
+                executables=_binary_artifacts(item),
                 install_role=InstallRole.EXPLICIT,
                 app_artifacts=_app_artifacts(item),
+                pinned=pinned,
+                caveats=_text(item.get("caveats")),
+                project_references=project_reference_map.get(token, ()),
                 evidence=(
                     Evidence(
                         kind="homebrew_cask_metadata",
                         value={
                             "app_artifacts": list(_app_artifacts(item)),
+                            "executables": list(_binary_artifacts(item)),
+                            "pinned": pinned,
+                            "project_references": list(project_reference_map.get(token, ())),
                             "version": _installed_version(item),
                         },
                         source="brew info --json=v2 --installed",
@@ -264,6 +470,7 @@ def collect_homebrew(
     *,
     collected_at: datetime,
     runner: HomebrewRunner = run_read_command,
+    project_roots: Sequence[Path] = (),
 ) -> HomebrewCollection:
     """Collect installed Homebrew items through fixed, read-only command arguments."""
     info = runner(ReadCommand.BREW, ("info", "--json=v2", "--installed"))
@@ -286,14 +493,51 @@ def collect_homebrew(
 
     leaves = runner(ReadCommand.BREW, ("leaves",))
     services = runner(ReadCommand.BREW, ("services", "list", "--json"))
+    prefix = runner(ReadCommand.BREW, ("--prefix",))
+    cellar = runner(ReadCommand.BREW, ("--cellar",))
+    caskroom = runner(ReadCommand.BREW, ("--caskroom",))
+    root_limitations: list[str] = []
+
+    def command_path(result: CommandResult, label: str) -> Path | None:
+        if result.state is not CommandState.COMPLETE:
+            return None
+        value = result.stdout.strip()
+        path = Path(value) if value else None
+        if path is None or not path.is_absolute():
+            root_limitations.append(f"The Homebrew {label} path metadata could not be read.")
+            return None
+        return path
+
+    prefix_path = command_path(prefix, "prefix")
+    cellar_path = command_path(cellar, "Cellar")
+    caskroom_path = command_path(caskroom, "Caskroom")
+    if prefix_path is not None:
+        if cellar_path is not None and not cellar_path.is_relative_to(prefix_path):
+            root_limitations.append("The Homebrew Cellar path is outside the reported prefix.")
+            cellar_path = None
+        if caskroom_path is not None and not caskroom_path.is_relative_to(prefix_path):
+            root_limitations.append("The Homebrew Caskroom path is outside the reported prefix.")
+            caskroom_path = None
+
     result = parse_homebrew_inventory(
         formulae_json=info.stdout,
         casks_json=info.stdout,
         leaves_text=leaves.stdout if leaves.state is CommandState.COMPLETE else "",
         services_json=services.stdout if services.state is CommandState.COMPLETE else "[]",
         collected_at=collected_at,
+        cellar_root=cellar_path,
+        caskroom_root=caskroom_path,
+        project_roots=project_roots,
     )
-    command_limitations = (*info.limitations, *leaves.limitations, *services.limitations)
+    command_limitations = (
+        *info.limitations,
+        *leaves.limitations,
+        *services.limitations,
+        *prefix.limitations,
+        *cellar.limitations,
+        *caskroom.limitations,
+        *root_limitations,
+    )
     if not command_limitations:
         return result
     return HomebrewCollection(

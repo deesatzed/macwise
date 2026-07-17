@@ -5,6 +5,9 @@
       "full_name": "postgresql@16",
       "desc": "Object-relational database system",
       "homepage": "https://www.postgresql.org/",
+      "linked_keg": "16.3",
+      "pinned": false,
+      "caveats": "A synthetic database caveat.",
       "installed": [
         {
           "version": "16.3",
@@ -22,6 +25,9 @@
       "full_name": "openssl@3",
       "desc": "Cryptography and SSL/TLS toolkit",
       "homepage": "https://openssl-library.org/",
+      "linked_keg": null,
+      "pinned": true,
+      "caveats": null,
       "installed": [
         {
           "version": "3.3.1",

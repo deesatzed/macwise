@@ -6,11 +6,16 @@
       "name": ["Example App"],
       "desc": "A safe synthetic desktop application",
       "homepage": "https://example.invalid/example-app",
+      "pinned": true,
+      "caveats": "A synthetic application caveat.",
       "version": "2.4.1",
       "installed": "2.4.1",
       "artifacts": [
         {
           "app": ["Example.app"]
+        },
+        {
+          "binary": ["example-cli"]
         }
       ]
     }

@@ -36,7 +36,12 @@ class ApplicationCollector(Protocol):
 
 
 class HomebrewCollector(Protocol):
-    def __call__(self, *, collected_at: datetime) -> HomebrewCollection: ...
+    def __call__(
+        self,
+        *,
+        collected_at: datetime,
+        project_roots: Sequence[Path],
+    ) -> HomebrewCollection: ...
 
 
 class StorageCollector(Protocol):
@@ -72,7 +77,12 @@ class AuditService:
     clock: Callable[[], datetime] = _utc_now
     audit_id_factory: Callable[[], str] = _new_audit_id
 
-    def run(self, application_roots: Sequence[Path]) -> AuditDocument:
+    def run(
+        self,
+        application_roots: Sequence[Path],
+        *,
+        project_roots: Sequence[Path] = (),
+    ) -> AuditDocument:
         """Collect one audit, continuing when an independent collector fails."""
         collected_at = self.clock()
         try:
@@ -99,7 +109,10 @@ class AuditService:
             )
 
         try:
-            homebrew = self.homebrew_collector(collected_at=collected_at)
+            homebrew = self.homebrew_collector(
+                collected_at=collected_at,
+                project_roots=project_roots,
+            )
         except Exception:
             homebrew = HomebrewCollection(
                 software=(),

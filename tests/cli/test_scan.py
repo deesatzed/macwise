@@ -14,9 +14,16 @@ class FakeAuditService:
     def __init__(self, audit: AuditDocument) -> None:
         self.audit = audit
         self.roots: tuple[Path, ...] | None = None
+        self.project_roots: tuple[Path, ...] | None = None
 
-    def run(self, application_roots: tuple[Path, ...]) -> AuditDocument:
+    def run(
+        self,
+        application_roots: tuple[Path, ...],
+        *,
+        project_roots: tuple[Path, ...] = (),
+    ) -> AuditDocument:
         self.roots = tuple(application_roots)
+        self.project_roots = tuple(project_roots)
         return self.audit
 
 
@@ -63,6 +70,27 @@ def test_scan_appends_only_explicit_deduplicated_application_roots(
         approved,
     )
     assert all(root != Path("/Volumes") for root in roots)
+
+
+def test_scan_passes_only_explicit_deduplicated_project_roots(
+    tmp_path: Path,
+    sample_audit: AuditDocument,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = FakeAuditService(sample_audit)
+    monkeypatch.setattr(cli, "_service_factory", lambda: service)
+    approved = tmp_path / "approved-project"
+
+    result = runner.invoke(
+        cli.app,
+        ["scan", "--project-root", str(approved), "--project-root", str(approved)],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    project_roots = service.project_roots
+    assert project_roots == (approved,)
+    assert project_roots is not None
+    assert Path.home() not in project_roots
 
 
 def test_scan_writes_only_to_an_explicit_new_output_file(
