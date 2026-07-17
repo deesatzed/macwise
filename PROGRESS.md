@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-17% complete – The second Phase 1 execution batch is implemented: MacWise inventories application bundles, Homebrew software, and storage volumes through read-only structured surfaces. It classifies internal/external paths, preserves unmounted/unavailable disk uncertainty, distinguishes explicit Homebrew leaves from dependencies, and has bounded real-Mac smoke evidence. Reporting, the complete CLI/help hierarchy, analysis, cleanup, Codex, and public release remain open.
+20% complete – MacWise now assembles the three Phase 1 collectors into one versioned audit and renders deterministic JSON and plain-language Markdown. Storage runs first for app-path classification; independent collector failures become explicit unavailable statuses without discarding other inventory. Reports separate verified inventory, collection limitations, and Phase 1 unknowns. The complete CLI/help hierarchy, later analysis, cleanup, Codex, and public release remain open.
 
 ## Current Assumptions
 
@@ -27,6 +27,7 @@
 | Build application inventory | Done | Codex | MW-004 verified test-first with synthetic bundles, malformed metadata, nested roots, and no-execution/symlink tests. |
 | Build Homebrew inventory | Done | Codex | MW-005 verified test-first with formula/cask/service fixtures and explicit/dependency safety classification. |
 | Build storage inventory | Done | Codex | MW-006 verified test-first with plist fixtures, partial/unavailable states, and guarded longest-mount path resolution. |
+| Build audit orchestration and reports | Done | Codex | MW-007 verified test-first; partial aggregation, stable ordering, JSON round trip, and honest Markdown unknowns. |
 | Complete Phases 2–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -39,9 +40,9 @@ Phase 1 read-only evidence foundation: versioned models and the bounded command 
 
 ## Next Actions
 
-1. Commit the verified MW-006 storage collector and Homebrew output-cap regression fix.
-2. Review the second execution batch at the checkpoint.
-3. Begin MW-007 audit orchestration and JSON/Markdown reporting in the next batch.
+1. Commit the verified MW-007 audit/report slice.
+2. Implement MW-008 command hierarchy, guided routing, scan formats, and help contract test-first.
+3. Add the Phase 1 public repository foundation and CI checks.
 4. Continue through the Phase 1 plan without collapsing later phases.
 
 ## Blockers
@@ -75,3 +76,5 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-17 real-smoke RED: installed Homebrew JSON reached the original 1 MB output cap, causing a zero-record partial result. Two regression tests failed before per-command output bounds and limitation propagation were implemented.
 - 2026-07-17 MW-006 GREEN: 5 storage tests and both output-cap regressions passed; the full suite reported 32 passed, Ruff passed, and Pyright reported 0 errors.
 - 2026-07-17 read-only host smoke: storage and Homebrew collectors completed against the current Mac without persisting inventory; the application collector returned records plus an explicit unavailable-root limitation rather than failing or guessing.
+- 2026-07-17 MW-007 RED: service/report tests failed collection because `macwise.services` and `macwise.reporting` did not exist.
+- 2026-07-17 MW-007 GREEN: 5 audit/report tests passed; the full suite reported 37 passed, Ruff passed, and Pyright reported 0 errors.
