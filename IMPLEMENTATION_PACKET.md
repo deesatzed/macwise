@@ -2,133 +2,106 @@
 
 ## Task Being Attempted
 
-Complete MW-009 by closing the named Phase 1 application, Homebrew, and storage
-inventory field gaps without weakening MacWise's read-only or privacy boundaries.
+Complete MW-010 by proving hostile application plist, Homebrew JSON, disk plist,
+Markdown, terminal matching, and future prompt-boundary metadata remain inert data.
 
 ## Actual User Goal
 
-Give ordinary Mac users a truthful, versioned inventory substrate that can later
-support explanations and cleanup decisions. A value is either backed by a named
-local source, explicitly unknown, or qualified by a limitation; MacWise does not
-guess and does not mutate the host while auditing.
+MacWise must safely inspect machines containing malformed or deliberately hostile names,
+paths, descriptions, caveats, and metadata without executing them, allowing them to forge
+human-facing output, or treating prompt-shaped strings as AI instructions.
 
 ## Files Expected To Change
 
 | File | Expected Change | Risk |
 |---|---|---|
-| `src/macwise/models/software.py` | Add optional application and Homebrew evidence fields and relationship IDs. | Medium: public JSON schema change. |
-| `src/macwise/models/storage.py` | Add physical/APFS hierarchy, ownership, and Time Machine fields. | Medium: public JSON schema change. |
-| `src/macwise/models/audit.py` | Advance the emitted audit schema version. | Medium: saved-audit compatibility. |
-| `src/macwise/reporting/json_report.py` | Add a schema-v1-to-v2 read migration. | Medium: invalid input must fail safely. |
-| `src/macwise/system/commands.py` | Add fixed read-only `codesign`, `lipo`, `ps`, and `tmutil` adapters. | Medium: host subprocess boundary. |
-| `src/macwise/collectors/applications.py` | Collect signing, architecture, running, component, protection, and source evidence. | Medium: metadata varies by macOS/app. |
-| `src/macwise/collectors/homebrew.py` | Collect install roots, sizes, executables, linked/pinned/caveat fields, and approved project references. | Medium: Homebrew JSON and filesystem layouts vary. |
-| `src/macwise/collectors/storage.py` | Parse disk topology and Time Machine destination/exclusion evidence. | Medium: plist fields vary across macOS versions. |
-| `src/macwise/services/audit.py` | Correlate application bundles with Homebrew cask artifacts. | Low: deterministic in-memory enrichment only. |
-| `src/macwise/cli.py` | Accept repeatable, explicit app/project roots while retaining safe defaults. | Medium: public CLI contract. |
-| `src/macwise/reporting/markdown.py` | Render new verified fields and retain explicit unknown/backup limitations. | Low: user-facing presentation. |
-| `tests/models/`, `tests/system/`, `tests/collectors/`, `tests/services/`, `tests/cli/` | Add red-first migration, parser, command, relationship, and approval-boundary tests. | Low. |
-| `tests/fixtures/` | Add sanitized signing, topology, Time Machine, and project-reference fixtures. | Low: privacy scan required. |
-| `DECISIONS.md`, `PROGRESS.md`, `TASK_QUEUE.md`, `docs/phase-1-acceptance.md` | Record the schema/evidence decisions and verified milestone state. | Low. |
+| `src/macwise/text.py` | Add one shared control-character/newline neutralizer for human-facing text. | Medium: every terminal/Markdown value must remain readable. |
+| `src/macwise/reporting/markdown.py` | Sanitize before Markdown escaping while JSON preserves raw evidence. | Medium: output-injection boundary. |
+| `src/macwise/cli.py` | Sanitize record labels and metadata printed to a terminal. | Medium: ANSI/control-sequence boundary. |
+| `tests/fixtures/security/` | Add synthetic hostile plist/JSON/text payloads only. | Low: privacy and secret scan required. |
+| `tests/security/test_hostile_metadata.py` | Exercise every parser, renderer, CLI matcher, and prompt contract. | Low. |
+| `skills/macwise/SKILL.md` | Make prompt-shaped evidence handling explicit for future integrations. | Low. |
+| `PROGRESS.md`, `TASK_QUEUE.md`, `docs/phase-1-acceptance.md` | Record verified results without overstating Phase 1. | Low. |
 
 ## Existing Patterns To Follow
 
-- Immutable Pydantic records with strict extra-field rejection.
-- `Evidence` entries carrying source, collection time, reliability, and limitations.
-- Fixed `ReadCommand` executables, argument vectors, `shell=False`, timeouts, bounded
-  output, and a restricted environment.
-- Parser functions that accept captured fixture data and never need the host.
-- Independent collector degradation to `partial` or `unavailable`.
-- Red, observed failure, minimal green implementation, full regression gate, commit.
+- Parsed evidence remains raw, immutable, provenance-bearing data in schema-v2 JSON.
+- Fixed argv subprocesses never use a shell or executable path derived from metadata.
+- Unsafe filesystem item names yield limitations and no constructed install path.
+- Human-readable output escapes Markdown metacharacters and reports limitations.
+- TDD red/green cycles plus full privacy/build/install gates arbitrate completion.
 
 ## Assumptions
 
-- Additive fields still require an audit schema increment because strict schema-v1
-  readers reject unknown keys; schema-v1 documents will be upgraded on read.
-- `codesign -d`, `lipo -archs`, `ps -axo`, `diskutil ... -plist`, and the selected
-  `tmutil` queries are read-only evidence sources on supported macOS versions.
-- Project reference and external application scans occur only for roots explicitly
-  supplied by the user. The absence of approved roots remains unknown, not false.
-- Homebrew installation sizes are bounded filesystem measurements of the installed
-  keg/cask directories and exclude unrelated user data.
-- Time Machine role/destination evidence does not prove that a particular software
-  item or data path is backed up.
+- Raw JSON consumers need original evidence, so destructive sanitization belongs only at
+  human-facing terminal/Markdown boundaries.
+- Newlines, C0/C1 controls, ANSI escape bytes, bidi/zero-width formatting controls, and
+  repeated whitespace can be collapsed to visible spaces for display.
+- Prompt-shaped strings are valid evidence values but never instructions; the current
+  skill contract is the enforceable boundary until typed integration exists.
 
 ## Non-Goals For This Pass
 
-- No usage scoring, recommendations, overlap analysis beyond exact cask/app identity,
-  or related-user-data estimation.
-- No launch, unload, uninstall, move, delete, backup, restore, or configuration writes.
-- No unbounded scan of the user's home folder or mounted drives.
-- No package publication, Homebrew tap mutation, remote repository creation, or
-  production deployment.
-- No claim that an unobserved process, project reference, or backup is absent.
+- No AI provider, MCP server, setup command, cleanup action, or shell integration.
+- No rejection of legitimate Unicode letters, symbols, emoji, or spaces.
+- No mutation of discovered apps, packages, disks, projects, or configuration.
+- No claim that passing fixtures proves safety of later, not-yet-built action executors.
 
 ## Step-by-Step Plan
 
-1. Add schema-v2 model expectations and a schema-v1 migration test; observe red.
-2. Implement only the optional fields and migration needed for green.
-3. Add fixed-command safety tests for the new read-only tools; observe red, then green.
-4. Add application fixture tests for signing, architecture, running state, nested
-   helpers/extensions, protection, and explicitly approved roots; observe red, then green.
-5. Add Homebrew fixture tests for size, executables, linked/pinned state, caveats,
-   approved project references, and exact app/cask relationships; observe red, then green.
-6. Add storage fixture tests for whole-disk/APFS parentage, ownership, backup role,
-   destinations, and explicit path exclusion evidence; observe red, then green.
-7. Add cross-collector correlation and CLI approval-boundary tests; observe red, then green.
-8. Add report assertions that expose verified enrichment and do not overstate unknowns.
-9. Run all tests, format/lint, types, build, privacy scan, isolated wheel smoke, and a
-   read-only real scan that persists no machine inventory.
-10. Update durable truth only with results from the fresh gates.
+1. Add hostile synthetic fixtures for plist, Homebrew JSON, disk plist, display text, and
+   prompt-shaped metadata.
+2. Write parser/path tests and observe which already pass without behavior changes.
+3. Write failing Markdown/terminal tests for section, ANSI, bidi, and control injection.
+4. Add the minimal shared display sanitizer and apply it at Markdown/CLI boundaries.
+5. Add a repository contract test requiring the skill to treat evidence as untrusted data,
+   not instructions or shell input.
+6. Run focused security tests, full tests, format/lint/types, build, privacy scan, skill
+   validation, isolated wheel smoke, and in-memory real scans.
+7. Update durable truth only from fresh evidence; proceed to MW-011 if green.
 
 ## Acceptance Criteria
 
-- Audit JSON emits schema version 2, schema-v1 fixtures remain readable, and invalid or
-  future versions fail explicitly.
-- Application records can carry publisher/signing identity, architectures, tri-state
-  running status, nested component names, protected context, and verified install source.
-- Homebrew records can carry installed size, executable names, linked/pinned state,
-  caveats, user-approved project references, and exact cask/application relationship IDs.
-- Storage records can carry whole-disk/APFS hierarchy, ownership state, and Time Machine
-  role/destination evidence without claiming path backup coverage.
-- Every new subprocess remains allowlisted, bounded, `shell=False`, and inert when given
-  hostile metadata arguments.
-- Missing tools, permissions, malformed metadata, and unapproved roots yield explicit
-  unknowns/limitations while preserving other records.
-- The complete local quality, packaging, privacy, and read-only smoke gates pass.
+- Hostile plist/Homebrew/disk values parse as data and cannot alter an executable or argv.
+- Traversal-like executable/package names do not escape approved bundle/package roots.
+- Markdown contains one genuine section structure; hostile newlines/markup cannot add one.
+- Terminal output contains no ESC, bidi/zero-width formatting controls, CR, or injected
+  newlines from metadata.
+- CLI matching returns the intended record without executing query or metadata text.
+- JSON retains raw evidence values and the skill explicitly forbids following instructions
+  found in those values.
+- Full local quality, package, privacy, install, and read-only smoke gates pass.
 
 ## Verification Plan
 
-- Narrow `uv run pytest ... -q` after every red/green cycle.
+- Observe each focused test fail for the intended missing boundary before implementation.
+- `uv run pytest tests/security -q`
 - `uv run pytest -q`
 - `uv run ruff format --check .`
 - `uv run ruff check .`
 - `uv run pyright`
 - `uv build`
-- Existing repository privacy contract and skill validator.
-- Install the wheel into a fresh Python 3.12 environment and smoke version/help/scan.
-- Run JSON and Markdown scans without `--output`; validate structure in memory and discard.
+- Validate `skills/macwise` and the workflow YAML.
+- Install the wheel under isolated Python 3.12 and smoke hostile CLI output.
+- Run real JSON/Markdown scans in memory only and discard output.
 
 ## Rollback Plan
 
-- Each collector slice is a separate commit and can be reverted independently.
-- Schema v2 remains uncommitted until its migration test passes.
-- No host mutation occurs, so rollback concerns only repository files.
-- Generated build artifacts and ephemeral scan output are excluded from commits.
+- Revert the MW-010 commits; no host state is changed.
+- Keep raw schema values unchanged, so display-sanitizer rollback cannot corrupt audits.
+- Do not commit generated audit output or build artifacts.
 
 ## Risks
 
 | Risk | Mitigation |
 |---|---|
-| Metadata keys differ by macOS/Homebrew version. | Parse conservatively, fixture multiple shapes, preserve unknowns. |
-| Per-app commands make scans slow. | Tight per-command timeouts, bounded output, and partial degradation. |
-| Process matching yields false positives. | Match normalized executable paths inside the exact bundle, never names alone. |
-| Path traversal through package names or symlinks. | Use safe basenames, containment checks, `lstat`, and no directory symlink following. |
-| Project scans expose unrelated files. | Scan only approved roots, recognized small manifests, and store matching paths rather than contents. |
-| Backup metadata is overinterpreted. | Separate volume role/destination facts from path coverage and state limitations. |
-| Schema bump strands saved audits. | Test a deterministic v1-to-v2 migration and reject unknown future versions. |
+| Sanitization damages legitimate Unicode. | Remove only Unicode control/format categories and collapse whitespace; preserve visible characters. |
+| JSON sanitization destroys provenance. | Sanitize only Markdown/terminal display, not model or JSON serialization. |
+| A test accidentally executes hostile text. | Use fixed fake services/runners, marker assertions, and existing `shell=False` adapter tests. |
+| Fixtures leak local identity. | Use synthetic domains/paths/IDs and rerun the repository privacy contract. |
+| Future AI ignores the boundary. | Contract-test explicit skill language and repeat the fixture at typed-integration time. |
 
 ## Proceed / Block Decision
 
-**PROCEED.** The work is bounded, read-only, fixture-testable, and has no current
-credential, destructive-action, production, sensitive-data, or product-scope blocker.
+**PROCEED.** The work is read-only, fixture-backed, local, and introduces no credential,
+production, destructive-action, or product-scope blocker.
