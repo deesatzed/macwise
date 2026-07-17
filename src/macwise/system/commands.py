@@ -71,6 +71,12 @@ COMMAND_CANDIDATES: Mapping[ReadCommand, tuple[str, ...]] = {
     ReadCommand.MDLS: ("/usr/bin/mdls",),
 }
 
+DEFAULT_OUTPUT_LIMITS: Mapping[ReadCommand, int] = {
+    ReadCommand.BREW: 16 * 1024 * 1024,
+    ReadCommand.DISKUTIL: 1_000_000,
+    ReadCommand.MDLS: 1_000_000,
+}
+
 
 def resolve_executable(command: ReadCommand) -> str | None:
     """Find an executable only among the fixed paths for an allowlisted command."""
@@ -123,7 +129,7 @@ def run_read_command(
     arguments: Sequence[str] = (),
     *,
     timeout: float = 10.0,
-    max_output_bytes: int = 1_000_000,
+    max_output_bytes: int | None = None,
     source_environment: Mapping[str, str] | None = None,
     runner: ProcessRunner = _default_runner,
     resolver: ExecutableResolver = resolve_executable,
@@ -133,7 +139,7 @@ def run_read_command(
         raise ValueError("command must be an allowlisted ReadCommand")
     if timeout <= 0:
         raise ValueError("timeout must be greater than zero")
-    if max_output_bytes <= 0:
+    if max_output_bytes is not None and max_output_bytes <= 0:
         raise ValueError("max_output_bytes must be greater than zero")
     if any(
         not isinstance(argument, str)  # pyright: ignore[reportUnnecessaryIsInstance]
@@ -154,6 +160,7 @@ def run_read_command(
             limitations=(f"The {command.value} read-only command is not available.",),
         )
 
+    output_limit = max_output_bytes or DEFAULT_OUTPUT_LIMITS[command]
     invocation = (executable, *arguments)
     environment = _safe_environment(
         source_environment if source_environment is not None else os.environ
@@ -169,13 +176,11 @@ def run_read_command(
             env=environment,
         )
     except subprocess.TimeoutExpired as error:
-        stdout, stdout_truncated = _bounded_text(error.stdout, max_output_bytes)
-        stderr, stderr_truncated = _bounded_text(error.stderr, max_output_bytes)
+        stdout, stdout_truncated = _bounded_text(error.stdout, output_limit)
+        stderr, stderr_truncated = _bounded_text(error.stderr, output_limit)
         limitations = [f"The {command.value} command timed out after {timeout:g} seconds."]
         if stdout_truncated or stderr_truncated:
-            limitations.append(
-                f"Command output was truncated to {max_output_bytes} bytes per stream."
-            )
+            limitations.append(f"Command output was truncated to {output_limit} bytes per stream.")
         return CommandResult(
             command=command,
             state=CommandState.TIMED_OUT,
@@ -206,8 +211,8 @@ def run_read_command(
             limitations=(f"The {command.value} command could not run: {error.strerror or error}.",),
         )
 
-    stdout, stdout_truncated = _bounded_text(completed.stdout, max_output_bytes)
-    stderr, stderr_truncated = _bounded_text(completed.stderr, max_output_bytes)
+    stdout, stdout_truncated = _bounded_text(completed.stdout, output_limit)
+    stderr, stderr_truncated = _bounded_text(completed.stderr, output_limit)
     limitations: list[str] = []
     state = CommandState.COMPLETE
     if completed.returncode != 0:
@@ -216,7 +221,7 @@ def run_read_command(
             f"The {command.value} command exited with status {completed.returncode}."
         )
     if stdout_truncated or stderr_truncated:
-        limitations.append(f"Command output was truncated to {max_output_bytes} bytes per stream.")
+        limitations.append(f"Command output was truncated to {output_limit} bytes per stream.")
 
     return CommandResult(
         command=command,

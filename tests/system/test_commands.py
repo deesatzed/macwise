@@ -165,6 +165,32 @@ def test_output_is_truncated_at_the_configured_byte_limit() -> None:
     assert result.limitations == ("Command output was truncated to 4 bytes per stream.",)
 
 
+def test_homebrew_has_a_larger_but_still_bounded_default_output_limit() -> None:
+    payload = b"x" * 1_100_000
+
+    def brew_runner(
+        args: Sequence[str],
+        *,
+        shell: bool,
+        check: bool,
+        capture_output: bool,
+        timeout: float,
+        env: Mapping[str, str],
+    ) -> CompletedProcess[bytes]:
+        del shell, check, capture_output, timeout, env
+        return CompletedProcess(args, 0, stdout=payload, stderr=b"")
+
+    result = run_read_command(
+        ReadCommand.BREW,
+        ("info", "--json=v2", "--installed"),
+        runner=brew_runner,
+        resolver=lambda _command: "/opt/homebrew/bin/brew",
+    )
+
+    assert len(result.stdout.encode()) == len(payload)
+    assert result.limitations == ()
+
+
 def test_raw_program_names_and_invalid_bounds_are_rejected() -> None:
     with pytest.raises(ValueError, match="allowlisted ReadCommand"):
         run_read_command("rm", resolver=lambda _command: "/bin/rm")  # type: ignore[arg-type]

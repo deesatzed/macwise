@@ -47,6 +47,7 @@ def test_versioned_audit_round_trips_without_losing_provenance() -> None:
     volume = VolumeRecord(
         id="volume:internal",
         name="Macintosh HD",
+        device_identifier="disk1s1",
         mount_point="/",
         location=StorageLocation.INTERNAL,
         capacity_bytes=1_000_000,

@@ -293,7 +293,7 @@ def collect_homebrew(
         services_json=services.stdout if services.state is CommandState.COMPLETE else "[]",
         collected_at=collected_at,
     )
-    command_limitations = (*leaves.limitations, *services.limitations)
+    command_limitations = (*info.limitations, *leaves.limitations, *services.limitations)
     if not command_limitations:
         return result
     return HomebrewCollection(

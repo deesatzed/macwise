@@ -128,3 +128,30 @@ def test_unavailable_homebrew_returns_an_explicit_unavailable_status() -> None:
     assert result.software == ()
     assert result.status.state is CollectorState.UNAVAILABLE
     assert result.status.limitations == ("The brew read-only command is not available.",)
+
+
+def test_info_output_limitation_marks_an_otherwise_parseable_inventory_partial() -> None:
+    def limited(command: ReadCommand, arguments: Sequence[str] = ()) -> CommandResult:
+        if arguments == ("info", "--json=v2", "--installed"):
+            stdout = fixture_text("formulae.json")
+            limitations = ("Command output was truncated.",)
+        elif arguments == ("leaves",):
+            stdout = fixture_text("leaves.txt")
+            limitations = ()
+        else:
+            stdout = fixture_text("services.json")
+            limitations = ()
+        return CommandResult(
+            command=command,
+            state=CommandState.COMPLETE,
+            stdout=stdout,
+            stderr="",
+            return_code=0,
+            duration_seconds=0.01,
+            limitations=limitations,
+        )
+
+    result = collect_homebrew(collected_at=COLLECTED_AT, runner=limited)
+
+    assert result.status.state is CollectorState.PARTIAL
+    assert "Command output was truncated." in result.status.limitations

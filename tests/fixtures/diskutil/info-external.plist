@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>DeviceIdentifier</key><string>disk2s1</string>
+  <key>VolumeName</key><string>Archive</string>
+  <key>MountPoint</key><string>/Volumes/Archive</string>
+  <key>FilesystemName</key><string>APFS</string>
+  <key>TotalSize</key><integer>2000000</integer>
+  <key>FreeSpace</key><integer>1500000</integer>
+  <key>Internal</key><false/>
+  <key>RemovableMedia</key><true/>
+  <key>ReadOnlyMedia</key><false/>
+  <key>ReadOnlyVolume</key><false/>
+  <key>Encrypted</key><false/>
+  <key>BusProtocol</key><string>USB</string>
+  <key>SMARTStatus</key><string>Verified</string>
+</dict>
+</plist>

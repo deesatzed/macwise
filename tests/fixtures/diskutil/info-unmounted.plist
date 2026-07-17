@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>DeviceIdentifier</key><string>disk2s2</string>
+  <key>VolumeName</key><string>Offline</string>
+  <key>FilesystemName</key><string>ExFAT</string>
+  <key>TotalSize</key><integer>500000</integer>
+  <key>Internal</key><false/>
+  <key>RemovableMedia</key><true/>
+  <key>ReadOnlyMedia</key><false/>
+  <key>BusProtocol</key><string>USB</string>
+</dict>
+</plist>
