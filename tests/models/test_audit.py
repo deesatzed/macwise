@@ -69,9 +69,62 @@ def test_versioned_audit_round_trips_without_losing_provenance() -> None:
 
     restored = AuditDocument.model_validate_json(audit.model_dump_json())
 
-    assert audit.schema_version == 1
+    assert audit.schema_version == 2
     assert restored == audit
     assert restored.software[0].evidence[0].source == "Info.plist"
+
+
+def test_expanded_inventory_fields_preserve_unknowns_and_typed_evidence() -> None:
+    software = SoftwareRecord(
+        id=stable_software_id(EntityType.APPLICATION, "org.example.SafeApp"),
+        entity_type=EntityType.APPLICATION,
+        name="SafeApp",
+        display_name="Safe App",
+        publisher="Example Developer ID",
+        signing_identity="Developer ID Application: Example (TEAM123456)",
+        team_identifier="TEAM123456",
+        architectures=("arm64", "x86_64"),
+        running=True,
+        components=("Contents/PlugIns/Share.appex",),
+        executables=("safe-tool",),
+        linked=True,
+        pinned=False,
+        caveats="Synthetic caveat.",
+        project_references=("sample/pyproject.toml",),
+        related_software_ids=("homebrew_cask:related",),
+    )
+    volume = VolumeRecord(
+        id="volume:internal",
+        name="System",
+        device_identifier="disk1s1",
+        parent_device_identifier="disk0",
+        whole_disk=False,
+        content="Apple_APFS",
+        apfs_container_identifier="disk1",
+        physical_store_identifiers=("disk0s2",),
+        ownership_enabled=True,
+        time_machine_role="Backup",
+        time_machine_destination=True,
+        time_machine_excluded=False,
+    )
+
+    assert software.architectures == ("arm64", "x86_64")
+    assert software.running is True
+    assert software.project_references == ("sample/pyproject.toml",)
+    assert volume.parent_device_identifier == "disk0"
+    assert volume.physical_store_identifiers == ("disk0s2",)
+    assert volume.time_machine_destination is True
+
+    unknown = SoftwareRecord(
+        id=stable_software_id(EntityType.APPLICATION, "org.example.Unknown"),
+        entity_type=EntityType.APPLICATION,
+        name="Unknown",
+        display_name="Unknown",
+    )
+    assert unknown.publisher is None
+    assert unknown.running is None
+    assert unknown.architectures == ()
+    assert unknown.project_references == ()
 
 
 def test_partial_collector_records_limitations_without_negative_claims() -> None:

@@ -24,6 +24,11 @@ class VolumeRecord(BaseModel):
     id: str = Field(min_length=1)
     name: str = Field(min_length=1)
     device_identifier: str = Field(min_length=1)
+    parent_device_identifier: str | None = None
+    whole_disk: bool | None = None
+    content: str | None = None
+    apfs_container_identifier: str | None = None
+    physical_store_identifiers: tuple[str, ...] = ()
     mount_point: str | None = None
     location: StorageLocation = StorageLocation.UNKNOWN
     filesystem: str | None = None
@@ -34,6 +39,10 @@ class VolumeRecord(BaseModel):
     removable: bool | None = None
     protocol: str | None = None
     smart_status: str | None = None
+    ownership_enabled: bool | None = None
+    time_machine_role: str | None = None
+    time_machine_destination: bool | None = None
+    time_machine_excluded: bool | None = None
     evidence: tuple[Evidence, ...] = ()
 
 

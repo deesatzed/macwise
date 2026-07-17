@@ -1,4 +1,7 @@
+import json
 from datetime import UTC, datetime
+
+import pytest
 
 from macwise.models import (
     AuditDocument,
@@ -11,7 +14,7 @@ from macwise.models import (
     VolumeRecord,
     stable_software_id,
 )
-from macwise.reporting import render_json, render_markdown
+from macwise.reporting import parse_json, render_json, render_markdown
 
 COLLECTED_AT = datetime(2026, 7, 17, 17, 0, tzinfo=UTC)
 
@@ -77,8 +80,53 @@ def test_json_report_is_deterministic_versioned_and_round_trips() -> None:
 
     assert first == second
     assert first.endswith("\n")
-    assert '"schema_version": 1' in first
+    assert '"schema_version": 2' in first
     assert restored == audit
+
+
+def test_schema_one_json_is_migrated_and_future_versions_are_rejected() -> None:
+    legacy = sample_audit().model_dump(mode="json")
+    legacy["schema_version"] = 1
+    for record in legacy["software"]:
+        for field in (
+            "publisher",
+            "signing_identity",
+            "team_identifier",
+            "architectures",
+            "running",
+            "components",
+            "executables",
+            "linked",
+            "pinned",
+            "caveats",
+            "project_references",
+            "related_software_ids",
+        ):
+            record.pop(field, None)
+    for volume in legacy["volumes"]:
+        for field in (
+            "parent_device_identifier",
+            "whole_disk",
+            "content",
+            "apfs_container_identifier",
+            "physical_store_identifiers",
+            "ownership_enabled",
+            "time_machine_role",
+            "time_machine_destination",
+            "time_machine_excluded",
+        ):
+            volume.pop(field, None)
+
+    migrated = parse_json(json.dumps(legacy))
+
+    assert migrated.schema_version == 2
+    assert migrated.software[0].publisher is None
+    assert migrated.software[0].architectures == ()
+    assert migrated.volumes[0].parent_device_identifier is None
+
+    legacy["schema_version"] = 3
+    with pytest.raises(ValueError, match="Unsupported audit schema version 3"):
+        parse_json(json.dumps(legacy))
 
 
 def test_markdown_separates_verified_inventory_limitations_and_unknowns() -> None:

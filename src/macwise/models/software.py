@@ -45,15 +45,27 @@ class SoftwareRecord(BaseModel):
     version: str | None = None
     install_path: str | None = None
     install_source: str | None = None
+    publisher: str | None = None
+    signing_identity: str | None = None
+    team_identifier: str | None = None
     description: str | None = None
     homepage: str | None = None
     size_bytes: int | None = Field(default=None, ge=0)
+    architectures: tuple[str, ...] = ()
+    running: bool | None = None
+    components: tuple[str, ...] = ()
+    executables: tuple[str, ...] = ()
     storage_location: StorageLocation = StorageLocation.UNKNOWN
     install_role: InstallRole = InstallRole.UNKNOWN
     dependencies: tuple[str, ...] = ()
     reverse_dependencies: tuple[str, ...] = ()
     service_status: str | None = None
     app_artifacts: tuple[str, ...] = ()
+    linked: bool | None = None
+    pinned: bool | None = None
+    caveats: str | None = None
+    project_references: tuple[str, ...] = ()
+    related_software_ids: tuple[str, ...] = ()
     protected: bool = False
     evidence: tuple[Evidence, ...] = ()
 

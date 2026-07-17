@@ -34,7 +34,7 @@ class AuditDocument(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal[1] = 1
+    schema_version: Literal[2] = 2
     audit_id: str = Field(min_length=1)
     collected_at: AwareDatetime
     software: tuple[SoftwareRecord, ...] = ()
