@@ -10,10 +10,13 @@ from uuid import uuid4
 from macwise.collectors import (
     ApplicationCollection,
     HomebrewCollection,
+    StartupCollection,
+    StartupRoot,
     StorageCollection,
     UsageCollection,
     collect_homebrew,
     collect_host_applications,
+    collect_startup,
     collect_storage,
     collect_usage,
     resolve_storage_location,
@@ -27,6 +30,7 @@ from macwise.models import (
     Evidence,
     Reliability,
     SoftwareRecord,
+    StartupKind,
     StorageLocation,
 )
 
@@ -63,6 +67,16 @@ class UsageCollector(Protocol):
         collected_at: datetime,
         storage_resolver: StorageResolver,
     ) -> UsageCollection: ...
+
+
+class StartupCollector(Protocol):
+    def __call__(
+        self,
+        software: Sequence[SoftwareRecord],
+        *,
+        roots: Sequence[StartupRoot],
+        collected_at: datetime,
+    ) -> StartupCollection: ...
 
 
 def _utc_now() -> datetime:
@@ -158,6 +172,7 @@ class AuditService:
     application_collector: ApplicationCollector = collect_host_applications
     homebrew_collector: HomebrewCollector = collect_homebrew
     storage_collector: StorageCollector = collect_storage
+    startup_collector: StartupCollector = collect_startup
     usage_collector: UsageCollector = collect_usage
     clock: Callable[[], datetime] = _utc_now
     audit_id_factory: Callable[[], str] = _new_audit_id
@@ -168,6 +183,7 @@ class AuditService:
         *,
         project_roots: Sequence[Path] = (),
         home_library: Path | None = None,
+        startup_roots: Sequence[StartupRoot] | None = None,
     ) -> AuditDocument:
         """Collect one audit, continuing when an independent collector fails."""
         collected_at = self.clock()
@@ -220,6 +236,27 @@ class AuditService:
             (*applications.software, *homebrew_software),
             collected_at=collected_at,
         )
+        configured_startup_roots = (
+            tuple(startup_roots)
+            if startup_roots is not None
+            else (
+                StartupRoot(StartupKind.LAUNCH_AGENT, Path.home() / "Library/LaunchAgents"),
+                StartupRoot(StartupKind.LAUNCH_AGENT, Path("/Library/LaunchAgents")),
+                StartupRoot(StartupKind.LAUNCH_DAEMON, Path("/Library/LaunchDaemons")),
+            )
+        )
+        try:
+            startup = self.startup_collector(
+                correlated_software,
+                roots=configured_startup_roots,
+                collected_at=collected_at,
+            )
+        except Exception:
+            startup = StartupCollection(
+                startup=(),
+                status=_failed_status("startup", collected_at),
+            )
+
         try:
             usage = self.usage_collector(
                 correlated_software,
@@ -252,7 +289,13 @@ class AuditService:
             ),
         )
         collectors = sorted(
-            (applications.status, homebrew.status, storage.status, usage.status),
+            (
+                applications.status,
+                homebrew.status,
+                startup.status,
+                storage.status,
+                usage.status,
+            ),
             key=lambda status: status.collector,
         )
         volumes = sorted(storage.volumes, key=lambda volume: volume.device_identifier)
@@ -262,5 +305,6 @@ class AuditService:
             software=tuple(software),
             volumes=tuple(volumes),
             collectors=tuple(collectors),
+            startup=startup.startup,
             path_evidence=usage.path_evidence,
         )

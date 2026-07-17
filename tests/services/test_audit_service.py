@@ -5,6 +5,8 @@ from pathlib import Path
 from macwise.collectors import (
     ApplicationCollection,
     HomebrewCollection,
+    StartupCollection,
+    StartupRoot,
     StorageCollection,
     UsageCollection,
     UsageSignal,
@@ -17,6 +19,8 @@ from macwise.models import (
     Evidence,
     Reliability,
     SoftwareRecord,
+    StartupKind,
+    StartupRecord,
     StorageLocation,
     VolumeRecord,
     stable_software_id,
@@ -49,6 +53,24 @@ def empty_usage_collector(
         path_evidence=(),
         status=CollectorStatus(
             collector="usage",
+            state=CollectorState.COMPLETE,
+            collected_at=collected_at,
+            records_count=0,
+        ),
+    )
+
+
+def empty_startup_collector(
+    software: Sequence[SoftwareRecord],
+    *,
+    roots: Sequence[StartupRoot],
+    collected_at: datetime,
+) -> StartupCollection:
+    del software, roots
+    return StartupCollection(
+        startup=(),
+        status=CollectorStatus(
+            collector="startup",
             state=CollectorState.COMPLETE,
             collected_at=collected_at,
             records_count=0,
@@ -149,10 +171,36 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
             status=status("usage", CollectorState.COMPLETE, 1),
         )
 
+    def startup_collector(
+        software: Sequence[SoftwareRecord],
+        *,
+        roots: Sequence[StartupRoot],
+        collected_at: datetime,
+    ) -> StartupCollection:
+        assert collected_at == COLLECTED_AT
+        assert tuple(roots) == (StartupRoot(StartupKind.LAUNCH_AGENT, Path("/LaunchAgents")),)
+        calls.append("startup")
+        formula = next(
+            record for record in software if record.entity_type is EntityType.HOMEBREW_FORMULA
+        )
+        return StartupCollection(
+            startup=(
+                StartupRecord(
+                    id="startup:alpha",
+                    label="alpha",
+                    kind=StartupKind.HOMEBREW_SERVICE,
+                    owner_software_ids=(formula.id,),
+                    running=True,
+                ),
+            ),
+            status=status("startup", CollectorState.COMPLETE, 1),
+        )
+
     audit = AuditService(
         application_collector=application_collector,
         homebrew_collector=homebrew_collector,
         storage_collector=storage_collector,
+        startup_collector=startup_collector,
         usage_collector=usage_collector,
         clock=lambda: COLLECTED_AT,
         audit_id_factory=lambda: "audit:test",
@@ -160,9 +208,10 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
         (Path("/Applications"),),
         project_roots=(Path("/Projects/Approved"),),
         home_library=Path("/Users/example/Library"),
+        startup_roots=(StartupRoot(StartupKind.LAUNCH_AGENT, Path("/LaunchAgents")),),
     )
 
-    assert calls == ["storage", "applications", "homebrew", "usage"]
+    assert calls == ["storage", "applications", "homebrew", "startup", "usage"]
     assert audit.audit_id == "audit:test"
     assert audit.schema_version == 3
     assert [record.entity_type for record in audit.software] == [
@@ -176,9 +225,11 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
     assert [collector.collector for collector in audit.collectors] == [
         "applications",
         "homebrew",
+        "startup",
         "storage",
         "usage",
     ]
+    assert audit.startup[0].owner_software_ids == (formula.id,)
     app_record = next(
         record for record in audit.software if record.entity_type is EntityType.APPLICATION
     )
@@ -228,6 +279,7 @@ def test_unexpected_collector_failure_does_not_discard_other_inventory() -> None
         application_collector=application_collector,
         homebrew_collector=broken_homebrew,
         storage_collector=storage_collector,
+        startup_collector=empty_startup_collector,
         usage_collector=empty_usage_collector,
         clock=lambda: COLLECTED_AT,
         audit_id_factory=lambda: "audit:partial",
@@ -348,6 +400,7 @@ def _relationship_audit(
         application_collector=application_collector,
         homebrew_collector=homebrew_collector,
         storage_collector=storage_collector,
+        startup_collector=empty_startup_collector,
         usage_collector=empty_usage_collector,
         clock=lambda: COLLECTED_AT,
         audit_id_factory=lambda: "audit:relationship",
