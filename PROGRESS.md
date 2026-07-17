@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-25% complete – The Phase 1 CLI surface is now implemented: guided interactive and non-interactive entry, the complete required root/nested hierarchy, real terminal/JSON/Markdown scans, explicit output-file safeguards, basic verified explain/review/storage/startup views, and contract-tested help for every command. Later-phase overlap, usage, backup, planning, apply/undo, and Codex commands exist only as honest read-only messages or safe refusals. Public documentation/CI and the Phase 1 acceptance audit remain before Phase 2.
+30% complete – MacWise now has a locally verified public-repository foundation, valid initial read-only Codex skill, CI definition, isolated wheel install proof, and real read-only scan proof in addition to the guided CLI and core collectors. The requirement-level Phase 1 audit is intentionally PARTIAL: application, Homebrew, and drive collectors still lack named fields from `GOAL.md`; public pipx/Homebrew installation and hosted CI are also unproven. Those gaps remain open before Phase 1 can be accepted.
 
 ## Current Assumptions
 
@@ -29,6 +29,8 @@
 | Build storage inventory | Done | Codex | MW-006 verified test-first with plist fixtures, partial/unavailable states, and guarded longest-mount path resolution. |
 | Build audit orchestration and reports | Done | Codex | MW-007 verified test-first; partial aggregation, stable ordering, JSON round trip, and honest Markdown unknowns. |
 | Complete Phase 1 CLI hierarchy and help | Done | Codex | MW-008 verified test-first across 24 root/nested help surfaces, guided routing, formats, output safeguards, and refusal paths. |
+| Build public repository foundation | Done | Codex | README/license/security/contribution/changelog/privacy/threat-model docs, valid initial skill, and commit-pinned CI added; local contract passes. |
+| Audit Phase 1 against `GOAL.md` | Done | Codex | `docs/phase-1-acceptance.md` verdict is PARTIAL with direct evidence and explicit collector/release gaps. |
 | Complete Phases 2–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -41,10 +43,10 @@ Phase 1 read-only evidence foundation: versioned models and the bounded command 
 
 ## Next Actions
 
-1. Commit the verified MW-008 CLI/help slice.
-2. Add the Phase 1 public repository foundation, privacy/threat-model docs, and CI checks.
-3. Run build, isolated install, real read-only scan, and Phase 1 requirement audit.
-4. Continue into Phase 2 without collapsing later phases.
+1. Commit the verified public foundation and Phase 1 acceptance audit.
+2. Close MW-009 application/Homebrew/storage field gaps test-first.
+3. Add cross-parser malicious metadata and prompt-injection fixtures under MW-010.
+4. Re-audit Phase 1, then continue into Phase 2 without collapsing later phases.
 
 ## Blockers
 
@@ -82,3 +84,9 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-17 MW-008 RED: the CLI suite reported 34 failures spanning missing commands, help clauses, scan formats, guided routing, output safeguards, and refusal paths.
 - 2026-07-17 MW-008 GREEN: 36 CLI tests passed; the full suite reported 71 passed, Ruff passed, Pyright reported 0 errors, and wheel/sdist build succeeded.
 - 2026-07-17 MW-008 manual help smoke: root, scan, and review help rendered the required plain-language, safety, examples, next-step, and command-list sections; `setup codex` refused with exit status 2 and stated that no changes were made.
+- 2026-07-17 public-foundation RED: repository tests reported four failures for missing public files, README/package metadata, and CI; the privacy check already passed.
+- 2026-07-17 public-foundation GREEN: 5 repository contract tests passed and the generated `skills/macwise` scaffold passed the skill-creator validator.
+- 2026-07-17 complete local gate: 76 tests passed, Ruff format/lint passed, Pyright reported 0 errors, and sdist/wheel build succeeded.
+- 2026-07-17 isolated install: the wheel installed under Python 3.12; version, root help, guided no-argument output, scan help, nested help, and exit-2 Codex setup refusal were verified.
+- 2026-07-17 real scan smoke: JSON schema/collector structure and Markdown verified/limitations/unknown sections passed in memory; no inventory was persisted or added to Git.
+- 2026-07-17 Phase 1 audit: PARTIAL due to explicit application, Homebrew, drive, malicious-fixture, public-install, and hosted-CI gaps recorded in `docs/phase-1-acceptance.md`.

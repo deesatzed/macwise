@@ -6,13 +6,32 @@ build-backend = "hatchling.build"
 name = "macwise"
 version = "0.1.0a0"
 description = "Understand installed Mac software and plan safe, reversible cleanup."
+readme = "README.md"
+license = "MIT"
 requires-python = ">=3.12"
+authors = [{ name = "MacWise contributors" }]
+keywords = ["macos", "software-inventory", "homebrew", "cli", "codex"]
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Environment :: Console",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Typing :: Typed",
+]
 dependencies = [
   "platformdirs>=4",
   "pydantic>=2.7",
   "rich>=13",
   "typer>=0.12",
 ]
+
+[project.urls]
+Repository = "https://github.com/deesatzed/macwise"
+Issues = "https://github.com/deesatzed/macwise/issues"
+Security = "https://github.com/deesatzed/macwise/security/policy"
 
 [project.scripts]
 macwise = "macwise.cli:main"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "MacWise"
+  short_description: "Review Mac software with verified local evidence"
+  default_prompt: "Use $macwise to review installed Mac software safely."
