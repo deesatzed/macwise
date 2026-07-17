@@ -18,8 +18,8 @@ def parse_json(text: str) -> AuditDocument:
         raise ValueError("Audit JSON must contain an object at the top level.")
     document = cast(dict[str, Any], loaded)
     version = document.get("schema_version")
-    if not isinstance(version, int) or isinstance(version, bool) or version not in {1, 2, 3}:
+    if not isinstance(version, int) or isinstance(version, bool) or version not in {1, 2, 3, 4}:
         raise ValueError(f"Unsupported audit schema version {version}.")
-    if version in {1, 2}:
-        document = {**document, "schema_version": 3}
+    if version in {1, 2, 3}:
+        document = {**document, "schema_version": 4}
     return AuditDocument.model_validate(document)

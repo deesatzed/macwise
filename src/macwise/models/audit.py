@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from macwise.models.analysis import BackupStatus, Finding, PathEvidence, StartupRecord
+from macwise.models.overlap import CatalogAssessment, GuardedRecommendation, OverlapRelation
 from macwise.models.software import SoftwareRecord
 from macwise.models.storage import VolumeRecord
 
@@ -35,7 +36,7 @@ class AuditDocument(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    schema_version: Literal[3] = 3
+    schema_version: Literal[4] = 4
     audit_id: str = Field(min_length=1)
     collected_at: AwareDatetime
     software: tuple[SoftwareRecord, ...] = ()
@@ -45,3 +46,6 @@ class AuditDocument(BaseModel):
     path_evidence: tuple[PathEvidence, ...] = ()
     findings: tuple[Finding, ...] = ()
     backup: BackupStatus | None = None
+    catalog_assessments: tuple[CatalogAssessment, ...] = ()
+    overlaps: tuple[OverlapRelation, ...] = ()
+    recommendations: tuple[GuardedRecommendation, ...] = ()
