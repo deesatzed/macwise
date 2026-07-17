@@ -12,7 +12,7 @@ Tasks are ordered. Start the first `ready` task, preserve the full goal, and upd
 | MW-005 | 1 | Inventory Homebrew formulae/casks with explicit/dependency distinction | done | 5 fixture/command tests cover metadata, services, cask mapping, unavailable/partial states, and dependency-candidate regression |
 | MW-006 | 1 | Inventory internal/external drives | done | 5 plist/command tests cover capacity/security/location, unmounted/unavailable volumes, and guarded path resolution; real read-only smoke completed |
 | MW-007 | 1 | Produce versioned JSON and Markdown audit reports | done | 5 service/report tests prove partial aggregation, stable ordering, versioned JSON round trip, stable Markdown, limitations, and unknown-language invariants |
-| MW-008 | 1 | Complete all Phase 1 commands/help and guided routing | pending | Help contract matrix and CLI behavior tests |
+| MW-008 | 1 | Complete all Phase 1 commands/help and guided routing | done | 36 CLI tests cover 24 help surfaces, required hierarchy, guided/noninteractive routing, formats, explicit output safeguards, and later-phase refusal paths |
 | MW-100 | 2 | Explain/review with usage, startup, related data, and backups | pending | Phase 2 acceptance suite and reports |
 | MW-200 | 3 | Role-aware overlap and learning-value intelligence | pending | Required comparison fixture suite |
 | MW-300 | 4 | Persistent cleanup plan and exact previews, no actions | pending | Safety/preflight tests prove zero mutation |

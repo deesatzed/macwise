@@ -18,6 +18,7 @@ This file records durable architecture, UX, safety, privacy, dependency, and rel
 | D-008 | 2026-07-17 | A non-TTY no-argument invocation shows the guided choices and exits safely instead of blocking for input. | The novice default remains discoverable while scripts, tests, and Codex cannot hang. | Accepted |
 | D-009 | 2026-07-17 | Homebrew inventory uses `brew info --json=v2 --installed`, `brew leaves`, and `brew services list --json`; all runs force no auto-update and no analytics. | Official Homebrew documentation identifies JSON v2 as the installed formula/cask surface and `leaves` as the explicit-leaf surface. Service JSON is useful but may drift, so failures remain partial evidence. | Accepted |
 | D-010 | 2026-07-17 | Command output remains bounded per program: Homebrew receives a 16 MiB cap while smaller metadata commands retain a 1 MB cap. | A real installed-software JSON document exceeded the original generic cap and was truncated; per-command bounds preserve safety without corrupting normal Homebrew inventory. | Accepted |
+| D-011 | 2026-07-17 | Expose the complete small public command hierarchy from Phase 1, but make later-phase commands refuse or report unknowns instead of simulating results. | Early discoverability supports the UX contract while honest refusal prevents unfinished cleanup, overlap, backup, or Codex behavior from looking real. | Accepted |
 
 ## Initial Default Decisions
 

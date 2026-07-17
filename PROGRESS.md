@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-20% complete – MacWise now assembles the three Phase 1 collectors into one versioned audit and renders deterministic JSON and plain-language Markdown. Storage runs first for app-path classification; independent collector failures become explicit unavailable statuses without discarding other inventory. Reports separate verified inventory, collection limitations, and Phase 1 unknowns. The complete CLI/help hierarchy, later analysis, cleanup, Codex, and public release remain open.
+25% complete – The Phase 1 CLI surface is now implemented: guided interactive and non-interactive entry, the complete required root/nested hierarchy, real terminal/JSON/Markdown scans, explicit output-file safeguards, basic verified explain/review/storage/startup views, and contract-tested help for every command. Later-phase overlap, usage, backup, planning, apply/undo, and Codex commands exist only as honest read-only messages or safe refusals. Public documentation/CI and the Phase 1 acceptance audit remain before Phase 2.
 
 ## Current Assumptions
 
@@ -28,6 +28,7 @@
 | Build Homebrew inventory | Done | Codex | MW-005 verified test-first with formula/cask/service fixtures and explicit/dependency safety classification. |
 | Build storage inventory | Done | Codex | MW-006 verified test-first with plist fixtures, partial/unavailable states, and guarded longest-mount path resolution. |
 | Build audit orchestration and reports | Done | Codex | MW-007 verified test-first; partial aggregation, stable ordering, JSON round trip, and honest Markdown unknowns. |
+| Complete Phase 1 CLI hierarchy and help | Done | Codex | MW-008 verified test-first across 24 root/nested help surfaces, guided routing, formats, output safeguards, and refusal paths. |
 | Complete Phases 2–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -40,10 +41,10 @@ Phase 1 read-only evidence foundation: versioned models and the bounded command 
 
 ## Next Actions
 
-1. Commit the verified MW-007 audit/report slice.
-2. Implement MW-008 command hierarchy, guided routing, scan formats, and help contract test-first.
-3. Add the Phase 1 public repository foundation and CI checks.
-4. Continue through the Phase 1 plan without collapsing later phases.
+1. Commit the verified MW-008 CLI/help slice.
+2. Add the Phase 1 public repository foundation, privacy/threat-model docs, and CI checks.
+3. Run build, isolated install, real read-only scan, and Phase 1 requirement audit.
+4. Continue into Phase 2 without collapsing later phases.
 
 ## Blockers
 
@@ -78,3 +79,6 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-17 read-only host smoke: storage and Homebrew collectors completed against the current Mac without persisting inventory; the application collector returned records plus an explicit unavailable-root limitation rather than failing or guessing.
 - 2026-07-17 MW-007 RED: service/report tests failed collection because `macwise.services` and `macwise.reporting` did not exist.
 - 2026-07-17 MW-007 GREEN: 5 audit/report tests passed; the full suite reported 37 passed, Ruff passed, and Pyright reported 0 errors.
+- 2026-07-17 MW-008 RED: the CLI suite reported 34 failures spanning missing commands, help clauses, scan formats, guided routing, output safeguards, and refusal paths.
+- 2026-07-17 MW-008 GREEN: 36 CLI tests passed; the full suite reported 71 passed, Ruff passed, Pyright reported 0 errors, and wheel/sdist build succeeded.
+- 2026-07-17 MW-008 manual help smoke: root, scan, and review help rendered the required plain-language, safety, examples, next-step, and command-list sections; `setup codex` refused with exit status 2 and stated that no changes were made.
