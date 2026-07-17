@@ -26,10 +26,14 @@ MacWise follows Semantic Versioning. The project is pre-alpha; unreleased behavi
 - Versioned exact-match role catalog spanning container, local-AI, Markdown, launcher/automation, and Python tool families.
 - All required role-aware overlap categories with explicit unknown and ambiguity handling.
 - Read-only `compare` and `review duplicates` views with observed-use comparison, unique capabilities, learning value, and removal-safe guidance.
+- Schema-version-1 immutable cleanup-plan snapshots with typed non-executable application Trash and Homebrew action previews.
+- Ten-category evidence-linked planning preflight covering identity, protection, dependencies, usage, overlap, related data, backup, startup, rollback, and staleness.
+- Integrity-checked append-only SQLite plan revisions with read-only display, optimistic concurrency, corruption refusal, and symlink-ancestor protection.
+- Persistent `plan add` and `plan show` CLI workflows with exact-name resolution, visibly blocked unsafe candidates, rollback blueprints, and zero host mutation.
 
 ### Not yet available
 
-- Cleanup planning, apply, verification, and undo.
+- Approval-gated apply, action-time verification, and undo.
 - One-command Codex setup and typed local integration.
 - Published pipx package, Homebrew tap, and signed release artifacts.
 

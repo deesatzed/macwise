@@ -4,7 +4,7 @@
 
 MacWise helps ordinary Mac users understand installed applications, Homebrew software, and storage before deciding what deserves attention. It gathers deterministic local evidence first, distinguishes user-selected Homebrew tools from dependencies, and labels missing evidence instead of turning it into a confident claim.
 
-MacWise is currently a pre-alpha read-only inventory and explain/review tool. It reports cautious usage findings, startup ownership, bounded related-data measurements, Time Machine facts, and exact-catalog role-aware overlaps without claiming complete history, backup coverage, or interchangeability. Cleanup planning, reversible apply/undo, and one-command Codex setup are still under development.
+MacWise is currently a pre-alpha inventory, explain/review, and non-executing cleanup-planning tool. It reports cautious usage findings, startup ownership, bounded related-data measurements, Time Machine facts, and exact-catalog role-aware overlaps without claiming complete history, backup coverage, or interchangeability. Cleanup previews can be saved as local immutable planning state; reversible apply/undo and one-command Codex setup are still under development.
 
 ## Terminal example
 
@@ -86,7 +86,8 @@ MacWise refuses to replace an existing report unless you review the path and add
 - Backup configuration is not described as verified path coverage.
 - Overlap categories come from exact qualified catalog identities and explicit relations, never fuzzy name similarity.
 - Phase 3 guidance can recommend keep, learn, keep-together, cautious consolidation review, or no recommendation; it does not authorize removal.
-- Current `plan`, `apply`, `undo`, and `setup codex` surfaces refuse safely rather than simulate unfinished capabilities.
+- `plan add` and `plan show` write or read only local immutable preview state; they do not change installed software or user data.
+- Current `apply`, `undo`, and `setup codex` surfaces refuse safely rather than simulate unfinished capabilities.
 - A future cleanup action must have an exact reviewed plan, action-time approval, verification, a rollback manifest, and an undo path where technically possible.
 
 See [Privacy](docs/privacy.md), [Threat model](docs/threat-model.md), and [Security policy](SECURITY.md).
@@ -140,6 +141,10 @@ macwise review duplicates
 macwise startup
 macwise backups
 
+# Save and review an exact non-executing cleanup preview
+macwise plan add "Example App"
+macwise plan show
+
 # Diagnose collector availability
 macwise doctor
 ```
@@ -148,7 +153,7 @@ Every command supports `--help`, including nested commands such as `macwise revi
 
 ## Current scope and roadmap
 
-Phases 1–3 cover guided use, the complete public command hierarchy, application/Homebrew/storage inventory, evidence provenance, partial-failure reporting, schema-4 JSON/Markdown output, cautious usage findings, startup ownership, bounded related data, backup limitations, an exact-match role catalog, required overlap categories, actual-use comparison, learning value, and guarded read-only recommendations. `GOAL.md` remains the full product contract for planning, reversible cleanup, Codex integration, and public release. See the [Phase 3 acceptance audit](docs/phase-3-acceptance.md) for current proof and limitations.
+Phases 1–4 cover guided use, the complete public command hierarchy, application/Homebrew/storage inventory, evidence provenance, partial-failure reporting, schema-4 JSON/Markdown output, cautious usage findings, startup ownership, bounded related data, backup limitations, exact-match role intelligence, and persistent immutable cleanup previews with ten-category preflight and rollback blueprints. `GOAL.md` remains the full product contract for approval-gated reversible cleanup, Codex integration, and public release. See the [Phase 4 acceptance audit](docs/phase-4-acceptance.md) for current proof and limitations.
 
 ## Development
 

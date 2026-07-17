@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-67% complete – MacWise now has a locally accepted schema-4 Phase 3 intelligence slice: an exact-match role catalog, every required overlap category, observed-use comparison, learning value, guarded recommendations, and deterministic read-only CLI/Markdown views. MW-200 passed its Python 3.12/3.13, independent-review, quality, build, privacy, skill, clean-wheel, hostile, and real-Mac gates. MW-011 remains PARTIAL because no hosted/Linux runner or Git remote exists; Phases 4–7 and public release remain open.
+75% complete – MacWise now has a locally accepted Phase 4 cleanup-planning slice: immutable typed previews, all ten preflight categories, rollback blueprints, integrity-checked append-only SQLite state, exact CLI review, and zero host mutation. MW-300 passed its Python 3.12/3.13, independent-review, quality, build, privacy, skill, clean-wheel, hostile, and real-Mac gates. MW-011 remains PARTIAL because no hosted/Linux runner or Git remote exists; Phases 5–7 and public release remain open.
 
 ## Current Assumptions
 
@@ -46,7 +46,8 @@
 | Design MW-300 cleanup planning | Done | Codex | Append-only SQLite revisions, typed non-executable intent, blocked-candidate review, preflight, and rollback-blueprint boundaries are saved under `docs/plans/`; D-024/D-025 record the choices. |
 | Build MW-300 cleanup planning | Done | Codex | Immutable plan models, pure preview construction, append-only SQLite revisions, persistent CLI review, hostile-input defenses, and zero-host-mutation tests pass the 186-test gate. |
 | Adjudicate independent MW-300 review | Done | Codex | Four recommendations were Accepted and Resolved test-first: read-only zero-version display, ancestor-symlink rejection, optimistic active-plan concurrency, and one-to-one action/rollback integrity. No critical finding remained. |
-| Complete Phases 4–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
+| Run MW-300 acceptance | Done | Codex | `docs/phase-4-acceptance.md` records a local PASS from 186 tests on Python 3.12/3.13, quality/build/privacy/skill/clean-wheel gates, independent review, and an aggregate-only real planner smoke. |
+| Complete Phases 5–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
 
@@ -54,11 +55,11 @@
 
 ## Current Milestone
 
-Phase 4 persistent cleanup planning and exact previews while every mutation and the external hosted-CI/public-release gates remain explicitly open.
+Phase 5 approval-gated reversible apply, action-time verification, manifests, and undo while external hosted-CI/public-release gates remain explicitly open.
 
 ## Next Actions
 
-1. Run MW-300 local acceptance across Python 3.12/3.13, build/privacy/skill/clean-wheel checks, and an aggregate-only real planner smoke; record the verdict in `docs/phase-4-acceptance.md`.
+1. Design and plan MW-400 approval-gated reversible apply, action-time revalidation, verification manifests, and undo without weakening the accepted Phase 4 preview boundary.
 2. Re-run hosted Linux/macOS CI once a Git remote/runner is authorized and available; do not treat the workflow definition as a run result.
 3. Keep public Homebrew/release proof deferred until tap/artifact authority exists.
 
@@ -132,3 +133,7 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-18 MW-300 TDD: immutable plan invariants, deterministic preview construction, integrity-checked append-only storage, persistent CLI review, hostile input handling, and zero-mutation boundaries each failed for their intended missing behavior before focused and full suites passed.
 - 2026-07-18 MW-300 independent review: four important findings were Accepted and Resolved test-first—read-only display no longer initializes version-0 stores, every existing path ancestor is checked for symlinks, stale competing writers cannot replace the active pointer, and action/rollback mappings are one-to-one. No critical finding remained.
 - 2026-07-18 MW-300 review-fix gate: 186 tests passed; focused model/planner/persistence tests reported 28 passed and the final persistence suite reported 11 passed; Ruff format/lint, Pyright, and `git diff --check` passed repository-wide.
+- 2026-07-18 MW-300 acceptance: 186 tests passed on Python 3.12.11 and 3.13.13; Ruff/Pyright/build/privacy/skill/workflow/clean-wheel gates passed; scoped stub and skipped-test scans were clean.
+- 2026-07-18 MW-300 clean-wheel smoke: a fresh Python 3.12 wheel install passed blocked-plan construction, schema-1 SQLite integrity round-trip, and safe plan-help checks under a canonical non-symlink state root.
+- 2026-07-18 MW-300 real smoke: an aggregate-only schema-4 audit produced 325 software records and 3 complete/4 partial collector states; pure planning produced 1 candidate, 1 action, 10 checks, and 1 rollback blueprint in 20.29 seconds without printing names/paths, persisting state, or mutating the host.
+- 2026-07-18 MW-300 claim validation: PASS for local Phase 4 cleanup-planning scope; hosted CI, publication, all action execution/approval/verification/undo, Codex integration, and Phases 5–7 remain open in `docs/phase-4-acceptance.md`.
