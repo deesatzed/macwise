@@ -33,6 +33,7 @@ from macwise.models import (
     StartupKind,
     StorageLocation,
 )
+from macwise.services.analysis import analyze_usage
 
 
 class ApplicationCollector(Protocol):
@@ -280,6 +281,12 @@ class AuditService:
             )
             for record in correlated_software
         )
+        findings = analyze_usage(
+            enriched_software,
+            startup=startup.startup,
+            path_evidence=usage.path_evidence,
+            collected_at=collected_at,
+        )
         software = sorted(
             enriched_software,
             key=lambda record: (
@@ -307,4 +314,5 @@ class AuditService:
             collectors=tuple(collectors),
             startup=startup.startup,
             path_evidence=usage.path_evidence,
+            findings=findings,
         )

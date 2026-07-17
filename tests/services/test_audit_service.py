@@ -22,6 +22,7 @@ from macwise.models import (
     StartupKind,
     StartupRecord,
     StorageLocation,
+    UsageLabel,
     VolumeRecord,
     stable_software_id,
 )
@@ -234,6 +235,9 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
         record for record in audit.software if record.entity_type is EntityType.APPLICATION
     )
     assert any(item.kind == "spotlight_last_used" for item in app_record.evidence)
+    findings = {finding.subject_id: finding for finding in audit.findings}
+    assert findings[app_record.id].usage_label is UsageLabel.RECENTLY_USED
+    assert findings[formula.id].usage_label is UsageLabel.ACTIVELY_USED
     storage_status = next(item for item in audit.collectors if item.collector == "storage")
     assert storage_status.state is CollectorState.PARTIAL
 
