@@ -4,6 +4,7 @@ import platform
 import sys
 from collections.abc import Callable, Sequence
 from enum import StrEnum
+from itertools import combinations
 from pathlib import Path
 from typing import Annotated
 
@@ -17,6 +18,8 @@ from macwise.models import (
     EntityType,
     Finding,
     FindingTopic,
+    OverlapCategory,
+    OverlapRelation,
     SoftwareRecord,
     UsageLabel,
 )
@@ -175,6 +178,21 @@ def _matching_records(audit: AuditDocument, query: str) -> tuple[SoftwareRecord,
     )
 
 
+def _resolve_record(audit: AuditDocument, query: str) -> SoftwareRecord:
+    matches = _matching_records(audit, query)
+    if not matches:
+        typer.echo(f'MacWise did not find an installed item matching "{safe_display_text(query)}".')
+        typer.echo("Run macwise review apps or macwise review brew, then use the displayed name.")
+        raise typer.Exit(2)
+    if len(matches) > 1:
+        typer.echo("MacWise found more than one possible match:\n")
+        for index, record in enumerate(matches, start=1):
+            typer.echo(f"{index}. {_record_label(record)}")
+        typer.echo("\nRun a qualified name such as app:NAME, cask:NAME, or formula:NAME.")
+        raise typer.Exit(2)
+    return next(iter(matches))
+
+
 def _record_label(record: SoftwareRecord) -> str:
     kind = {
         EntityType.APPLICATION: "application",
@@ -227,6 +245,33 @@ def _echo_findings(findings: Sequence[Finding]) -> None:
         typer.echo(f"- {_finding_summary(finding)}")
         for limitation in finding.limitations:
             typer.echo(f"  Limitation: {safe_display_text(limitation)}")
+
+
+def _usage_finding(audit: AuditDocument, subject_id: str) -> Finding | None:
+    return next(
+        (
+            finding
+            for finding in audit.findings
+            if finding.subject_id == subject_id and finding.topic is FindingTopic.USAGE
+        ),
+        None,
+    )
+
+
+def _relation_for(
+    audit: AuditDocument,
+    left_subject_id: str,
+    right_subject_id: str,
+) -> OverlapRelation | None:
+    sought = frozenset((left_subject_id, right_subject_id))
+    return next(
+        (
+            relation
+            for relation in audit.overlaps
+            if frozenset((relation.left_subject_id, relation.right_subject_id)) == sought
+        ),
+        None,
+    )
 
 
 def _list_records(records: Sequence[SoftwareRecord]) -> None:
@@ -316,11 +361,32 @@ def review_startup() -> None:
 
 @review_app.command("duplicates", help=HELP["review_duplicates"])
 def review_duplicates() -> None:
-    _phase_message(
-        "Role-aware overlap analysis is not available until Phase 3; MacWise will not guess from names.",
-        "macwise compare NAME NAME",
-        "macwise scan",
+    audit = _audit()
+    records = {record.id: record for record in audit.software}
+    candidates = tuple(
+        relation
+        for relation in audit.overlaps
+        if relation.category is not OverlapCategory.NOT_ACTUALLY_RELATED
     )
+    typer.echo("Overlap candidates — not all are duplicates\n")
+    if not candidates:
+        typer.echo("No explicit overlap candidates were found in the bundled role catalog.")
+    grouped: dict[OverlapCategory, list[OverlapRelation]] = {}
+    for relation in candidates:
+        grouped.setdefault(relation.category, []).append(relation)
+    for category in sorted(grouped, key=lambda item: item.value):
+        typer.echo(f"{_human_label(category.value).capitalize()}")
+        for relation in grouped[category]:
+            left = records.get(relation.left_subject_id)
+            right = records.get(relation.right_subject_id)
+            left_name = left.display_name if left is not None else relation.left_subject_id
+            right_name = right.display_name if right is not None else relation.right_subject_id
+            typer.echo(
+                f"- {safe_display_text(left_name)} and {safe_display_text(right_name)}: "
+                f"{safe_display_text(relation.statement)}"
+            )
+        typer.echo("")
+    typer.echo("This review is read-only and does not authorize removal or other changes.")
 
 
 @review_app.command("largest", help=HELP["review_largest"])
@@ -387,18 +453,7 @@ def explain(
     name: Annotated[str, typer.Argument(help="Installed app, cask, or formula name.")],
 ) -> None:
     audit = _audit()
-    matches = _matching_records(audit, name)
-    if not matches:
-        typer.echo(f'MacWise did not find an installed item matching "{safe_display_text(name)}".')
-        typer.echo("Run macwise review apps or macwise review brew, then use the displayed name.")
-        raise typer.Exit(2)
-    if len(matches) > 1:
-        typer.echo("MacWise found more than one possible match:\n")
-        for index, record in enumerate(matches, start=1):
-            typer.echo(f"{index}. {_record_label(record)}")
-        typer.echo("\nRun a qualified name such as app:NAME, cask:NAME, or formula:NAME.")
-        raise typer.Exit(2)
-    record = next(iter(matches))
+    record = _resolve_record(audit, name)
     typer.echo(f"{safe_display_text(record.display_name)}\n")
     typer.echo("Verified facts")
     typer.echo(f"- Type: {_human_label(record.entity_type.value)}")
@@ -460,6 +515,34 @@ def explain(
     _echo_findings(verified)
     typer.echo("\nInferred findings")
     _echo_findings(inferred)
+    assessment = next(
+        (item for item in audit.catalog_assessments if item.subject_id == record.id),
+        None,
+    )
+    if assessment is not None:
+        typer.echo(f"- Catalog roles: {', '.join(map(safe_display_text, assessment.roles))}")
+        if assessment.unique_capabilities:
+            typer.echo(
+                "- Unique capabilities: "
+                f"{', '.join(map(safe_display_text, assessment.unique_capabilities))}"
+            )
+        typer.echo(f"- Learning value: {_human_label(assessment.learning_value.value)}")
+        typer.echo(f"  {safe_display_text(assessment.learning_statement)}")
+    records_by_id = {item.id: item for item in audit.software}
+    for relation in audit.overlaps:
+        if record.id not in {relation.left_subject_id, relation.right_subject_id}:
+            continue
+        other_id = (
+            relation.right_subject_id
+            if relation.left_subject_id == record.id
+            else relation.left_subject_id
+        )
+        other = records_by_id.get(other_id)
+        other_name = other.display_name if other is not None else other_id
+        typer.echo(
+            f"- Related overlap: {safe_display_text(other_name)} — "
+            f"{_human_label(relation.category.value)}"
+        )
     typer.echo("\nUser-confirmed findings")
     _echo_findings(confirmed)
     typer.echo("\nUnknowns and limitations")
@@ -471,9 +554,21 @@ def explain(
         for limitation in audit.backup.limitations:
             typer.echo(f"- Backup limitation: {safe_display_text(limitation)}")
     typer.echo("- Backup coverage: Not verified.")
-    typer.echo(
-        "Recommendation: Not available until overlap, learning-value, and cleanup preflight complete."
-    )
+    guidance = tuple(item for item in audit.recommendations if record.id in item.subject_ids)
+    if guidance:
+        for item in guidance:
+            typer.echo(
+                f"Guarded guidance: {_human_label(item.action.value)} — "
+                f"{safe_display_text(item.statement)}"
+            )
+            for prerequisite in item.prerequisites:
+                typer.echo(f"- Prerequisite: {safe_display_text(prerequisite)}")
+            for limitation in item.limitations:
+                typer.echo(f"- Guidance limitation: {safe_display_text(limitation)}")
+    else:
+        typer.echo(
+            "Recommendation: Not available until overlap, learning-value, and cleanup preflight complete."
+        )
     typer.echo("\nThis command is read-only. MacWise did not change this Mac.")
 
 
@@ -481,12 +576,83 @@ def explain(
 def compare(
     names: Annotated[list[str], typer.Argument(help="One or more installed names.")],
 ) -> None:
-    typer.echo(f"Requested comparison: {', '.join(map(safe_display_text, names))}")
-    _phase_message(
-        "Role-aware overlap categories and actual-use comparison are not available until Phase 3.",
-        "macwise review duplicates",
-        "macwise explain NAME",
+    if len(names) < 2:
+        typer.echo("MacWise compare requires at least two installed names.")
+        raise typer.Exit(2)
+    audit = _audit()
+    selected = tuple(_resolve_record(audit, name) for name in names)
+    if len({record.id for record in selected}) != len(selected):
+        typer.echo("Choose distinct installed items for a comparison.")
+        raise typer.Exit(2)
+
+    assessments = {item.subject_id: item for item in audit.catalog_assessments}
+    records_by_id = {record.id: record for record in audit.software}
+    typer.echo("Role-aware comparison\n")
+    for record in selected:
+        typer.echo(f"- {_record_label(record)}")
+        assessment = assessments.get(record.id)
+        if assessment is None:
+            typer.echo("  Catalog role: unknown")
+            typer.echo("  Learning value: unknown")
+        else:
+            typer.echo(f"  Catalog roles: {', '.join(map(safe_display_text, assessment.roles))}")
+            typer.echo(f"  Learning value: {_human_label(assessment.learning_value.value)}")
+        finding = _usage_finding(audit, record.id)
+        if finding is None or finding.usage_label is None:
+            typer.echo("  Usage: no reliable evidence (unknown, unknown confidence)")
+        else:
+            typer.echo(
+                f"  Usage: {_human_label(finding.usage_label.value)} "
+                f"({_human_label(finding.basis.value)}, {finding.confidence.value} confidence)"
+            )
+
+    for left, right in combinations(selected, 2):
+        typer.echo(
+            f"\n{safe_display_text(left.display_name)} and {safe_display_text(right.display_name)}"
+        )
+        relation = _relation_for(audit, left.id, right.id)
+        if relation is None:
+            typer.echo("Relationship unknown.")
+            typer.echo("MacWise will not infer a category from names alone.")
+            continue
+        typer.echo(f"Relationship: {_human_label(relation.category.value)}")
+        typer.echo(f"Reason: {safe_display_text(relation.statement)}")
+        if relation.shared_capabilities:
+            typer.echo(
+                "Shared capabilities: "
+                f"{', '.join(map(safe_display_text, relation.shared_capabilities))}"
+            )
+        left_name = records_by_id.get(relation.left_subject_id)
+        right_name = records_by_id.get(relation.right_subject_id)
+        if relation.left_unique_capabilities:
+            label = left_name.display_name if left_name is not None else relation.left_subject_id
+            values = ", ".join(
+                _human_label(value).capitalize() for value in relation.left_unique_capabilities
+            )
+            typer.echo(f"{safe_display_text(label)} unique: {values}")
+        if relation.right_unique_capabilities:
+            label = right_name.display_name if right_name is not None else relation.right_subject_id
+            values = ", ".join(
+                _human_label(value).capitalize() for value in relation.right_unique_capabilities
+            )
+            typer.echo(f"{safe_display_text(label)} unique: {values}")
+
+    selected_ids = {record.id for record in selected}
+    guidance = tuple(
+        item for item in audit.recommendations if set(item.subject_ids) <= selected_ids
     )
+    typer.echo("\nGuarded guidance")
+    if not guidance:
+        typer.echo("- No recommendation is available for the selected items.")
+    for item in guidance:
+        typer.echo(
+            f"- {_human_label(item.action.value).capitalize()}: {safe_display_text(item.statement)}"
+        )
+        for prerequisite in item.prerequisites:
+            typer.echo(f"  Prerequisite: {safe_display_text(prerequisite)}")
+        for limitation in item.limitations:
+            typer.echo(f"  Limitation: {safe_display_text(limitation)}")
+    typer.echo("\nThis comparison is read-only and does not authorize removal or other changes.")
 
 
 @app.command(help=HELP["startup"])

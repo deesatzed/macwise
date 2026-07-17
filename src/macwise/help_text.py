@@ -78,7 +78,7 @@ HELP: dict[str, str] = {
         ("Run macwise explain NAME.", "Run macwise scan."),
     ),
     "review_duplicates": _help(
-        "Explains the current status of overlap analysis without guessing that related tools duplicate each other.",
+        "Groups explicit role-aware overlap candidates and distinguishes duplicates, substitutes, complements, dependencies, and successors.",
         "you want to consolidate software with similar roles.",
         READ_ONLY,
         ("macwise review duplicates", "macwise compare Docker Podman"),
@@ -106,14 +106,14 @@ HELP: dict[str, str] = {
         ("Run macwise explain NAME.", "Run macwise scan --format markdown."),
     ),
     "explain": _help(
-        "Explains one installed item's verified facts, usage findings, startup components, related data, and backup limitations.",
+        "Explains one installed item's facts, usage, startup, related data, catalog roles, overlaps, learning value, and guarded guidance.",
         "you see an unfamiliar app or Homebrew tool and want a cautious first explanation.",
         READ_ONLY,
         ("macwise explain Raycast", "macwise explain ollama", "macwise explain formula:openssl@3"),
         ("Run macwise compare NAME NAME.", "Run macwise plan."),
     ),
     "compare": _help(
-        "Compares named software only when role-aware overlap evidence is available.",
+        "Compares two or more installed items by explicit roles, overlap category, actual-use evidence, unique capabilities, and learning value.",
         "you want to understand whether installed tools substitute for or complement each other.",
         READ_ONLY,
         ("macwise compare Docker Podman", "macwise compare Raycast Hammerspoon"),
