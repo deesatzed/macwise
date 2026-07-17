@@ -40,6 +40,24 @@ def test_collects_bundle_metadata_size_and_volume_location(tmp_path: Path) -> No
     }
 
 
+def test_same_bundle_identifier_at_two_paths_keeps_distinct_instance_ids(
+    tmp_path: Path,
+) -> None:
+    primary_root = tmp_path / "Applications"
+    secondary_root = tmp_path / "External Applications"
+    copytree(FIXTURE_APP, primary_root / "Example.app")
+    copytree(FIXTURE_APP, secondary_root / "Example.app")
+
+    result = collect_applications(
+        (primary_root, secondary_root),
+        collected_at=COLLECTED_AT,
+    )
+
+    assert len(result.software) == 2
+    assert {record.identifier for record in result.software} == {"org.example.safe-app"}
+    assert len({record.id for record in result.software}) == 2
+
+
 def test_malformed_and_missing_plists_become_partial_limitations(tmp_path: Path) -> None:
     applications_root = tmp_path / "Applications"
     malformed = applications_root / "Broken.app" / "Contents"

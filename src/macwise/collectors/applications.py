@@ -186,7 +186,8 @@ def _collect_application(
             )
         )
 
-    canonical_key = identifier or str(app_path.resolve(strict=False))
+    resolved_path = str(app_path.resolve(strict=False))
+    canonical_key = f"{identifier}\0{resolved_path}" if identifier else resolved_path
     return (
         SoftwareRecord(
             id=stable_software_id(EntityType.APPLICATION, canonical_key),
