@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-6% complete – Repository foundation, the guided CLI slice, and the versioned Phase 1 evidence schema are implemented. MacWise now has immutable provenance-bearing software, volume, collector-status, and audit models with explicit unknowns. The remaining inventory, analysis, cleanup, Codex, and public-release phases are open.
+8% complete – The first Phase 1 execution batch is implemented: installable guided CLI, versioned evidence/audit models, and a bounded read-command security boundary. MacWise can now represent truthful partial evidence and safely invoke only fixed inventory programs without a shell. Host collectors, analysis, cleanup, Codex, and public release remain open.
 
 ## Current Assumptions
 
@@ -23,6 +23,7 @@
 | Initialize Git repository | Done | Codex | Initialized `main` on 2026-07-17. |
 | Build Phase 1 foundation and guided CLI slice | Done | Codex | MW-001 verified test-first, including isolated Python 3.12 wheel install. |
 | Build versioned evidence and audit models | Done | Codex | MW-002 verified test-first; schema version 1 round-trips provenance. |
+| Build bounded read-command adapter | Done | Codex | MW-003 verified test-first; fixed programs, no shell, time/output/environment bounds, typed failures. |
 | Complete Phases 2–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -35,9 +36,9 @@ Phase 1 read-only evidence foundation: versioned models and the bounded command 
 
 ## Next Actions
 
-1. Commit the verified MW-002 model slice.
-2. Implement MW-003 safe bounded read-command adapter test-first.
-3. Begin MW-004 application inventory after the first execution batch checkpoint.
+1. Commit the verified MW-003 command-adapter slice.
+2. Review the first execution batch at the checkpoint.
+3. Begin MW-004 application inventory in the next batch.
 4. Continue through the Phase 1 plan without collapsing later phases.
 
 ## Blockers
@@ -59,3 +60,5 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-17 MW-001 install smoke: the wheel installed into a fresh Python 3.12 environment; both `macwise --help` and no-argument `macwise` exited successfully and displayed the expected read-only help/guided output.
 - 2026-07-17 MW-002 RED: `uv run pytest tests/models -q` failed collection because `macwise.models` did not exist.
 - 2026-07-17 MW-002 GREEN: the model suite reported 6 passed; the full suite reported 8 passed, Ruff passed, and Pyright reported 0 errors.
+- 2026-07-17 MW-003 RED: `uv run pytest tests/system/test_commands.py -q` failed collection because `macwise.system` did not exist.
+- 2026-07-17 MW-003 GREEN: 6 command-adapter tests passed; the full suite reported 14 passed, Ruff passed, and Pyright reported 0 errors.
