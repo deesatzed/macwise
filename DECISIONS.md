@@ -47,6 +47,13 @@ This file records durable architecture, UX, safety, privacy, dependency, and rel
 | D-022 | 2026-07-17 | Analysis | Use a versioned bundled role catalog with exact qualified matches and explicit pair relations; never assign overlap categories from fuzzy name/description similarity. | Deterministic offline relationships are testable and unknown-safe, while similarity would falsely label related tools as duplicates. | Fuzzy heuristics; live research/AI classification. | Accepted |
 | D-023 | 2026-07-17 | Safety and UX | Limit Phase 3 recommendations to keep, learn, keep-together, review-consolidation, or no-recommendation; none authorizes removal or startup changes. | Phase 3 lacks the dependency, backup, ambiguity, protection, data, rollback, and approval preflight owned by Phases 4–5. | Recommend removal directly from overlap/usage; defer all recommendation language. | Accepted |
 
+## MW-300 Decisions
+
+| ID | Date | Category | Decision | Rationale | Alternatives Considered | Status |
+|---|---|---|---|---|---|---|
+| D-024 | 2026-07-17 | Persistence and Safety | Store complete immutable plan revisions as canonical JSON plus integrity digests in a versioned local SQLite database; later actions must revalidate typed intent rather than execute persisted command text. | Append-only snapshots preserve exactly what was reviewed, support later approval integrity, and prevent stale or hostile persisted values from becoming execution authority. | Mutable normalized rows; atomic JSON files. | Accepted |
+| D-025 | 2026-07-17 | UX and Safety | Reject names without one exact identity, but retain exact unsafe candidates as visibly blocked plan items with explicit preflight outcomes. | A blocked review workspace exposes why a candidate is unsafe without guessing identity or granting action authority. | Reject every unsafe candidate at add time; accept and merely warn for all risks. | Accepted |
+
 ## Initial Default Decisions
 
 - MIT license unless a later legal decision selects Apache-2.0.

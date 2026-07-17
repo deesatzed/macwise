@@ -12,6 +12,7 @@
 - Phase 1 may use sanitized command fixtures on non-macOS CI while macOS runners exercise bounded integration smoke tests.
 - GitHub repository creation, package publication, Homebrew tap changes, and production release require explicit authority/credentials at the relevant phase; local preparation does not.
 - The approved Phase 3 goal authorizes a versioned exact-match role catalog and guarded read-only recommendations; unknown relationships remain unknown, and removal authorization stays deferred to planning/execution phases.
+- The active autonomous goal approves the Phase 4 assumption that one exact unsafe candidate may be persisted as blocked for review; ambiguous names still refuse, and no plan grants execution authority.
 
 ## Task Tracker
 
@@ -42,11 +43,12 @@
 | Build MW-200 role-aware overlap intelligence | Done | Codex | Schema 4, catalog, analyzer, compare/review/explain/report views, ambiguity propagation, and guarded guidance pass the 142-test gate. |
 | Adjudicate independent MW-200 review | Done | Codex | Three recommendations were Accepted and Resolved: ambiguity visibility, explicit actual-use comparison, and neutral-pair learning guidance. No critical finding remained. |
 | Run MW-200 acceptance | Done | Codex | `docs/phase-3-acceptance.md` records a local PASS from 142 tests on Python 3.12/3.13, quality/build/privacy/skill/clean-wheel gates, independent review, and aggregate-only real scans. |
+| Design MW-300 cleanup planning | Done | Codex | Append-only SQLite revisions, typed non-executable intent, blocked-candidate review, preflight, and rollback-blueprint boundaries are saved under `docs/plans/`; D-024/D-025 record the choices. |
 | Complete Phases 4–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
 
-- D-001 through D-023 are in `DECISIONS.md`.
+- D-001 through D-025 are in `DECISIONS.md`.
 
 ## Current Milestone
 
