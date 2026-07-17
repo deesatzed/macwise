@@ -67,14 +67,14 @@ durable meaning, and permits each mutator to be isolated behind a small typed in
    and action-specific host checks, and refuses any blocker, changed identity, missing
    source, occupied destination, unavailable evidence, or prior interrupted run.
 3. Interactive use displays every action and warning, then requires the exact phrase
-   `APPLY <12-character fingerprint>`. Non-interactive use refuses unless the same value
+   `APPLY <16-character fingerprint>`. Non-interactive use refuses unless the same value
    is passed explicitly with `--approve`; the value is consent evidence, not a secret.
 4. MacWise appends a prepared manifest revision, appends an in-progress revision before
    each action, invokes exactly one allowlisted adapter, verifies the result, and appends
    the observed outcome. It stops immediately on failure or verification mismatch.
 5. `macwise undo` selects the latest run with applied reversible actions, renders its
    reverse-order operations, revalidates current state, and requires
-   `UNDO <12-character run fingerprint>`. Each undo attempt is likewise manifested and
+   `UNDO <16-character run fingerprint>`. Each undo attempt is likewise manifested and
    verified.
 
 Non-TTY calls without an exact fingerprint fail without mutation. Blocked plans, empty
@@ -83,8 +83,9 @@ also fail without mutation.
 
 ## Plan evolution and startup intent
 
-Phase 4 plan schema 1 remains readable and executable only for its existing Trash and
-Homebrew actions. New plans use schema 2 when they include startup intent. Schema 2
+Phase 4 plan schema 1 remains readable but is never executable; `apply` requires a fresh
+schema-2 preview so the user reviews the complete execution-era contract. New plans use
+schema 2, including when they contain only Trash or Homebrew removal. Schema 2
 preserves all schema-1 fields and adds typed action-target identity so one software
 candidate may preview multiple ordered actions without weakening the one-rollback-per-
 action invariant.
@@ -134,6 +135,12 @@ unknown schemas, uses bound parameters, and applies the accepted plan-store syml
 ancestor protections. A new run requires no unresolved active execution and the exact
 active plan pointer/digest observed during preparation.
 
+A shared advisory lock beneath the state root is acquired by plan append, apply, and undo.
+Apply holds it for the complete critical section, reloads the full plan digest after lock
+acquisition and before every action, and refuses concurrent writers. The displayed
+fingerprint is the first 16 hexadecimal characters; internal comparisons always use the
+full SHA-256 digest.
+
 Before an adapter call, an in-progress revision is committed. If the process disappears,
 the next command sees that revision as interrupted and refuses both new apply and blind
 undo until bounded recovery inspection determines the actual state. No crash is silently
@@ -159,8 +166,9 @@ For Trash actions:
 - lstat the source without following symlinks;
 - require an ordinary `.app` directory, the same bundle identity when available, a
   non-system path, and a non-symlink ancestor chain;
-- require the exact destination to be absent, beneath the current user's canonical
-  Trash, and on the same filesystem;
+- reconstruct the destination from the typed plan/action identity and canonical current
+  Trash root, require exact equality with the inert preview, and require it to be absent
+  and on the same filesystem;
 - refuse cross-device moves instead of copying recursively.
 
 For Homebrew actions:
@@ -170,25 +178,30 @@ For Homebrew actions:
   kind;
 - rerun reverse-dependency, explicit-role, project-reference, service, and blocker checks;
 - construct only `brew uninstall --formula TOKEN` or `brew uninstall --cask TOKEN` with
-  no shell and Homebrew auto-update/analytics disabled.
+  no shell and Homebrew auto-update/analytics disabled;
+- block casks whose fresh metadata contains uninstall, zap, pkg, privileged, or unknown
+  removal artifacts; never use force, zap, cleanup, or autoremove.
 
 For startup actions:
 
 - require the same stable startup ID, kind, label/token, owner, user domain, and safe
   source path;
-- capture whether the item was loaded/running/enabled before mutation;
+- capture whether the item was loaded/running/enabled before mutation and the exact
+  plist SHA-256 for LaunchAgents;
 - permit only the supported current-user LaunchAgent and Homebrew-service adapters.
 
 ## Allowlisted adapters and verification
 
 ### Manual applications
 
-Use an injected filesystem adapter whose production implementation performs one
-same-filesystem atomic rename from the validated bundle path to the unique validated
-Trash path. It never follows symlinks, copies a directory tree, overwrites a destination,
+Use an injected filesystem adapter whose production implementation opens trusted source
+and Trash parent directory descriptors, rechecks device/inode and bundle identity, and
+performs one descriptor-relative same-filesystem atomic rename to the unique reconstructed
+Trash name. It never follows symlinks, copies a directory tree, overwrites a destination,
 or deletes content. Verification requires source absence, destination presence, and the
-same captured bundle identity. Undo requires the destination to remain the same bundle
-and the original path to be free, then atomically renames it back and verifies both paths.
+same captured inode/bundle identity. Undo requires the destination to remain the same
+bundle and the original path to be free, then performs the reverse descriptor-relative
+rename and verifies both paths.
 
 ### Homebrew
 
@@ -203,8 +216,8 @@ exit status alone.
 
 Current-user LaunchAgent and Homebrew-service operations use dedicated fixed argument
 builders. Verification queries fresh launch/service state; exit status alone is
-insufficient. Undo restores only the recorded prior state and refuses if the plist,
-owner, token, or domain changed.
+insufficient. Undo restores only the recorded prior state and refuses if the plist hash,
+owner, token, label, path, or domain changed.
 
 ## Failure behavior
 
