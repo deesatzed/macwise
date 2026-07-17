@@ -1,0 +1,35 @@
+{
+  "formulae": [
+    {
+      "name": "postgresql@16",
+      "full_name": "postgresql@16",
+      "desc": "Object-relational database system",
+      "homepage": "https://www.postgresql.org/",
+      "installed": [
+        {
+          "version": "16.3",
+          "installed_on_request": true
+        }
+      ],
+      "runtime_dependencies": [
+        {
+          "full_name": "openssl@3"
+        }
+      ]
+    },
+    {
+      "name": "openssl@3",
+      "full_name": "openssl@3",
+      "desc": "Cryptography and SSL/TLS toolkit",
+      "homepage": "https://openssl-library.org/",
+      "installed": [
+        {
+          "version": "3.3.1",
+          "installed_on_request": false
+        }
+      ],
+      "runtime_dependencies": []
+    }
+  ],
+  "casks": []
+}

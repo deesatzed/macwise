@@ -17,6 +17,14 @@ class EntityType(StrEnum):
     HOMEBREW_CASK = "homebrew_cask"
 
 
+class InstallRole(StrEnum):
+    """Whether a package was selected by the user or installed for another item."""
+
+    EXPLICIT = "explicit"
+    DEPENDENCY = "dependency"
+    UNKNOWN = "unknown"
+
+
 def stable_software_id(entity_type: EntityType, canonical_key: str) -> str:
     """Return a deterministic, type-scoped ID without embedding private values."""
     normalized_key = canonical_key.strip().casefold()
@@ -37,7 +45,23 @@ class SoftwareRecord(BaseModel):
     version: str | None = None
     install_path: str | None = None
     install_source: str | None = None
+    description: str | None = None
+    homepage: str | None = None
     size_bytes: int | None = Field(default=None, ge=0)
     storage_location: StorageLocation = StorageLocation.UNKNOWN
+    install_role: InstallRole = InstallRole.UNKNOWN
+    dependencies: tuple[str, ...] = ()
+    reverse_dependencies: tuple[str, ...] = ()
+    service_status: str | None = None
+    app_artifacts: tuple[str, ...] = ()
     protected: bool = False
     evidence: tuple[Evidence, ...] = ()
+
+    @property
+    def user_selected(self) -> bool | None:
+        """Map the package role to a safe tri-state user-selection answer."""
+        if self.install_role is InstallRole.EXPLICIT:
+            return True
+        if self.install_role is InstallRole.DEPENDENCY:
+            return False
+        return None

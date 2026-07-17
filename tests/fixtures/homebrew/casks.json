@@ -1,0 +1,18 @@
+{
+  "formulae": [],
+  "casks": [
+    {
+      "token": "example-app",
+      "name": ["Example App"],
+      "desc": "A safe synthetic desktop application",
+      "homepage": "https://example.invalid/example-app",
+      "version": "2.4.1",
+      "installed": "2.4.1",
+      "artifacts": [
+        {
+          "app": ["Example.app"]
+        }
+      ]
+    }
+  ]
+}

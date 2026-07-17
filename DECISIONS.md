@@ -16,6 +16,7 @@ This file records durable architecture, UX, safety, privacy, dependency, and rel
 | D-006 | 2026-07-17 | Support both Apple Silicon and Intel macOS where public APIs and command output permit it. | The public CLI should not unnecessarily exclude supported Macs. | Accepted |
 | D-007 | 2026-07-17 | `uv` is the contributor workflow; published metadata remains standards-compliant so `pipx install macwise` does not require uv. | This preserves the requested development tool and public installation path. | Accepted |
 | D-008 | 2026-07-17 | A non-TTY no-argument invocation shows the guided choices and exits safely instead of blocking for input. | The novice default remains discoverable while scripts, tests, and Codex cannot hang. | Accepted |
+| D-009 | 2026-07-17 | Homebrew inventory uses `brew info --json=v2 --installed`, `brew leaves`, and `brew services list --json`; all runs force no auto-update and no analytics. | Official Homebrew documentation identifies JSON v2 as the installed formula/cask surface and `leaves` as the explicit-leaf surface. Service JSON is useful but may drift, so failures remain partial evidence. | Accepted |
 
 ## Initial Default Decisions
 

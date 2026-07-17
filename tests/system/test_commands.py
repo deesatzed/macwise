@@ -56,6 +56,8 @@ def test_runner_uses_fixed_executable_and_keeps_hostile_metadata_inert() -> None
     assert captured["timeout"] == 2.5
     assert captured["env"] == {
         "HOME": "/Users/example",
+        "HOMEBREW_NO_ANALYTICS": "1",
+        "HOMEBREW_NO_AUTO_UPDATE": "1",
         "LANG": "en_US.UTF-8",
         "PATH": "/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin:/usr/local/bin",
     }

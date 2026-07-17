@@ -82,7 +82,11 @@ def resolve_executable(command: ReadCommand) -> str | None:
 
 
 def _safe_environment(source: Mapping[str, str]) -> dict[str, str]:
-    environment = {"PATH": SAFE_PATH}
+    environment = {
+        "HOMEBREW_NO_ANALYTICS": "1",
+        "HOMEBREW_NO_AUTO_UPDATE": "1",
+        "PATH": SAFE_PATH,
+    }
     environment.update({key: source[key] for key in SAFE_ENVIRONMENT_KEYS if key in source})
     return environment
 
