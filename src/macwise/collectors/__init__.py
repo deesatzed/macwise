@@ -16,15 +16,19 @@ from macwise.collectors.storage import (
     parse_volume_info,
     resolve_storage_location,
 )
+from macwise.collectors.usage import UsageCollection, UsageSignal, collect_usage
 
 __all__ = [
     "ApplicationCollection",
     "HomebrewCollection",
     "StorageCollection",
+    "UsageCollection",
+    "UsageSignal",
     "collect_applications",
     "collect_homebrew",
     "collect_host_applications",
     "collect_storage",
+    "collect_usage",
     "parse_homebrew_inventory",
     "parse_volume_info",
     "resolve_storage_location",

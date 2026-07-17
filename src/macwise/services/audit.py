@@ -11,9 +11,11 @@ from macwise.collectors import (
     ApplicationCollection,
     HomebrewCollection,
     StorageCollection,
+    UsageCollection,
     collect_homebrew,
     collect_host_applications,
     collect_storage,
+    collect_usage,
     resolve_storage_location,
 )
 from macwise.collectors.applications import StorageResolver
@@ -50,6 +52,17 @@ class HomebrewCollector(Protocol):
 
 class StorageCollector(Protocol):
     def __call__(self, *, collected_at: datetime) -> StorageCollection: ...
+
+
+class UsageCollector(Protocol):
+    def __call__(
+        self,
+        software: Sequence[SoftwareRecord],
+        *,
+        home_library: Path,
+        collected_at: datetime,
+        storage_resolver: StorageResolver,
+    ) -> UsageCollection: ...
 
 
 def _utc_now() -> datetime:
@@ -145,6 +158,7 @@ class AuditService:
     application_collector: ApplicationCollector = collect_host_applications
     homebrew_collector: HomebrewCollector = collect_homebrew
     storage_collector: StorageCollector = collect_storage
+    usage_collector: UsageCollector = collect_usage
     clock: Callable[[], datetime] = _utc_now
     audit_id_factory: Callable[[], str] = _new_audit_id
 
@@ -153,6 +167,7 @@ class AuditService:
         application_roots: Sequence[Path],
         *,
         project_roots: Sequence[Path] = (),
+        home_library: Path | None = None,
     ) -> AuditDocument:
         """Collect one audit, continuing when an independent collector fails."""
         collected_at = self.clock()
@@ -205,8 +220,31 @@ class AuditService:
             (*applications.software, *homebrew_software),
             collected_at=collected_at,
         )
+        try:
+            usage = self.usage_collector(
+                correlated_software,
+                home_library=home_library or (Path.home() / "Library"),
+                collected_at=collected_at,
+                storage_resolver=storage_resolver,
+            )
+        except Exception:
+            usage = UsageCollection(
+                signals=(),
+                path_evidence=(),
+                status=_failed_status("usage", collected_at),
+            )
+
+        usage_evidence = {
+            signal.subject_id: signal.evidence for signal in usage.signals if signal.evidence
+        }
+        enriched_software = tuple(
+            record.model_copy(
+                update={"evidence": (*record.evidence, *usage_evidence.get(record.id, ()))}
+            )
+            for record in correlated_software
+        )
         software = sorted(
-            correlated_software,
+            enriched_software,
             key=lambda record: (
                 record.entity_type.value,
                 record.display_name.casefold(),
@@ -214,7 +252,7 @@ class AuditService:
             ),
         )
         collectors = sorted(
-            (applications.status, homebrew.status, storage.status),
+            (applications.status, homebrew.status, storage.status, usage.status),
             key=lambda status: status.collector,
         )
         volumes = sorted(storage.volumes, key=lambda volume: volume.device_identifier)
@@ -224,4 +262,5 @@ class AuditService:
             software=tuple(software),
             volumes=tuple(volumes),
             collectors=tuple(collectors),
+            path_evidence=usage.path_evidence,
         )

@@ -2,12 +2,20 @@ from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
-from macwise.collectors import ApplicationCollection, HomebrewCollection, StorageCollection
+from macwise.collectors import (
+    ApplicationCollection,
+    HomebrewCollection,
+    StorageCollection,
+    UsageCollection,
+    UsageSignal,
+)
 from macwise.models import (
     AuditDocument,
     CollectorState,
     CollectorStatus,
     EntityType,
+    Evidence,
+    Reliability,
     SoftwareRecord,
     StorageLocation,
     VolumeRecord,
@@ -25,6 +33,26 @@ def status(name: str, state: CollectorState, records: int, *limitations: str) ->
         collected_at=COLLECTED_AT,
         records_count=records,
         limitations=limitations,
+    )
+
+
+def empty_usage_collector(
+    software: Sequence[SoftwareRecord],
+    *,
+    home_library: Path,
+    collected_at: datetime,
+    storage_resolver: Callable[[Path], StorageLocation],
+) -> UsageCollection:
+    del software, home_library, storage_resolver
+    return UsageCollection(
+        signals=(),
+        path_evidence=(),
+        status=CollectorStatus(
+            collector="usage",
+            state=CollectorState.COMPLETE,
+            collected_at=collected_at,
+            records_count=0,
+        ),
     )
 
 
@@ -87,18 +115,54 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
             status=status("homebrew", CollectorState.COMPLETE, 1),
         )
 
+    def usage_collector(
+        software: Sequence[SoftwareRecord],
+        *,
+        home_library: Path,
+        collected_at: datetime,
+        storage_resolver: Callable[[Path], StorageLocation],
+    ) -> UsageCollection:
+        assert collected_at == COLLECTED_AT
+        assert home_library == Path("/Users/example/Library")
+        assert storage_resolver(Path("/Volumes/Archive/data")) is StorageLocation.EXTERNAL
+        calls.append("usage")
+        application = next(
+            record for record in software if record.entity_type is EntityType.APPLICATION
+        )
+        return UsageCollection(
+            signals=(
+                UsageSignal(
+                    subject_id=application.id,
+                    last_used_at=COLLECTED_AT,
+                    evidence=(
+                        Evidence(
+                            kind="spotlight_last_used",
+                            value=COLLECTED_AT.isoformat(),
+                            source="synthetic mdls",
+                            collected_at=COLLECTED_AT,
+                            reliability=Reliability.MEDIUM,
+                        ),
+                    ),
+                ),
+            ),
+            path_evidence=(),
+            status=status("usage", CollectorState.COMPLETE, 1),
+        )
+
     audit = AuditService(
         application_collector=application_collector,
         homebrew_collector=homebrew_collector,
         storage_collector=storage_collector,
+        usage_collector=usage_collector,
         clock=lambda: COLLECTED_AT,
         audit_id_factory=lambda: "audit:test",
     ).run(
         (Path("/Applications"),),
         project_roots=(Path("/Projects/Approved"),),
+        home_library=Path("/Users/example/Library"),
     )
 
-    assert calls == ["storage", "applications", "homebrew"]
+    assert calls == ["storage", "applications", "homebrew", "usage"]
     assert audit.audit_id == "audit:test"
     assert audit.schema_version == 3
     assert [record.entity_type for record in audit.software] == [
@@ -113,8 +177,14 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
         "applications",
         "homebrew",
         "storage",
+        "usage",
     ]
-    assert audit.collectors[-1].state is CollectorState.PARTIAL
+    app_record = next(
+        record for record in audit.software if record.entity_type is EntityType.APPLICATION
+    )
+    assert any(item.kind == "spotlight_last_used" for item in app_record.evidence)
+    storage_status = next(item for item in audit.collectors if item.collector == "storage")
+    assert storage_status.state is CollectorState.PARTIAL
 
 
 def test_unexpected_collector_failure_does_not_discard_other_inventory() -> None:
@@ -158,6 +228,7 @@ def test_unexpected_collector_failure_does_not_discard_other_inventory() -> None
         application_collector=application_collector,
         homebrew_collector=broken_homebrew,
         storage_collector=storage_collector,
+        usage_collector=empty_usage_collector,
         clock=lambda: COLLECTED_AT,
         audit_id_factory=lambda: "audit:partial",
     ).run(())
@@ -277,6 +348,7 @@ def _relationship_audit(
         application_collector=application_collector,
         homebrew_collector=homebrew_collector,
         storage_collector=storage_collector,
+        usage_collector=empty_usage_collector,
         clock=lambda: COLLECTED_AT,
         audit_id_factory=lambda: "audit:relationship",
     ).run(())
