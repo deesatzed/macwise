@@ -11,8 +11,8 @@ from macwise.collectors import (
     ApplicationCollection,
     HomebrewCollection,
     StorageCollection,
-    collect_applications,
     collect_homebrew,
+    collect_host_applications,
     collect_storage,
     resolve_storage_location,
 )
@@ -66,7 +66,7 @@ def _failed_status(collector: str, collected_at: datetime) -> CollectorStatus:
 class AuditService:
     """Run read-only collectors and preserve partial results."""
 
-    application_collector: ApplicationCollector = collect_applications
+    application_collector: ApplicationCollector = collect_host_applications
     homebrew_collector: HomebrewCollector = collect_homebrew
     storage_collector: StorageCollector = collect_storage
     clock: Callable[[], datetime] = _utc_now

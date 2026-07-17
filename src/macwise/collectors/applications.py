@@ -6,7 +6,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Protocol, cast
 
 from macwise.models import (
     CollectorState,
@@ -18,8 +18,20 @@ from macwise.models import (
     StorageLocation,
     stable_software_id,
 )
+from macwise.system import CommandResult, CommandState, ReadCommand, run_read_command
 
 StorageResolver = Callable[[Path], StorageLocation]
+
+
+class ApplicationRunner(Protocol):
+    """The narrow command boundary used for host-only application metadata."""
+
+    def __call__(
+        self,
+        command: ReadCommand,
+        arguments: Sequence[str] = (),
+        /,
+    ) -> CommandResult: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -59,6 +71,38 @@ def _bundle_size(app_path: Path) -> int:
     return total
 
 
+def _bundle_components(app_path: Path) -> tuple[str, ...]:
+    """List nested helper/extension bundles without following symlinks."""
+    component_suffixes = {".app", ".appex", ".bundle", ".plugin", ".xpc"}
+    components: list[str] = []
+    for current_root, directories, _files in os.walk(app_path, followlinks=False):
+        root = Path(current_root)
+        retained: list[str] = []
+        for directory in sorted(directories, key=str.casefold):
+            candidate = root / directory
+            if candidate.is_symlink():
+                continue
+            if candidate.suffix.casefold() in component_suffixes:
+                components.append(candidate.relative_to(app_path).as_posix())
+                continue
+            retained.append(directory)
+        directories[:] = retained
+    return tuple(sorted(components, key=str.casefold))
+
+
+def is_protected_application(app_path: Path) -> bool:
+    """Return whether an app is inside Apple's protected system hierarchy."""
+    absolute = Path(os.path.abspath(app_path))
+    return absolute == Path("/System") or Path("/System") in absolute.parents
+
+
+def _installation_source(app_path: Path, protected: bool) -> str | None:
+    if protected:
+        return "apple_system"
+    receipt = app_path / "Contents" / "_MASReceipt" / "receipt"
+    return "mac_app_store" if receipt.is_file() and not receipt.is_symlink() else None
+
+
 def _collect_application(
     app_path: Path,
     *,
@@ -84,6 +128,8 @@ def _collect_application(
     display_name = _string_value(metadata, "CFBundleDisplayName", "CFBundleName") or bundle_name
     identifier = _string_value(metadata, "CFBundleIdentifier")
     version = _string_value(metadata, "CFBundleShortVersionString", "CFBundleVersion")
+    protected = is_protected_application(app_path)
+    install_source = _installation_source(app_path, protected)
 
     try:
         size_bytes = _bundle_size(app_path)
@@ -96,6 +142,12 @@ def _collect_application(
     except OSError:
         storage_location = StorageLocation.UNKNOWN
         limitations.append(f"The application bundle {app_path} storage location is unavailable.")
+
+    try:
+        components = _bundle_components(app_path)
+    except OSError:
+        components = ()
+        limitations.append(f"The application bundle {app_path} components could not be read.")
 
     evidence: list[Evidence] = []
     if metadata:
@@ -123,6 +175,16 @@ def _collect_application(
                 limitations=("Includes the app bundle only, not related user data.",),
             )
         )
+    if components:
+        evidence.append(
+            Evidence(
+                kind="application_components",
+                value=list(components),
+                source="application bundle layout",
+                collected_at=collected_at,
+                reliability=Reliability.HIGH,
+            )
+        )
 
     canonical_key = identifier or str(app_path.resolve(strict=False))
     return (
@@ -134,8 +196,11 @@ def _collect_application(
             identifier=identifier,
             version=version,
             install_path=str(app_path),
+            install_source=install_source,
             size_bytes=size_bytes,
+            components=components,
             storage_location=storage_location,
+            protected=protected,
             evidence=tuple(evidence),
         ),
         tuple(limitations),
@@ -201,5 +266,203 @@ def collect_applications(
             collected_at=collected_at,
             records_count=len(records),
             limitations=tuple(limitations),
+        ),
+    )
+
+
+def _key_values(text: str) -> dict[str, list[str]]:
+    values: dict[str, list[str]] = {}
+    for line in text.splitlines():
+        key, separator, value = line.partition("=")
+        if separator and key.strip() and value.strip():
+            values.setdefault(key.strip(), []).append(value.strip())
+    return values
+
+
+def _publisher_from_signing_identity(identity: str) -> str:
+    prefixes = (
+        "Developer ID Application: ",
+        "Apple Development: ",
+        "Apple Distribution: ",
+        "3rd Party Mac Developer Application: ",
+    )
+    publisher = identity
+    for prefix in prefixes:
+        if publisher.startswith(prefix):
+            publisher = publisher.removeprefix(prefix)
+            break
+    before_team, separator, _team = publisher.rpartition(" (")
+    return before_team if separator and publisher.endswith(")") else publisher
+
+
+def _architectures(text: str) -> tuple[str, ...]:
+    value = text.strip()
+    if " are: " in value:
+        value = value.rsplit(" are: ", 1)[1]
+    elif " architecture: " in value:
+        value = value.rsplit(" architecture: ", 1)[1]
+    supported_tokens = {"arm64", "arm64e", "i386", "ppc", "ppc64", "x86_64"}
+    return tuple(sorted({token for token in value.split() if token in supported_tokens}))
+
+
+def _safe_executable_path(app_path: Path, metadata: dict[str, Any]) -> Path | None:
+    executable_name = _string_value(metadata, "CFBundleExecutable")
+    if (
+        executable_name is None
+        or Path(executable_name).name != executable_name
+        or "/" in executable_name
+        or "\\" in executable_name
+    ):
+        return None
+    executable = app_path / "Contents" / "MacOS" / executable_name
+    if executable.is_symlink() or not executable.is_file():
+        return None
+    return executable
+
+
+def _plist_metadata(app_path: Path) -> dict[str, Any]:
+    try:
+        loaded = plistlib.loads((app_path / "Contents" / "Info.plist").read_bytes())
+    except (OSError, plistlib.InvalidFileException, ValueError):
+        return {}
+    return cast(dict[str, Any], loaded) if isinstance(loaded, dict) else {}
+
+
+def collect_host_applications(
+    roots: Sequence[Path],
+    *,
+    collected_at: datetime,
+    storage_resolver: StorageResolver = _unknown_storage,
+    runner: ApplicationRunner = run_read_command,
+) -> ApplicationCollection:
+    """Collect bundles and enrich them with bounded read-only host metadata."""
+    base = collect_applications(
+        roots,
+        collected_at=collected_at,
+        storage_resolver=storage_resolver,
+    )
+    limitations = list(base.status.limitations)
+    process_result = runner(ReadCommand.PS, ("-axo", "comm="))
+    process_paths: set[str] | None
+    if process_result.state is CommandState.COMPLETE:
+        process_paths = {
+            line.strip() for line in process_result.stdout.splitlines() if line.strip()
+        }
+        limitations.extend(process_result.limitations)
+    else:
+        process_paths = None
+        limitations.extend(
+            process_result.limitations or ("The ps process metadata is unavailable.",)
+        )
+
+    records: list[SoftwareRecord] = []
+    for record in base.software:
+        if record.install_path is None:
+            records.append(record)
+            continue
+        app_path = Path(record.install_path)
+        metadata = _plist_metadata(app_path)
+        executable = _safe_executable_path(app_path, metadata)
+        item_evidence = list(record.evidence)
+
+        codesign = runner(ReadCommand.CODESIGN, ("-dv", "--verbose=4", str(app_path)))
+        publisher: str | None = None
+        signing_identity: str | None = None
+        team_identifier: str | None = None
+        if codesign.state is CommandState.COMPLETE:
+            signing_values = _key_values(f"{codesign.stdout}\n{codesign.stderr}")
+            authorities = signing_values.get("Authority", [])
+            signing_identity = authorities[0] if authorities else None
+            publisher = (
+                _publisher_from_signing_identity(signing_identity)
+                if signing_identity is not None
+                else None
+            )
+            team_values = signing_values.get("TeamIdentifier", [])
+            team_identifier = team_values[0] if team_values else None
+            if signing_identity is None:
+                limitations.append(f"Signing identity for {app_path} is unavailable.")
+            else:
+                item_evidence.append(
+                    Evidence(
+                        kind="application_signing",
+                        value={
+                            "publisher": publisher,
+                            "signing_identity": signing_identity,
+                            "team_identifier": team_identifier,
+                        },
+                        source=f"codesign -dv --verbose=4 {app_path}",
+                        collected_at=collected_at,
+                        reliability=Reliability.HIGH,
+                    )
+                )
+            limitations.extend(codesign.limitations)
+        else:
+            limitations.extend(
+                codesign.limitations or (f"Signing metadata for {app_path} is unavailable.",)
+            )
+
+        architecture_values: tuple[str, ...] = ()
+        if executable is None:
+            limitations.append(f"Executable metadata for {app_path} is unavailable.")
+        else:
+            lipo = runner(ReadCommand.LIPO, ("-archs", str(executable)))
+            if lipo.state is CommandState.COMPLETE:
+                architecture_values = _architectures(lipo.stdout)
+                if architecture_values:
+                    item_evidence.append(
+                        Evidence(
+                            kind="application_architecture",
+                            value=list(architecture_values),
+                            source=f"lipo -archs {executable}",
+                            collected_at=collected_at,
+                            reliability=Reliability.HIGH,
+                        )
+                    )
+                else:
+                    limitations.append(f"Architecture metadata for {app_path} is unavailable.")
+                limitations.extend(lipo.limitations)
+            else:
+                limitations.extend(
+                    lipo.limitations or (f"Architecture metadata for {app_path} is unavailable.",)
+                )
+
+        running = (
+            None
+            if process_paths is None or executable is None
+            else str(executable) in process_paths
+        )
+        if running is not None:
+            item_evidence.append(
+                Evidence(
+                    kind="application_process_state",
+                    value=running,
+                    source="ps -axo comm=",
+                    collected_at=collected_at,
+                    reliability=Reliability.HIGH,
+                    limitations=("This is a point-in-time process snapshot.",),
+                )
+            )
+
+        records.append(
+            record.model_copy(
+                update={
+                    "publisher": publisher,
+                    "signing_identity": signing_identity,
+                    "team_identifier": team_identifier,
+                    "architectures": architecture_values,
+                    "running": running,
+                    "evidence": tuple(item_evidence),
+                }
+            )
+        )
+
+    return ApplicationCollection(
+        software=tuple(records),
+        status=base.status.model_copy(
+            update={
+                "state": CollectorState.COMPLETE if not limitations else CollectorState.PARTIAL,
+                "limitations": tuple(limitations),
+            }
         ),
     )

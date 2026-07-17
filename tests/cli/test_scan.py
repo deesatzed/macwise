@@ -40,6 +40,31 @@ def test_scan_supports_all_public_formats(
         assert "Example App" in result.stdout
 
 
+def test_scan_appends_only_explicit_deduplicated_application_roots(
+    tmp_path: Path,
+    sample_audit: AuditDocument,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    service = FakeAuditService(sample_audit)
+    monkeypatch.setattr(cli, "_service_factory", lambda: service)
+    approved = tmp_path / "External Apps"
+
+    result = runner.invoke(
+        cli.app,
+        ["scan", "--app-root", str(approved), "--app-root", str(approved)],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    roots = service.roots
+    assert roots is not None
+    assert roots == (
+        Path("/Applications"),
+        Path.home() / "Applications",
+        approved,
+    )
+    assert all(root != Path("/Volumes") for root in roots)
+
+
 def test_scan_writes_only_to_an_explicit_new_output_file(
     tmp_path: Path,
     sample_audit: AuditDocument,

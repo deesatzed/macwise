@@ -308,7 +308,7 @@ uv run ruff format --check .
 uv run ruff check .
 uv run pyright
 uv build
-python3 /Users/o2satz/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/macwise
+python3 "$CODEX_HOME/skills/.system/skill-creator/scripts/quick_validate.py" skills/macwise
 ```
 
 Expected: every command succeeds with no warnings or errors.

@@ -75,12 +75,18 @@ def _is_interactive() -> bool:
     return sys.stdin.isatty() and sys.stdout.isatty()
 
 
-def _application_roots() -> tuple[Path, ...]:
-    return (Path("/Applications"), Path.home() / "Applications")
+def _application_roots(additional: Sequence[Path] = ()) -> tuple[Path, ...]:
+    roots = (Path("/Applications"), Path.home() / "Applications", *additional)
+    unique: dict[str, Path] = {}
+    for root in roots:
+        absolute = Path(root).expanduser().absolute()
+        unique.setdefault(str(absolute), absolute)
+    return tuple(unique.values())
 
 
-def _audit() -> AuditDocument:
-    return _service_factory().run(_application_roots())
+def _audit(application_roots: Sequence[Path] | None = None) -> AuditDocument:
+    roots = tuple(application_roots) if application_roots is not None else _application_roots()
+    return _service_factory().run(roots)
 
 
 def _render(audit: AuditDocument, output_format: OutputFormat) -> str:
@@ -183,9 +189,16 @@ def scan(
         bool,
         typer.Option("--force", help="Replace an existing --output file after review."),
     ] = False,
+    app_root: Annotated[
+        list[Path] | None,
+        typer.Option(
+            "--app-root",
+            help="Also scan this explicitly approved application folder (repeatable).",
+        ),
+    ] = None,
 ) -> None:
     """Create and render one read-only audit."""
-    audit = _audit()
+    audit = _audit(_application_roots(app_root or ()))
     _write_or_print(_render(audit, output_format), output, force)
 
 

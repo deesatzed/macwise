@@ -1,9 +1,11 @@
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 from shutil import copytree
 
-from macwise.collectors.applications import collect_applications
+from macwise.collectors.applications import collect_applications, collect_host_applications
 from macwise.models import CollectorState, EntityType, StorageLocation
+from macwise.system import CommandResult, CommandState, ReadCommand
 
 COLLECTED_AT = datetime(2026, 7, 17, 14, 0, tzinfo=UTC)
 FIXTURE_APP = Path(__file__).parents[1] / "fixtures" / "apps" / "Example.app"
@@ -124,3 +126,158 @@ def test_missing_configured_root_is_reported_without_crashing(tmp_path: Path) ->
     assert result.status.limitations == (
         f"The configured application folder {missing_root} is not available.",
     )
+
+
+def test_host_collection_enriches_signing_architecture_process_components_and_source(
+    tmp_path: Path,
+) -> None:
+    applications_root = tmp_path / "Applications"
+    app_path = applications_root / "Example.app"
+    copytree(FIXTURE_APP, app_path)
+    executable = app_path / "Contents" / "MacOS" / "ExampleExecutable"
+    executable.parent.mkdir()
+    executable.write_bytes(b"synthetic universal executable")
+    (app_path / "Contents" / "PlugIns" / "Share.appex").mkdir(parents=True)
+    (app_path / "Contents" / "XPCServices" / "Worker.xpc").mkdir(parents=True)
+    (app_path / "Contents" / "Library" / "LoginItems" / "Helper.app").mkdir(parents=True)
+    receipt = app_path / "Contents" / "_MASReceipt" / "receipt"
+    receipt.parent.mkdir()
+    receipt.write_bytes(b"synthetic receipt")
+    calls: list[tuple[ReadCommand, tuple[str, ...]]] = []
+
+    def runner(command: ReadCommand, arguments: Sequence[str] = ()) -> CommandResult:
+        calls.append((command, tuple(arguments)))
+        stdout = ""
+        stderr = ""
+        if command is ReadCommand.PS:
+            stdout = f"{executable}\n"
+        elif command is ReadCommand.CODESIGN:
+            stderr = "\n".join(
+                (
+                    "Identifier=org.example.safe-app",
+                    "Authority=Developer ID Application: Example Corp (TEAM123456)",
+                    "Authority=Developer ID Certification Authority",
+                    "TeamIdentifier=TEAM123456",
+                )
+            )
+        elif command is ReadCommand.LIPO:
+            stdout = f"Architectures in the fat file: {executable} are: x86_64 arm64\n"
+        return CommandResult(
+            command=command,
+            state=CommandState.COMPLETE,
+            stdout=stdout,
+            stderr=stderr,
+            return_code=0,
+            duration_seconds=0.01,
+        )
+
+    result = collect_host_applications(
+        (applications_root,),
+        collected_at=COLLECTED_AT,
+        runner=runner,
+    )
+
+    assert result.status.state is CollectorState.COMPLETE
+    record = result.software[0]
+    assert record.publisher == "Example Corp"
+    assert record.signing_identity == "Developer ID Application: Example Corp (TEAM123456)"
+    assert record.team_identifier == "TEAM123456"
+    assert record.architectures == ("arm64", "x86_64")
+    assert record.running is True
+    assert record.components == (
+        "Contents/Library/LoginItems/Helper.app",
+        "Contents/PlugIns/Share.appex",
+        "Contents/XPCServices/Worker.xpc",
+    )
+    assert record.install_source == "mac_app_store"
+    assert record.protected is False
+    assert {item.kind for item in record.evidence}.issuperset(
+        {
+            "application_architecture",
+            "application_components",
+            "application_process_state",
+            "application_signing",
+        }
+    )
+    assert calls == [
+        (ReadCommand.PS, ("-axo", "comm=")),
+        (ReadCommand.CODESIGN, ("-dv", "--verbose=4", str(app_path))),
+        (ReadCommand.LIPO, ("-archs", str(executable))),
+    ]
+
+
+def test_failed_host_metadata_stays_unknown_and_marks_collection_partial(tmp_path: Path) -> None:
+    applications_root = tmp_path / "Applications"
+    app_path = applications_root / "Example.app"
+    copytree(FIXTURE_APP, app_path)
+    executable = app_path / "Contents" / "MacOS" / "ExampleExecutable"
+    executable.parent.mkdir()
+    executable.write_bytes(b"synthetic executable")
+
+    def failing_runner(command: ReadCommand, arguments: Sequence[str] = ()) -> CommandResult:
+        del arguments
+        return CommandResult(
+            command=command,
+            state=CommandState.FAILED,
+            stdout="",
+            stderr="synthetic failure",
+            return_code=1,
+            duration_seconds=0.01,
+            limitations=(f"The {command.value} metadata is unavailable.",),
+        )
+
+    result = collect_host_applications(
+        (applications_root,),
+        collected_at=COLLECTED_AT,
+        runner=failing_runner,
+    )
+
+    record = result.software[0]
+    assert result.status.state is CollectorState.PARTIAL
+    assert record.publisher is None
+    assert record.signing_identity is None
+    assert record.architectures == ()
+    assert record.running is None
+    assert any("ps metadata" in item for item in result.status.limitations)
+    assert any("codesign metadata" in item for item in result.status.limitations)
+    assert any("lipo metadata" in item for item in result.status.limitations)
+
+
+def test_process_evidence_requires_an_exact_executable_path(tmp_path: Path) -> None:
+    applications_root = tmp_path / "Applications"
+    app_path = applications_root / "Example.app"
+    copytree(FIXTURE_APP, app_path)
+    executable = app_path / "Contents" / "MacOS" / "ExampleExecutable"
+    executable.parent.mkdir()
+    executable.write_bytes(b"synthetic executable")
+
+    def runner(command: ReadCommand, arguments: Sequence[str] = ()) -> CommandResult:
+        del arguments
+        return CommandResult(
+            command=command,
+            state=CommandState.COMPLETE,
+            stdout=f"{executable}-different\n" if command is ReadCommand.PS else "arm64\n",
+            stderr=(
+                "Authority=Apple Development: Example Corp (TEAM123456)\n"
+                "TeamIdentifier=TEAM123456\n"
+                if command is ReadCommand.CODESIGN
+                else ""
+            ),
+            return_code=0,
+            duration_seconds=0.01,
+        )
+
+    result = collect_host_applications(
+        (applications_root,),
+        collected_at=COLLECTED_AT,
+        runner=runner,
+    )
+
+    assert result.software[0].running is False
+
+
+def test_system_application_paths_are_marked_protected() -> None:
+    from macwise.collectors.applications import is_protected_application
+
+    assert is_protected_application(Path("/System/Applications/Safari.app")) is True
+    assert is_protected_application(Path("/Applications/Example.app")) is False

@@ -1,6 +1,10 @@
 """Read-only evidence collectors."""
 
-from macwise.collectors.applications import ApplicationCollection, collect_applications
+from macwise.collectors.applications import (
+    ApplicationCollection,
+    collect_applications,
+    collect_host_applications,
+)
 from macwise.collectors.homebrew import (
     HomebrewCollection,
     collect_homebrew,
@@ -19,6 +23,7 @@ __all__ = [
     "StorageCollection",
     "collect_applications",
     "collect_homebrew",
+    "collect_host_applications",
     "collect_storage",
     "parse_homebrew_inventory",
     "parse_volume_info",
