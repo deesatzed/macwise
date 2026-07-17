@@ -4,7 +4,7 @@
 
 MacWise helps ordinary Mac users understand installed applications, Homebrew software, and storage before deciding what deserves attention. It gathers deterministic local evidence first, distinguishes user-selected Homebrew tools from dependencies, and labels missing evidence instead of turning it into a confident claim.
 
-MacWise is currently a pre-alpha read-only inventory. Cleanup planning, reversible apply/undo, complete usage/startup/backup analysis, and one-command Codex setup are still under development.
+MacWise is currently a pre-alpha read-only inventory and explain/review tool. It now reports cautious usage findings, startup ownership, bounded related-data measurements, and Time Machine facts without claiming complete history or backup coverage. Overlap recommendations, cleanup planning, reversible apply/undo, and one-command Codex setup are still under development.
 
 ## Terminal example
 
@@ -125,6 +125,13 @@ macwise scan --format json
 # Show cautious identity facts for one item
 macwise explain "Example App"
 
+# Review only evidence-supported possibly-unused items
+macwise review unused
+
+# Inspect startup ownership and backup limitations
+macwise startup
+macwise backups
+
 # Diagnose collector availability
 macwise doctor
 ```
@@ -133,7 +140,7 @@ Every command supports `--help`, including nested commands such as `macwise revi
 
 ## Current scope and roadmap
 
-Phase 1 covers guided use, the complete public command hierarchy, application/Homebrew/storage inventory, evidence provenance, partial-failure reporting, and JSON/Markdown output. `GOAL.md` remains the full product contract for explain/review intelligence, overlap analysis, planning, reversible cleanup, Codex integration, and public release.
+Phases 1 and 2 cover guided use, the complete public command hierarchy, application/Homebrew/storage inventory, evidence provenance, partial-failure reporting, schema-3 JSON/Markdown output, cautious usage findings, startup ownership, bounded related data, backup limitations, and read-only explain/review views. `GOAL.md` remains the full product contract for overlap intelligence, planning, reversible cleanup, Codex integration, and public release. See the [Phase 2 acceptance audit](docs/phase-2-acceptance.md) for current proof and limitations.
 
 ## Development
 

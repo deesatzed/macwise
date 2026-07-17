@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-55% complete – MacWise now has a locally verified public-repository foundation and an implemented schema-3 Phase 2 explain/review slice: multi-signal usage findings, startup ownership, bounded related paths, honest Time Machine facts, and deterministic read-only CLI/Markdown views. MW-009 and MW-010 are closed; MW-011 remains PARTIAL because no hosted/Linux runner or Git remote exists. MW-100 is implemented locally and awaiting its broader acceptance gates.
+58% complete – MacWise now has a locally accepted schema-3 Phase 2 explain/review slice: multi-signal usage findings, startup ownership, bounded related paths, honest Time Machine facts, and deterministic read-only CLI/Markdown views. MW-100 passed its Python 3.12/3.13, quality, build, privacy, skill, clean-wheel, hostile, and real-Mac gates. MW-011 remains PARTIAL because no hosted/Linux runner or Git remote exists; Phase 3+ and public release remain open.
 
 ## Current Assumptions
 
@@ -36,20 +36,20 @@
 | Run MW-011 clean-platform acceptance | Partial | Codex | Python 3.12 and 3.13 pass on macOS; clean wheel and isolated pipx installs pass. Hosted Linux/macOS CI cannot run without a remote runner; Docker/Podman engines are not running. |
 | Build MW-100 evidence and analysis core | Done | Codex | Schema 3, v1/v2 migration, usage/startup collectors, evidence-basis findings, bounded related paths, and backup facts pass the 112-test gate. |
 | Build MW-100 explain/review views | Done | Codex | Explain, review unused, startup, backups, help, and four-basis Markdown views pass focused, hostile-render, and 118-test full gates. |
-| Run MW-100 acceptance | In progress | Codex | Run cross-version, build, privacy, skill, clean-install, and real read-only evidence; keep later phases disabled. |
+| Run MW-100 acceptance | Done | Codex | `docs/phase-2-acceptance.md` records a local PASS from 118 tests on Python 3.12/3.13, quality/build/privacy/skill/clean-wheel gates, and aggregate-only real scans. |
 | Complete Phases 2–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
 
-- D-001 through D-008 are in `DECISIONS.md`.
+- D-001 through D-021 are in `DECISIONS.md`.
 
 ## Current Milestone
 
-Phase 2 explain/review evidence while the external hosted-CI/public-release gates remain explicitly open.
+Phase 3 role-aware overlap intelligence while the external hosted-CI/public-release gates remain explicitly open.
 
 ## Next Actions
 
-1. Run MW-100 full acceptance across Python 3.12/3.13, build, privacy, skill, clean install, and real read-only command/report smokes.
+1. Plan MW-200 role-aware overlap categories, active-use comparison, learning value, and guarded recommendations without enabling cleanup actions.
 2. Re-run hosted Linux/macOS CI once a Git remote/runner is authorized and available; do not treat the workflow definition as a run result.
 3. Keep public Homebrew/release proof deferred until tap/artifact authority exists.
 
@@ -111,3 +111,6 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-17 MW-100 evidence-core gate: 112 tests passed; Ruff lint/format passed; Pyright reported 0 errors. Backup facts include configuration, available destinations, last-verifiable timestamp, and path exclusion state but deliberately no coverage field.
 - 2026-07-17 MW-100 UX RED/GREEN: five command/report tests failed on the Phase 1 refusal surfaces and missing Markdown sections before deterministic explain, cautious unused review, startup ownership/state, backup facts, and four-basis report rendering were added.
 - 2026-07-17 MW-100 UX gate: 118 tests passed; Ruff lint/format passed; Pyright reported 0 errors; the hostile renderer now asserts the exact seven allowed level-2 headings and rejects forged structure.
+- 2026-07-17 MW-100 acceptance: 118 tests passed on Python 3.12.11 and 3.13.13; Ruff/Pyright/build/privacy/skill/workflow/clean-wheel gates passed; the installed wheel rendered Phase 2 evidence correctly.
+- 2026-07-17 MW-100 real smokes: an in-memory audit produced 325 findings for 325 software records, 28 startup records, 97 bounded related paths, six usage-label kinds, schema round-trip, and exact safe headings in 25.54 seconds. A 19.2-second aggregate rerun showed 3 complete and 3 explicitly partial collectors; no inventory was saved.
+- 2026-07-17 MW-100 claim validation: PASS for the local read-only Phase 2 scope; overall product, hosted CI, publication, and Phase 3+ claims remain open in `docs/phase-2-acceptance.md`.

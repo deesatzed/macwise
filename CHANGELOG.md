@@ -18,10 +18,13 @@ MacWise follows Semantic Versioning. The project is pre-alpha; unreleased behavi
 - Homebrew installed sizes, executable names, linked/pinned/caveat state, approved project references, storage location, and guarded cask/application identity links.
 - Physical/APFS storage hierarchy, ownership, and Time Machine role/destination/exclusion facts without path-coverage claims.
 - Synthetic hostile plist/Homebrew/disk/prompt fixtures plus shared Markdown/terminal control, bidi, and structure-injection neutralization while raw JSON evidence remains intact.
+- Schema-version-3 startup, related-path, backup, and basis-tagged finding models with schema-1/schema-2 migration.
+- Bounded Spotlight/known-Library-path usage evidence, conservative launch/Homebrew startup ownership, and deterministic multi-signal usage labels.
+- Time Machine configuration, available-destination, last-verifiable-timestamp, and related-path exclusion facts without a coverage claim.
+- Read-only `explain`, `review unused`, `startup`, and `backups` views plus verified/inferred/user-confirmed/unknown Markdown sections.
 
 ### Not yet available
 
-- Complete usage, startup, related-data, and backup analysis.
 - Role-aware overlap recommendations.
 - Cleanup planning, apply, verification, and undo.
 - One-command Codex setup and typed local integration.

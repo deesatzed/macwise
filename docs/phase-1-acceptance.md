@@ -1,5 +1,8 @@
 # Phase 1 Acceptance Audit
 
+> Historical Phase 1 checkpoint. Current schema-3 and Phase 2 evidence is recorded in
+> [`phase-2-acceptance.md`](phase-2-acceptance.md).
+
 Date: 2026-07-17
 
 Verdict: **PARTIAL**. The Phase 1 user experience, schema, reports, help contract, safety boundary, local package build, MW-009 collector fields, and MW-010 hostile-metadata boundaries have direct evidence. Clean hosted platforms, public installation, and several later evidence fields remain open, so Phase 1 and the overall MacWise goal are not complete.
