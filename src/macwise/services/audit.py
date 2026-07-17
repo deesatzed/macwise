@@ -31,6 +31,7 @@ from macwise.models import (
     CollectorStatus,
     EntityType,
     Evidence,
+    Finding,
     PathEvidence,
     Reliability,
     SoftwareRecord,
@@ -39,6 +40,7 @@ from macwise.models import (
     VolumeRecord,
 )
 from macwise.services.analysis import analyze_usage
+from macwise.services.overlap import OverlapAnalysis, analyze_overlaps
 
 
 class ApplicationCollector(Protocol):
@@ -93,6 +95,15 @@ class BackupCollector(Protocol):
         path_evidence: Sequence[PathEvidence],
         collected_at: datetime,
     ) -> BackupCollection: ...
+
+
+class OverlapAnalyzer(Protocol):
+    def __call__(
+        self,
+        software: Sequence[SoftwareRecord],
+        *,
+        usage_findings: Sequence[Finding],
+    ) -> OverlapAnalysis: ...
 
 
 def _utc_now() -> datetime:
@@ -188,6 +199,7 @@ class AuditService:
     application_collector: ApplicationCollector = collect_host_applications
     backup_collector: BackupCollector = collect_backups
     homebrew_collector: HomebrewCollector = collect_homebrew
+    overlap_analyzer: OverlapAnalyzer = analyze_overlaps
     storage_collector: StorageCollector = collect_storage
     startup_collector: StartupCollector = collect_startup
     usage_collector: UsageCollector = collect_usage
@@ -316,6 +328,23 @@ class AuditService:
             path_evidence=backups.path_evidence,
             collected_at=collected_at,
         )
+        try:
+            overlap = self.overlap_analyzer(
+                enriched_software,
+                usage_findings=findings,
+            )
+            overlap_status = CollectorStatus(
+                collector="overlap",
+                state=(CollectorState.PARTIAL if overlap.limitations else CollectorState.COMPLETE),
+                collected_at=collected_at,
+                records_count=(
+                    len(overlap.assessments) + len(overlap.relations) + len(overlap.recommendations)
+                ),
+                limitations=overlap.limitations,
+            )
+        except Exception:
+            overlap = OverlapAnalysis(assessments=(), relations=(), recommendations=())
+            overlap_status = _failed_status("overlap", collected_at)
         software = sorted(
             enriched_software,
             key=lambda record: (
@@ -329,6 +358,7 @@ class AuditService:
                 applications.status,
                 backups.status,
                 homebrew.status,
+                overlap_status,
                 startup.status,
                 storage.status,
                 usage.status,
@@ -346,4 +376,22 @@ class AuditService:
             path_evidence=backups.path_evidence,
             findings=findings,
             backup=backups.backup,
+            catalog_assessments=tuple(
+                sorted(
+                    overlap.assessments,
+                    key=lambda item: (item.catalog_key, item.subject_id),
+                )
+            ),
+            overlaps=tuple(
+                sorted(
+                    overlap.relations,
+                    key=lambda item: (item.category.value, item.id),
+                )
+            ),
+            recommendations=tuple(
+                sorted(
+                    overlap.recommendations,
+                    key=lambda item: (item.action.value, item.id),
+                )
+            ),
         )

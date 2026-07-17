@@ -15,10 +15,14 @@ from macwise.collectors import (
 from macwise.models import (
     AuditDocument,
     BackupStatus,
+    CatalogAssessment,
+    ClaimBasis,
     CollectorState,
     CollectorStatus,
     EntityType,
     Evidence,
+    Finding,
+    LearningValue,
     PathEvidence,
     Reliability,
     SoftwareRecord,
@@ -30,6 +34,7 @@ from macwise.models import (
     stable_software_id,
 )
 from macwise.services.audit import AuditService
+from macwise.services.overlap import OverlapAnalysis
 
 COLLECTED_AT = datetime(2026, 7, 17, 17, 0, tzinfo=UTC)
 
@@ -239,10 +244,39 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
             status=status("backups", CollectorState.COMPLETE, 1),
         )
 
+    def overlap_analyzer(
+        software: Sequence[SoftwareRecord],
+        *,
+        usage_findings: Sequence[Finding],
+    ) -> OverlapAnalysis:
+        assert usage_findings
+        calls.append("overlap")
+        application = next(
+            record for record in software if record.entity_type is EntityType.APPLICATION
+        )
+        return OverlapAnalysis(
+            assessments=(
+                CatalogAssessment(
+                    subject_id=application.id,
+                    catalog_key="synthetic-app",
+                    catalog_version="test",
+                    catalog_source="synthetic catalog",
+                    roles=("test role",),
+                    learning_value=LearningValue.MODERATE,
+                    learning_statement="Synthetic learning context.",
+                    basis=ClaimBasis.INFERRED,
+                    confidence=Reliability.MEDIUM,
+                ),
+            ),
+            relations=(),
+            recommendations=(),
+        )
+
     audit = AuditService(
         application_collector=application_collector,
         backup_collector=backup_collector,
         homebrew_collector=homebrew_collector,
+        overlap_analyzer=overlap_analyzer,
         storage_collector=storage_collector,
         startup_collector=startup_collector,
         usage_collector=usage_collector,
@@ -262,9 +296,10 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
         "startup",
         "usage",
         "backups",
+        "overlap",
     ]
     assert audit.audit_id == "audit:test"
-    assert audit.schema_version == 3
+    assert audit.schema_version == 4
     assert [record.entity_type for record in audit.software] == [
         EntityType.APPLICATION,
         EntityType.HOMEBREW_FORMULA,
@@ -277,12 +312,14 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
         "applications",
         "backups",
         "homebrew",
+        "overlap",
         "startup",
         "storage",
         "usage",
     ]
     assert audit.startup[0].owner_software_ids == (formula.id,)
     assert audit.backup is not None and audit.backup.configured is True
+    assert audit.catalog_assessments[0].catalog_key == "synthetic-app"
     app_record = next(
         record for record in audit.software if record.entity_type is EntityType.APPLICATION
     )
@@ -331,10 +368,19 @@ def test_unexpected_collector_failure_does_not_discard_other_inventory() -> None
         del collected_at, project_roots
         raise RuntimeError("private implementation detail")
 
+    def broken_overlap(
+        software: Sequence[SoftwareRecord],
+        *,
+        usage_findings: Sequence[Finding],
+    ) -> OverlapAnalysis:
+        del software, usage_findings
+        raise RuntimeError("private overlap implementation detail")
+
     audit = AuditService(
         application_collector=application_collector,
         backup_collector=empty_backup_collector,
         homebrew_collector=broken_homebrew,
+        overlap_analyzer=broken_overlap,
         storage_collector=storage_collector,
         startup_collector=empty_startup_collector,
         usage_collector=empty_usage_collector,
@@ -346,6 +392,11 @@ def test_unexpected_collector_failure_does_not_discard_other_inventory() -> None
     assert homebrew_status.state is CollectorState.UNAVAILABLE
     assert homebrew_status.limitations == ("The Homebrew collector failed unexpectedly.",)
     assert "private implementation detail" not in homebrew_status.model_dump_json()
+    overlap_status = next(item for item in audit.collectors if item.collector == "overlap")
+    assert overlap_status.state is CollectorState.UNAVAILABLE
+    assert overlap_status.limitations == ("The Overlap collector failed unexpectedly.",)
+    assert "private overlap implementation detail" not in overlap_status.model_dump_json()
+    assert audit.catalog_assessments == ()
 
 
 def test_unique_cask_artifact_and_version_link_the_same_application() -> None:
