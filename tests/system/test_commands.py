@@ -3,7 +3,55 @@ from subprocess import CompletedProcess, TimeoutExpired
 
 import pytest
 
-from macwise.system.commands import CommandState, ReadCommand, run_read_command
+from macwise.system.commands import (
+    COMMAND_CANDIDATES,
+    DEFAULT_OUTPUT_LIMITS,
+    CommandState,
+    ReadCommand,
+    run_read_command,
+)
+
+
+@pytest.mark.parametrize(
+    ("command", "fixed_path"),
+    [
+        (ReadCommand.CODESIGN, "/usr/bin/codesign"),
+        (ReadCommand.LIPO, "/usr/bin/lipo"),
+        (ReadCommand.PS, "/bin/ps"),
+        (ReadCommand.TMUTIL, "/usr/bin/tmutil"),
+    ],
+)
+def test_macos_metadata_commands_are_fixed_bounded_and_keep_arguments_inert(
+    command: ReadCommand,
+    fixed_path: str,
+) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_runner(
+        args: Sequence[str],
+        *,
+        shell: bool,
+        check: bool,
+        capture_output: bool,
+        timeout: float,
+        env: Mapping[str, str],
+    ) -> CompletedProcess[bytes]:
+        captured.update(args=tuple(args), shell=shell)
+        return CompletedProcess(args, 0, stdout=b"metadata", stderr=b"")
+
+    hostile_argument = "/Applications/$(touch injected).app"
+    result = run_read_command(
+        command,
+        (hostile_argument,),
+        runner=fake_runner,
+        resolver=lambda _command: fixed_path,
+    )
+
+    assert COMMAND_CANDIDATES[command] == (fixed_path,)
+    assert DEFAULT_OUTPUT_LIMITS[command] == 1_000_000
+    assert captured["args"] == (fixed_path, hostile_argument)
+    assert captured["shell"] is False
+    assert result.state is CommandState.COMPLETE
 
 
 def test_runner_uses_fixed_executable_and_keeps_hostile_metadata_inert() -> None:

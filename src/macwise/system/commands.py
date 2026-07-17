@@ -17,8 +17,12 @@ class ReadCommand(StrEnum):
     """Programs MacWise is permitted to invoke while gathering evidence."""
 
     BREW = "brew"
+    CODESIGN = "codesign"
     DISKUTIL = "diskutil"
+    LIPO = "lipo"
     MDLS = "mdls"
+    PS = "ps"
+    TMUTIL = "tmutil"
 
 
 class CommandState(StrEnum):
@@ -67,14 +71,22 @@ class ExecutableResolver(Protocol):
 
 COMMAND_CANDIDATES: Mapping[ReadCommand, tuple[str, ...]] = {
     ReadCommand.BREW: ("/opt/homebrew/bin/brew", "/usr/local/bin/brew"),
+    ReadCommand.CODESIGN: ("/usr/bin/codesign",),
     ReadCommand.DISKUTIL: ("/usr/sbin/diskutil",),
+    ReadCommand.LIPO: ("/usr/bin/lipo",),
     ReadCommand.MDLS: ("/usr/bin/mdls",),
+    ReadCommand.PS: ("/bin/ps",),
+    ReadCommand.TMUTIL: ("/usr/bin/tmutil",),
 }
 
 DEFAULT_OUTPUT_LIMITS: Mapping[ReadCommand, int] = {
     ReadCommand.BREW: 16 * 1024 * 1024,
+    ReadCommand.CODESIGN: 1_000_000,
     ReadCommand.DISKUTIL: 1_000_000,
+    ReadCommand.LIPO: 1_000_000,
     ReadCommand.MDLS: 1_000_000,
+    ReadCommand.PS: 1_000_000,
+    ReadCommand.TMUTIL: 1_000_000,
 }
 
 
