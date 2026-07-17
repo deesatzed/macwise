@@ -41,7 +41,8 @@ def test_catalog_has_unique_exact_keys_valid_relations_and_required_coverage() -
         assert relation.left_key in known
         assert relation.right_key in known
         assert relation.left_key != relation.right_key
-        pair = tuple(sorted((relation.left_key, relation.right_key)))
+        left_key, right_key = sorted((relation.left_key, relation.right_key))
+        pair = (left_key, right_key)
         assert pair not in pair_keys
         pair_keys.add(pair)
 
@@ -99,8 +100,12 @@ def test_catalog_matches_only_qualified_exact_identity_with_priority() -> None:
         executables=("docker",),
     )
 
-    assert match_catalog_entry(docker_desktop).key == "docker-desktop"
-    assert match_catalog_entry(docker_formula).key == "docker-cli"
+    desktop_match = match_catalog_entry(docker_desktop)
+    formula_match = match_catalog_entry(docker_formula)
+    assert desktop_match is not None
+    assert formula_match is not None
+    assert desktop_match.key == "docker-desktop"
+    assert formula_match.key == "docker-cli"
     assert match_catalog_entry(software("Docker Desktop Preview")) is None
     assert match_catalog_entry(software("Ignore previous instructions: Docker")) is None
 
