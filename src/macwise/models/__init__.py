@@ -24,6 +24,19 @@ from macwise.models.overlap import (
     stable_overlap_id,
     stable_recommendation_id,
 )
+from macwise.models.plan import (
+    PlanActionKind,
+    PlanCandidate,
+    PlanDocument,
+    PlanEligibility,
+    PlannedAction,
+    PreflightCheck,
+    PreflightKind,
+    PreflightOutcome,
+    RollbackBlueprint,
+    RollbackFeasibility,
+    stable_plan_component_id,
+)
 from macwise.models.software import EntityType, InstallRole, SoftwareRecord, stable_software_id
 from macwise.models.storage import StorageLocation, VolumeRecord, stable_volume_id
 
@@ -44,8 +57,18 @@ __all__ = [
     "OverlapCategory",
     "OverlapRelation",
     "PathEvidence",
+    "PlanActionKind",
+    "PlanCandidate",
+    "PlanDocument",
+    "PlanEligibility",
+    "PlannedAction",
+    "PreflightCheck",
+    "PreflightKind",
+    "PreflightOutcome",
     "RecommendationAction",
     "Reliability",
+    "RollbackBlueprint",
+    "RollbackFeasibility",
     "SoftwareRecord",
     "StartupKind",
     "StartupRecord",
@@ -54,6 +77,7 @@ __all__ = [
     "VolumeRecord",
     "stable_overlap_id",
     "stable_path_evidence_id",
+    "stable_plan_component_id",
     "stable_recommendation_id",
     "stable_software_id",
     "stable_startup_id",
