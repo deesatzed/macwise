@@ -9,6 +9,7 @@ from macwise.services.approval import (
     undo_approval_phrase,
 )
 from macwise.services.audit import AuditService
+from macwise.services.execution import ExecutionService, ExecutionServiceError
 from macwise.services.overlap import OverlapAnalysis, analyze_overlaps
 from macwise.services.planning import PlanningResult, add_candidate
 from macwise.services.revalidation import PreparedExecution, RevalidationError, prepare_execution
@@ -16,6 +17,8 @@ from macwise.services.revalidation import PreparedExecution, RevalidationError, 
 __all__ = [
     "ApprovalError",
     "AuditService",
+    "ExecutionService",
+    "ExecutionServiceError",
     "OverlapAnalysis",
     "PlanningResult",
     "PreparedExecution",
