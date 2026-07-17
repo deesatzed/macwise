@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Destinations</key>
+  <array>
+    <dict>
+      <key>ID</key><string>00000000-0000-0000-0000-000000000001</string>
+      <key>Kind</key><string>Local</string>
+      <key>LastDestination</key><integer>1</integer>
+      <key>MountPoint</key><string>/Volumes/Archive</string>
+      <key>Name</key><string>Archive</string>
+    </dict>
+  </array>
+</dict>
+</plist>

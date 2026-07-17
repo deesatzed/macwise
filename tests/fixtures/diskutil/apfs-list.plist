@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Containers</key>
+  <array>
+    <dict>
+      <key>ContainerReference</key><string>disk1</string>
+      <key>PhysicalStores</key>
+      <array>
+        <dict><key>DeviceIdentifier</key><string>disk0s2</string></dict>
+      </array>
+      <key>Volumes</key>
+      <array>
+        <dict>
+          <key>DeviceIdentifier</key><string>disk1s1</string>
+          <key>Roles</key><array><string>System</string></array>
+        </dict>
+      </array>
+    </dict>
+    <dict>
+      <key>ContainerReference</key><string>disk2</string>
+      <key>PhysicalStores</key>
+      <array>
+        <dict><key>DeviceIdentifier</key><string>disk2s3</string></dict>
+      </array>
+      <key>Volumes</key>
+      <array>
+        <dict>
+          <key>DeviceIdentifier</key><string>disk2s1</string>
+          <key>Roles</key><array><string>Backup</string></array>
+        </dict>
+      </array>
+    </dict>
+  </array>
+</dict>
+</plist>

@@ -3,6 +3,15 @@
 <plist version="1.0">
 <dict>
   <key>DeviceIdentifier</key><string>disk1s1</string>
+  <key>ParentWholeDisk</key><string>disk0</string>
+  <key>WholeDisk</key><false/>
+  <key>Content</key><string>Apple_APFS</string>
+  <key>APFSContainerReference</key><string>disk1</string>
+  <key>APFSPhysicalStores</key>
+  <array>
+    <dict><key>APFSPhysicalStore</key><string>disk0s2</string></dict>
+  </array>
+  <key>GlobalPermissionsEnabled</key><true/>
   <key>VolumeName</key><string>System</string>
   <key>MountPoint</key><string>/</string>
   <key>FilesystemName</key><string>APFS</string>
