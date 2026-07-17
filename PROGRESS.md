@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-40% complete – MacWise now has a locally verified public-repository foundation, schema-v2 audit migration, enriched read-only application/Homebrew/storage evidence, a valid initial Codex skill, CI definition, isolated wheel install proof, and real read-only scan proof. MW-009's named collector gaps are closed. The requirement-level Phase 1 audit remains intentionally PARTIAL: malicious cross-parser fixtures, several later evidence fields, public pipx/Homebrew installation, and hosted CI are still unproven.
+45% complete – MacWise now has a locally verified public-repository foundation, schema-v2 audit migration, enriched read-only application/Homebrew/storage evidence, hostile cross-parser/display fixtures, a valid read-only Codex skill, CI definition, isolated wheel install proof, and real read-only scan proof. MW-009 and MW-010 are closed. The requirement-level Phase 1 audit remains intentionally PARTIAL: clean-platform/hosted CI, several later evidence fields, and public pipx/Homebrew installation are still unproven.
 
 ## Current Assumptions
 
@@ -32,6 +32,7 @@
 | Build public repository foundation | Done | Codex | README/license/security/contribution/changelog/privacy/threat-model docs, valid initial skill, and commit-pinned CI added; local contract passes. |
 | Audit Phase 1 against `GOAL.md` | Done | Codex | `docs/phase-1-acceptance.md` verdict is PARTIAL with direct evidence and explicit collector/release gaps. |
 | Close MW-009 inventory field gaps | Done | Codex | Schema v2 plus application signing/architecture/process/components/source, Homebrew size/executable/state/reference/location/correlation, and storage topology/ownership/Time Machine facts are fixture-tested and real-smoked. |
+| Complete MW-010 hostile metadata coverage | Done | Codex | Synthetic plist/Homebrew/disk/prompt fixtures prove path containment, raw JSON provenance, Markdown/terminal neutralization, inert CLI matching, and the skill's prompt boundary. |
 | Complete Phases 2–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -40,12 +41,12 @@
 
 ## Current Milestone
 
-Phase 1 adversarial evidence acceptance: cross-parser malicious metadata fixtures and a requirement-level re-audit.
+Phase 1 clean-platform acceptance: rerun the requirement matrix and prove clean wheel/pipx plus hosted macOS/Linux CI where authority and tooling permit.
 
 ## Next Actions
 
-1. Add cross-parser malicious metadata and prompt-injection fixtures under MW-010.
-2. Re-audit Phase 1 and run clean-platform acceptance under MW-011.
+1. Re-audit Phase 1 and run clean-platform acceptance under MW-011.
+2. Prove a local `pipx`-equivalent or actual `pipx` install without publishing; hosted CI remains external-state dependent.
 3. Continue into Phase 2 without collapsing later phases or overstating backup/usage evidence.
 
 ## Blockers
@@ -94,3 +95,7 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-17 MW-009 complete local gate: 94 tests passed; Ruff format/lint passed; Pyright reported 0 errors; sdist/wheel build, skill validation, workflow YAML parsing, and `git diff --check` passed.
 - 2026-07-17 MW-009 isolated install: the built wheel installed under Python 3.12; version, root/guided/scan help, explicit-root options, and exit-2 Codex setup refusal were verified.
 - 2026-07-17 MW-009 real read-only smokes: application signing/architecture/process evidence, Homebrew size/executable/state evidence, storage topology/ownership/Time Machine facts, schema-v2 JSON, and enriched Markdown were validated in memory without persisting host inventory.
+- 2026-07-17 MW-010 RED: hostile security tests exposed raw ESC/newline/bidi structure injection in Markdown/CLI output and missing explicit prompt-shaped evidence language; parser/path containment already passed.
+- 2026-07-17 MW-010 GREEN: 4 focused security tests and 46 security/reporting/CLI regressions passed after shared human-display sanitization and the strengthened skill boundary.
+- 2026-07-17 MW-010 complete local gate: 98 tests passed; Ruff format/lint, Pyright, build, skill validation, workflow parse, privacy contract, and diff checks passed.
+- 2026-07-17 MW-010 isolated/real smokes: the Python 3.12 wheel neutralized hostile control/bidi/newline text; a real in-memory Markdown scan contained only the three genuine level-2 sections and was discarded.

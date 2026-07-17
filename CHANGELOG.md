@@ -17,6 +17,7 @@ MacWise follows Semantic Versioning. The project is pre-alpha; unreleased behavi
 - Application signing, architecture, process, nested component, protection, and verified-source evidence with explicit approved roots.
 - Homebrew installed sizes, executable names, linked/pinned/caveat state, approved project references, storage location, and guarded cask/application identity links.
 - Physical/APFS storage hierarchy, ownership, and Time Machine role/destination/exclusion facts without path-coverage claims.
+- Synthetic hostile plist/Homebrew/disk/prompt fixtures plus shared Markdown/terminal control, bidi, and structure-injection neutralization while raw JSON evidence remains intact.
 
 ### Not yet available
 
