@@ -20,7 +20,8 @@ def test_no_arguments_shows_guided_choices_without_blocking() -> None:
         "6. See what uses the most space",
         "7. Ask what an app does",
         "8. Create a safe cleanup plan",
-        "9. Help",
+        "9. Review undo recovery",
+        "10. Help",
     )
     for choice in expected_choices:
         assert choice in result.stdout

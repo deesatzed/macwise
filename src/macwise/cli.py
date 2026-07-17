@@ -1,23 +1,31 @@
 """The public MacWise command-line interface."""
 
+import hashlib
+import os
 import platform
+import re
 import sys
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from enum import StrEnum
 from itertools import combinations
 from pathlib import Path
-from typing import Annotated, Never
+from typing import Annotated, Never, Protocol
 from uuid import uuid4
 
 import typer
 
 from macwise import __version__
+from macwise.execution import MutationCommandAdapter, TrashFilesystemAdapter
 from macwise.help_text import HELP
 from macwise.models import (
+    ActionObservation,
     AuditDocument,
     ClaimBasis,
     EntityType,
+    ExecutionAction,
+    ExecutionRun,
+    ExecutionState,
     Finding,
     FindingTopic,
     OverlapCategory,
@@ -30,10 +38,28 @@ from macwise.models import (
     SoftwareRecord,
     UsageLabel,
 )
-from macwise.persistence import PlanStore, PlanStoreError
+from macwise.persistence import (
+    ExecutionStore,
+    ExecutionStoreError,
+    PlanStore,
+    PlanStoreError,
+    execution_digest,
+)
 from macwise.reporting import render_json, render_markdown
-from macwise.services import AuditService, add_candidate
-from macwise.system.commands import ReadCommand, resolve_executable
+from macwise.services import (
+    ApprovalError,
+    AuditService,
+    ExecutionService,
+    ExecutionServiceError,
+    PreparedExecution,
+    RevalidationError,
+    add_candidate,
+    apply_approval_phrase,
+    prepare_execution,
+    require_approval,
+    undo_approval_phrase,
+)
+from macwise.system.commands import CommandState, ReadCommand, resolve_executable, run_read_command
 from macwise.text import safe_display_text
 
 GUIDED_MENU = """MacWise
@@ -48,7 +74,8 @@ What would you like to do?
 6. See what uses the most space
 7. Ask what an app does
 8. Create a safe cleanup plan
-9. Help
+9. Review undo recovery
+10. Help
 """
 
 
@@ -92,6 +119,14 @@ _service_factory: Callable[[], AuditService] = AuditService
 _plan_store_factory: Callable[[], PlanStore] = PlanStore
 
 
+class CLIExecutionService(Protocol):
+    def apply(self, prepared: PreparedExecution, *, approval: str) -> ExecutionRun: ...
+
+    def active(self) -> ExecutionRun | None: ...
+
+    def undo(self, *, approval: str) -> ExecutionRun: ...
+
+
 def _planning_clock() -> datetime:
     return datetime.now(UTC)
 
@@ -102,6 +137,149 @@ def _plan_id_factory() -> str:
 
 def _trash_root_factory() -> Path:
     return Path.home() / ".Trash"
+
+
+def _filesystem_observation(path: Path) -> ActionObservation:
+    try:
+        item = path.lstat()
+    except FileNotFoundError:
+        return ActionObservation(exists=False)
+    except OSError:
+        return ActionObservation(exists=None)
+    identity = None
+    if path.suffix.casefold() == ".app":
+        identity = hashlib.sha256(f"{item.st_dev}:{item.st_ino}:{path}".encode()).hexdigest()
+    return ActionObservation(
+        exists=True,
+        device=item.st_dev,
+        inode=item.st_ino,
+        identity_digest=identity,
+    )
+
+
+def _execution_preparer(plan: PlanDocument, audit: AuditDocument) -> PreparedExecution:
+    return prepare_execution(
+        plan,
+        audit,
+        trash_root=_trash_root_factory(),
+        filesystem_probe=_filesystem_observation,
+    )
+
+
+class LiveActionObserver:
+    """Collect fresh command-action state through existing read-only collectors."""
+
+    @staticmethod
+    def launchctl_state(
+        label: str,
+        *,
+        default_enabled: bool | None,
+    ) -> tuple[bool | None, bool | None]:
+        uid = os.getuid()
+        disabled = run_read_command(
+            ReadCommand.LAUNCHCTL,
+            ("print-disabled", f"gui/{uid}"),
+        )
+        enabled = default_enabled
+        if disabled.state is CommandState.COMPLETE:
+            match = re.search(
+                rf'"{re.escape(label)}"\s*=>\s*(true|false)',
+                disabled.stdout,
+            )
+            if match is not None:
+                enabled = match.group(1) == "false"
+        printed = run_read_command(
+            ReadCommand.LAUNCHCTL,
+            ("print", f"gui/{uid}/{label}"),
+        )
+        running = (
+            True
+            if printed.state is CommandState.COMPLETE
+            else False
+            if printed.state is CommandState.FAILED
+            else None
+        )
+        return enabled, running
+
+    def observe(self, action: ExecutionAction) -> ActionObservation:
+        audit = _audit()
+        if action.kind in {
+            PlanActionKind.HOMEBREW_UNINSTALL_FORMULA,
+            PlanActionKind.HOMEBREW_UNINSTALL_CASK,
+        }:
+            expected = (
+                EntityType.HOMEBREW_FORMULA
+                if action.kind is PlanActionKind.HOMEBREW_UNINSTALL_FORMULA
+                else EntityType.HOMEBREW_CASK
+            )
+            matches = tuple(
+                item
+                for item in audit.software
+                if item.entity_type is expected and item.name == action.inverse.homebrew_token
+            )
+            return ActionObservation(
+                installed=True if len(matches) == 1 else False if not matches else None
+            )
+        if action.kind is PlanActionKind.STOP_HOMEBREW_SERVICE:
+            matches = tuple(
+                item
+                for item in audit.startup
+                if item.id == action.inverse.startup_id
+                and item.label == action.inverse.startup_label
+            )
+            return ActionObservation(
+                running=matches[0].running if len(matches) == 1 else None,
+                enabled=matches[0].enabled if len(matches) == 1 else None,
+            )
+        if action.kind is not PlanActionKind.DISABLE_LAUNCH_AGENT:
+            return ActionObservation()
+        source_value = action.inverse.startup_source_path
+        label = action.inverse.startup_label
+        if source_value is None or label is None:
+            return ActionObservation()
+        source = Path(source_value)
+        try:
+            content_hash = hashlib.sha256(source.read_bytes()).hexdigest()
+        except OSError:
+            return ActionObservation(exists=False)
+        startup = tuple(
+            item
+            for item in audit.startup
+            if item.id == action.inverse.startup_id
+            and item.label == label
+            and item.source_path == source_value
+        )
+        default_enabled = startup[0].enabled if len(startup) == 1 else None
+        enabled, running = self.launchctl_state(
+            label,
+            default_enabled=default_enabled,
+        )
+        return ActionObservation(
+            exists=True,
+            enabled=enabled,
+            running=running,
+            plist_sha256=content_hash,
+        )
+
+
+def _execution_service_factory(plan_store: PlanStore) -> CLIExecutionService:
+    lock_path = plan_store.lock_path
+    return ExecutionService(
+        plan_store=plan_store,
+        execution_store=ExecutionStore(lock_path=lock_path),
+        state_lock_path=lock_path,
+        trash_adapter=TrashFilesystemAdapter(
+            source_roots=_application_roots(),
+            trash_root=_trash_root_factory(),
+        ),
+        command_adapter=MutationCommandAdapter(
+            launch_agents_root=Path.home() / "Library" / "LaunchAgents",
+            uid=os.getuid(),
+        ),
+        action_observer=LiveActionObserver(),
+        clock=lambda: datetime.now(UTC),
+        run_id_factory=lambda: f"run:{uuid4().hex}",
+    )
 
 
 def _is_interactive() -> bool:
@@ -450,7 +628,7 @@ def _echo_plan(plan: PlanDocument) -> None:
     if plan.eligibility is PlanEligibility.BLOCKED:
         typer.echo("Next: resolve every blocker, then create a fresh preview.")
     else:
-        typer.echo("Next: review this preview. Phase 5 apply remains disabled.")
+        typer.echo("Next: review this preview, then run macwise apply for fresh revalidation.")
 
 
 def _plan_store_failure(*, writing: bool) -> Never:
@@ -1000,23 +1178,147 @@ def plan_show() -> None:
 
 
 @app.command("apply", help=HELP["apply"])
-def apply_plan() -> None:
-    _phase_message(
-        "MacWise cannot apply this preview because current-state revalidation, action-time approval, verification and undo remain unavailable until Phase 5.",
-        "macwise plan show",
-        "macwise scan",
-        failure=True,
-    )
+def apply_plan(
+    approve: Annotated[
+        str | None,
+        typer.Option(
+            "--approve",
+            help="Exact APPLY fingerprint phrase shown after fresh revalidation.",
+        ),
+    ] = None,
+) -> None:
+    """Revalidate and apply one reviewed schema-2 plan after exact approval."""
+    plan = _active_plan()
+    if plan is None:
+        typer.echo("No active cleanup plan exists to apply.")
+        typer.echo("No changes were made.\n\nNext:\n  macwise plan add NAME")
+        raise typer.Exit(2)
+    if plan.schema_version != 2:
+        typer.echo("This cleanup plan uses an older preview schema and cannot be applied.")
+        typer.echo("No changes were made.\n\nNext:\n  create a fresh plan revision")
+        raise typer.Exit(2)
+    if plan.eligibility is not PlanEligibility.PREVIEW_READY:
+        typer.echo("This cleanup plan is blocked and cannot be applied.")
+        typer.echo("No changes were made.\n\nNext:\n  macwise plan show")
+        raise typer.Exit(2)
+
+    try:
+        fresh_audit = _audit()
+        prepared = _execution_preparer(plan, fresh_audit)
+    except RevalidationError:
+        typer.echo("Fresh host evidence no longer matches this cleanup plan safely.")
+        typer.echo("No changes were made.\n\nNext:\n  create and review a fresh plan revision")
+        raise typer.Exit(2) from None
+
+    _echo_plan(plan)
+    typer.echo("\nAction-time verification")
+    typer.echo(f"- {len(prepared.actions)} ordered action(s) were freshly reconstructed.")
+    typer.echo("- MacWise will stop on the first action or verification failure.")
+    typer.echo("- Related user data remains preserved.")
+    phrase = apply_approval_phrase(prepared.plan_digest)
+    typer.echo(f"\nApproval required: {phrase}")
+    supplied = approve
+    if supplied is None and _is_interactive():
+        supplied = typer.prompt("Type the exact approval phrase")
+    if supplied is None:
+        typer.echo(f"Run again with --approve '{phrase}' after reviewing this output.")
+        typer.echo("No changes were made.")
+        raise typer.Exit(2)
+    try:
+        require_approval(prepared.plan_digest, supplied, verb="APPLY")
+    except ApprovalError:
+        typer.echo("The approval phrase does not exactly match the reviewed plan fingerprint.")
+        typer.echo("No changes were made.")
+        raise typer.Exit(2) from None
+
+    service = _execution_service_factory(_plan_store_factory())
+    try:
+        result = service.apply(
+            prepared,
+            approval=supplied,
+        )
+    except (ExecutionServiceError, ExecutionStoreError):
+        try:
+            recovery = service.active()
+        except ExecutionStoreError:
+            recovery = None
+        if recovery is not None:
+            typer.echo(
+                f"Execution stopped with durable state: {_human_label(recovery.state.value)}."
+            )
+        else:
+            typer.echo("Execution did not complete safely; recovery state is unavailable.")
+        typer.echo("Next: run macwise doctor before retrying or creating a new plan.")
+        raise typer.Exit(2) from None
+    if result.state is not ExecutionState.SUCCEEDED:
+        typer.echo(f"Execution stopped with state: {_human_label(result.state.value)}.")
+        typer.echo("Next: run macwise undo or macwise doctor before any new plan.")
+        raise typer.Exit(2)
+    typer.echo("\nExecution succeeded and every action has fresh verified after-state evidence.")
+    typer.echo("Next: run macwise undo to review the separately approved reverse actions.")
 
 
 @app.command(help=HELP["undo"])
-def undo() -> None:
-    _phase_message(
-        "MacWise cannot undo changes because this build cannot create action manifests.",
-        "macwise doctor",
-        "macwise scan",
-        failure=True,
-    )
+def undo(
+    approve: Annotated[
+        str | None,
+        typer.Option(
+            "--approve",
+            help="Exact UNDO fingerprint phrase shown for the active verified run.",
+        ),
+    ] = None,
+) -> None:
+    """Reverse the latest fully verified run after separate exact approval."""
+    try:
+        service = _execution_service_factory(_plan_store_factory())
+        active = service.active()
+    except (ExecutionStoreError, PlanStoreError):
+        typer.echo("MacWise could not read recovery state safely.")
+        typer.echo("No undo action was attempted.\n\nNext:\n  macwise doctor")
+        raise typer.Exit(2) from None
+    if active is None:
+        typer.echo("No MacWise execution manifest is available to undo.")
+        typer.echo("No changes were made.\n\nNext:\n  macwise plan show")
+        raise typer.Exit(2)
+    if active.state is not ExecutionState.SUCCEEDED:
+        typer.echo(
+            f"The active execution state is {_human_label(active.state.value)} and is not "
+            "a fully verified run ready for ordinary undo."
+        )
+        typer.echo("No undo action was attempted.\n\nNext:\n  macwise doctor")
+        raise typer.Exit(2)
+
+    typer.echo("Undo review\n")
+    for action in reversed(active.actions):
+        typer.echo(f"- Reverse action {action.sequence}: {_human_label(action.inverse.kind.value)}")
+    typer.echo("Homebrew reinstalls are best-effort and may not restore the captured version.")
+    phrase = undo_approval_phrase(execution_digest(active))
+    typer.echo(f"\nApproval required: {phrase}")
+    supplied = approve
+    if supplied is None and _is_interactive():
+        supplied = typer.prompt("Type the exact approval phrase")
+    if supplied is None:
+        typer.echo(f"Run again with --approve '{phrase}' after reviewing this output.")
+        typer.echo("No undo action was attempted.")
+        raise typer.Exit(2)
+    try:
+        require_approval(execution_digest(active), supplied, verb="UNDO")
+    except ApprovalError:
+        typer.echo("The approval phrase does not exactly match the active run fingerprint.")
+        typer.echo("No undo action was attempted.")
+        raise typer.Exit(2) from None
+    try:
+        result = service.undo(approval=supplied)
+    except (ExecutionServiceError, ExecutionStoreError):
+        typer.echo("Undo did not complete safely; recovery state was preserved.")
+        typer.echo("Next: run macwise doctor before retrying or creating a new plan.")
+        raise typer.Exit(2) from None
+    if result.state is not ExecutionState.UNDONE:
+        typer.echo(f"Undo stopped with state: {_human_label(result.state.value)}.")
+        typer.echo("Next: run macwise doctor before retrying.")
+        raise typer.Exit(2)
+    typer.echo("\nUndo succeeded and every reverse action was verified.")
+    typer.echo("Next: run macwise scan for a fresh read-only view.")
 
 
 @app.command(help=HELP["doctor"])
@@ -1067,6 +1369,9 @@ def _guided_action(choice: int, ctx: typer.Context) -> None:
         explain(typer.prompt("App or tool name"))
     elif choice == 8:
         plan_root(ctx)
+    elif choice == 9:
+        typer.echo("Undo recovery requires a separate approval.")
+        typer.echo("Run macwise undo to review the active manifest and exact reverse actions.")
     else:
         typer.echo(ctx.get_help())
 
@@ -1089,9 +1394,9 @@ def guided(
     if not _is_interactive():
         typer.echo("Run macwise --help to see direct commands.")
         return
-    choice = typer.prompt("Choose 1-9", type=int)
-    if choice not in range(1, 10):
-        typer.echo("Choose a number from 1 through 9.")
+    choice = typer.prompt("Choose 1-10", type=int)
+    if choice not in range(1, 11):
+        typer.echo("Choose a number from 1 through 10.")
         raise typer.Exit(2)
     _guided_action(choice, ctx)
 

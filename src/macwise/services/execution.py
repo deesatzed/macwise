@@ -109,6 +109,10 @@ class ExecutionService:
         self.clock = clock
         self.run_id_factory = run_id_factory
 
+    def active(self) -> ExecutionRun | None:
+        """Return the current integrity-checked recovery manifest, if one exists."""
+        return self.execution_store.active()
+
     def _revision(
         self,
         previous: ExecutionRun,

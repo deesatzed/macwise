@@ -43,7 +43,7 @@ def test_noninteractive_guided_menu_never_prompts(monkeypatch: pytest.MonkeyPatc
     result = runner.invoke(cli.app)
 
     assert result.exit_code == 0
-    assert "Choose 1-9" not in result.stdout
+    assert "Choose 1-10" not in result.stdout
     assert "Run macwise --help to see direct commands." in result.stdout
 
 
@@ -63,3 +63,16 @@ def test_interactive_choice_eight_routes_to_real_plan_view_without_scanning(
     assert result.exit_code == 0, result.stdout
     assert "No active cleanup plan exists" in result.stdout
     assert "macwise plan add NAME" in result.stdout
+
+
+def test_interactive_choice_nine_exposes_undo_without_auto_approval(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(cli, "_is_interactive", lambda: True)
+
+    result = runner.invoke(cli.app, input="9\n")
+
+    assert result.exit_code == 0, result.stdout
+    assert "macwise undo" in result.stdout
+    assert "separate approval" in result.stdout
+    assert "Type the exact approval phrase" not in result.stdout

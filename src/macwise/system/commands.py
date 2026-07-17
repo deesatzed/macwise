@@ -20,6 +20,7 @@ class ReadCommand(StrEnum):
     CODESIGN = "codesign"
     DISKUTIL = "diskutil"
     LIPO = "lipo"
+    LAUNCHCTL = "launchctl"
     MDLS = "mdls"
     PS = "ps"
     TMUTIL = "tmutil"
@@ -74,6 +75,7 @@ COMMAND_CANDIDATES: Mapping[ReadCommand, tuple[str, ...]] = {
     ReadCommand.CODESIGN: ("/usr/bin/codesign",),
     ReadCommand.DISKUTIL: ("/usr/sbin/diskutil",),
     ReadCommand.LIPO: ("/usr/bin/lipo",),
+    ReadCommand.LAUNCHCTL: ("/bin/launchctl",),
     ReadCommand.MDLS: ("/usr/bin/mdls",),
     ReadCommand.PS: ("/bin/ps",),
     ReadCommand.TMUTIL: ("/usr/bin/tmutil",),
@@ -84,6 +86,7 @@ DEFAULT_OUTPUT_LIMITS: Mapping[ReadCommand, int] = {
     ReadCommand.CODESIGN: 1_000_000,
     ReadCommand.DISKUTIL: 1_000_000,
     ReadCommand.LIPO: 1_000_000,
+    ReadCommand.LAUNCHCTL: 1_000_000,
     ReadCommand.MDLS: 1_000_000,
     ReadCommand.PS: 1_000_000,
     ReadCommand.TMUTIL: 1_000_000,

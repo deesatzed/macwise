@@ -219,7 +219,7 @@ def test_store_errors_fail_closed_with_recovery_message(
     assert "Move or back up" in result.stdout
 
 
-def test_apply_still_refuses_even_when_preview_is_ready(
+def test_apply_refuses_when_fresh_source_no_longer_matches_preview(
     planning_cli: tuple[PlanStore, StaticAuditService, AuditDocument],
 ) -> None:
     added = RUNNER.invoke(cli.app, ["plan", "add", "app:Example"])
@@ -228,8 +228,6 @@ def test_apply_still_refuses_even_when_preview_is_ready(
     result = RUNNER.invoke(cli.app, ["apply"])
 
     assert result.exit_code == 2
-    assert "cannot apply" in result.stdout
-    assert "current-state revalidation" in result.stdout
-    assert "action-time approval" in result.stdout
-    assert "verification and undo" in result.stdout
+    assert "Fresh host evidence no longer matches" in result.stdout
+    assert "fresh plan revision" in result.stdout
     assert "No changes were made" in result.stdout

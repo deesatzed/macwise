@@ -55,6 +55,7 @@
 | Build MW-400 fresh revalidation | Done | Codex | Read-only preparation rebuilds schema-2 policy from current audit evidence, reconstructs canonical operations, captures Trash inode/device identity and startup plist hashes/prior state, and blocks changed targets, new blockers, cross-device moves, occupied destinations, and risky/unknown cask behavior. |
 | Build MW-400 Trash execution slice | Done | Codex | A closed descriptor-relative adapter uses exclusive no-replace same-filesystem renames for approved roots, verifies device/inode identity, and reverses exactly; the coordinator locks, journals before mutation, verifies, records failure, rejects replay, and separately approves undo. |
 | Build MW-400 command execution slice | Done | Codex | Closed fixed-path Homebrew and current-user launchctl adapters accept only structured safe identities, use bounded shell-free fake-runner-tested invocations, require fresh before/after observations, preserve startup/removal and reverse undo ordering, and journal verification or undo failure before stopping. |
+| Build MW-400 approval and recovery CLI | Done | Codex | `apply` and `undo` render review surfaces, require exact interactive or explicit fingerprints, collect fresh evidence, expose durable failure states and recovery guidance, and use injected fake execution services in tests; default assembly uses the shared journal lock and closed adapters without elevation. |
 | Complete Phases 5–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -67,7 +68,7 @@ Phase 5 approval-gated reversible apply, action-time verification, manifests, an
 
 ## Next Actions
 
-1. Execute MW-400 Task 7 test-first: approval-gated `apply` and `undo` CLI integration with explicit recovery UX and fully injected tests.
+1. Execute MW-400 Task 8: adversarial execution hardening, independent skeptical review, claim validation, and Phase 5 acceptance gates.
 2. Re-run hosted Linux/macOS CI once a Git remote/runner is authorized and available; do not treat the workflow definition as a run result.
 3. Keep public Homebrew/release proof deferred until tap/artifact authority exists.
 
@@ -157,3 +158,5 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-18 MW-400 Task 5 gate: 227 tests passed; Ruff format/lint, Pyright, and `git diff --check` passed. The only real mutation was an exclusive rename and reverse rename of a synthetic `.app` inside pytest's canonical temporary root; no installed app or real Trash was touched.
 - 2026-07-18 MW-400 Task 6 RED/GREEN: the mutating-command import and coordinator constructor first failed; exact fake runners then proved allowlisted formula/cask install and uninstall, Homebrew service stop/start, current-user LaunchAgent disable/bootout and enable/bootstrap, safe environment, fixed executables, structured-token rejection, output bounds, prepared-action substitution refusal, fresh before/after verification, stop-on-failure, startup-before-removal ordering, reverse-order undo, and durable undo-failure state.
 - 2026-07-18 MW-400 Task 6 gate: 248 tests passed; Ruff format/lint, Pyright, and `git diff --check` passed repository-wide. Every Homebrew and launchctl mutation used an injected recording fake; no real Homebrew package, service, LaunchAgent, installed app, or user Trash was touched.
+- 2026-07-18 MW-400 Task 7 RED/GREEN: approval CLI tests first failed on missing injection seams and the Phase 4 refusal commands; exact non-TTY and interactive apply approval, separate undo approval, no-plan and stale-plan refusal, durable failure-state rendering, guided undo recovery, launchctl read-state probing, and updated help then passed with fake execution services only.
+- 2026-07-18 MW-400 Task 7 gate: 256 tests passed; Ruff format/lint, Pyright, build, `git diff --check`, and manual `apply --help` / `undo --help` rendering passed. No real mutating adapter was invoked and no installed software, startup state, real Trash, or Homebrew state changed.

@@ -45,7 +45,7 @@ _BLOCKING_GUIDANCE = {
 _PLAN_LIMITATIONS = (
     "This preview is not approval to make changes.",
     "Every target and preflight must be revalidated against current host state before action.",
-    "Phase 4 does not uninstall, move, disable, delete, or otherwise change installed software.",
+    "Creating or reviewing this preview does not change installed software or startup state.",
 )
 
 

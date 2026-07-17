@@ -65,6 +65,22 @@ def test_plan_help_distinguishes_local_state_from_host_changes() -> None:
     assert "does not change installed software or user data" in " ".join(add.stdout.split())
 
 
+def test_apply_and_undo_help_explain_approval_recovery_and_limits() -> None:
+    apply = runner.invoke(app, ["apply", "--help"])
+    undo = runner.invoke(app, ["undo", "--help"])
+
+    assert apply.exit_code == undo.exit_code == 0
+    apply_text = " ".join(apply.stdout.split())
+    undo_text = " ".join(undo.stdout.split())
+    assert "exact approval" in apply_text
+    assert "fresh revalidation" in apply_text
+    assert "does not elevate" in apply_text
+    assert "related user data" in apply_text
+    assert "separate exact approval" in undo_text
+    assert "best-effort" in undo_text
+    assert "Homebrew" in undo_text
+
+
 def test_root_help_lists_the_small_public_hierarchy() -> None:
     result = runner.invoke(app, ["--help"])
 
