@@ -32,15 +32,35 @@ def _role(record: SoftwareRecord) -> str:
     return "installation role unknown"
 
 
+def _yes_no(value: bool) -> str:
+    return "yes" if value else "no"
+
+
 def _software_lines(record: SoftwareRecord) -> list[str]:
     version = f", version {_markdown_text(record.version)}" if record.version else ""
     lines = [f"- **{_markdown_text(record.display_name)}** — {_role(record)}{version}"]
     if record.install_path:
         lines.append(f"  - Location: `{_markdown_text(record.install_path)}`")
+    if record.install_source:
+        lines.append(f"  - Install source: {_markdown_text(record.install_source)}")
+    if record.publisher:
+        lines.append(f"  - Publisher: {_markdown_text(record.publisher)}")
+    if record.signing_identity:
+        lines.append(f"  - Signing identity: {_markdown_text(record.signing_identity)}")
+    if record.team_identifier:
+        lines.append(f"  - Signing team: {_markdown_text(record.team_identifier)}")
     if record.size_bytes is not None:
         lines.append(
             f"  - Size: {_bytes(record.size_bytes)} on {record.storage_location.value} storage"
         )
+    if record.architectures:
+        lines.append(f"  - Architectures: {', '.join(map(_markdown_text, record.architectures))}")
+    if record.running is not None:
+        lines.append(f"  - Running at collection time: {_yes_no(record.running)}")
+    if record.components:
+        lines.append(f"  - Components: {', '.join(map(_markdown_text, record.components))}")
+    if record.executables:
+        lines.append(f"  - Executables: {', '.join(map(_markdown_text, record.executables))}")
     if record.dependencies:
         lines.append(f"  - Depends on: {', '.join(map(_markdown_text, record.dependencies))}")
     if record.reverse_dependencies:
@@ -49,6 +69,19 @@ def _software_lines(record: SoftwareRecord) -> list[str]:
         )
     if record.service_status:
         lines.append(f"  - Background service: {_markdown_text(record.service_status)}")
+    package_state: list[str] = []
+    if record.linked is not None:
+        package_state.append(f"Linked: {_yes_no(record.linked)}")
+    if record.pinned is not None:
+        package_state.append(f"pinned: {_yes_no(record.pinned)}")
+    if package_state:
+        lines.append(f"  - {'; '.join(package_state)}")
+    if record.project_references:
+        lines.append(
+            f"  - Project references: {', '.join(map(_markdown_text, record.project_references))}"
+        )
+    if record.caveats:
+        lines.append(f"  - Caveats: {_markdown_text(record.caveats)}")
     return lines
 
 
@@ -98,6 +131,33 @@ def render_markdown(audit: AuditDocument) -> str:
                 f"- **{_markdown_text(volume.name)}** — {volume.location.value}{mount}; "
                 f"{free} free of {capacity}"
             )
+            hierarchy: list[str] = []
+            if volume.parent_device_identifier:
+                hierarchy.append(f"Parent disk: {_markdown_text(volume.parent_device_identifier)}")
+            if volume.apfs_container_identifier:
+                hierarchy.append(
+                    f"APFS container: {_markdown_text(volume.apfs_container_identifier)}"
+                )
+            if hierarchy:
+                lines.append(f"  - {'; '.join(hierarchy)}")
+            if volume.physical_store_identifiers:
+                lines.append(
+                    "  - Physical stores: "
+                    f"{', '.join(map(_markdown_text, volume.physical_store_identifiers))}"
+                )
+            if volume.ownership_enabled is not None:
+                lines.append(f"  - Ownership enabled: {_yes_no(volume.ownership_enabled)}")
+            if volume.time_machine_role:
+                lines.append(f"  - Time Machine role: {_markdown_text(volume.time_machine_role)}")
+            if volume.time_machine_destination is not None:
+                lines.append(
+                    "  - Configured Time Machine destination: "
+                    f"{_yes_no(volume.time_machine_destination)}"
+                )
+            if volume.time_machine_excluded is not None:
+                lines.append(
+                    f"  - Excluded from Time Machine: {_yes_no(volume.time_machine_excluded)}"
+                )
     else:
         lines.append("- No storage records were collected.")
 

@@ -13,6 +13,10 @@ MacWise follows Semantic Versioning. The project is pre-alpha; unreleased behavi
 - Deterministic JSON and Markdown reports.
 - Safe command boundary with fixed executables, no shell, timeouts, bounded output, and reduced Homebrew side effects.
 - Initial read-only MacWise Codex skill scaffold.
+- Schema-version-1 audit migration and schema-version-2 inventory fields.
+- Application signing, architecture, process, nested component, protection, and verified-source evidence with explicit approved roots.
+- Homebrew installed sizes, executable names, linked/pinned/caveat state, approved project references, storage location, and guarded cask/application identity links.
+- Physical/APFS storage hierarchy, ownership, and Time Machine role/destination/exclusion facts without path-coverage claims.
 
 ### Not yet available
 

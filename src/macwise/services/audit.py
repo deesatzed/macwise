@@ -190,8 +190,19 @@ class AuditService:
                 status=_failed_status("homebrew", collected_at),
             )
 
+        homebrew_software = tuple(
+            record.model_copy(
+                update={
+                    "storage_location": storage_resolver(Path(record.install_path))
+                    if record.install_path is not None
+                    else StorageLocation.UNKNOWN
+                }
+            )
+            for record in homebrew.software
+        )
+
         correlated_software = _correlate_cask_applications(
-            (*applications.software, *homebrew.software),
+            (*applications.software, *homebrew_software),
             collected_at=collected_at,
         )
         software = sorted(

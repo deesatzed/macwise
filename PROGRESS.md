@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-30% complete – MacWise now has a locally verified public-repository foundation, valid initial read-only Codex skill, CI definition, isolated wheel install proof, and real read-only scan proof in addition to the guided CLI and core collectors. The requirement-level Phase 1 audit is intentionally PARTIAL: application, Homebrew, and drive collectors still lack named fields from `GOAL.md`; public pipx/Homebrew installation and hosted CI are also unproven. Those gaps remain open before Phase 1 can be accepted.
+40% complete – MacWise now has a locally verified public-repository foundation, schema-v2 audit migration, enriched read-only application/Homebrew/storage evidence, a valid initial Codex skill, CI definition, isolated wheel install proof, and real read-only scan proof. MW-009's named collector gaps are closed. The requirement-level Phase 1 audit remains intentionally PARTIAL: malicious cross-parser fixtures, several later evidence fields, public pipx/Homebrew installation, and hosted CI are still unproven.
 
 ## Current Assumptions
 
@@ -31,6 +31,7 @@
 | Complete Phase 1 CLI hierarchy and help | Done | Codex | MW-008 verified test-first across 24 root/nested help surfaces, guided routing, formats, output safeguards, and refusal paths. |
 | Build public repository foundation | Done | Codex | README/license/security/contribution/changelog/privacy/threat-model docs, valid initial skill, and commit-pinned CI added; local contract passes. |
 | Audit Phase 1 against `GOAL.md` | Done | Codex | `docs/phase-1-acceptance.md` verdict is PARTIAL with direct evidence and explicit collector/release gaps. |
+| Close MW-009 inventory field gaps | Done | Codex | Schema v2 plus application signing/architecture/process/components/source, Homebrew size/executable/state/reference/location/correlation, and storage topology/ownership/Time Machine facts are fixture-tested and real-smoked. |
 | Complete Phases 2–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -39,14 +40,13 @@
 
 ## Current Milestone
 
-Phase 1 read-only evidence foundation: versioned models and the bounded command adapter, followed by application/Homebrew/drive collectors.
+Phase 1 adversarial evidence acceptance: cross-parser malicious metadata fixtures and a requirement-level re-audit.
 
 ## Next Actions
 
-1. Commit the verified public foundation and Phase 1 acceptance audit.
-2. Close MW-009 application/Homebrew/storage field gaps test-first.
-3. Add cross-parser malicious metadata and prompt-injection fixtures under MW-010.
-4. Re-audit Phase 1, then continue into Phase 2 without collapsing later phases.
+1. Add cross-parser malicious metadata and prompt-injection fixtures under MW-010.
+2. Re-audit Phase 1 and run clean-platform acceptance under MW-011.
+3. Continue into Phase 2 without collapsing later phases or overstating backup/usage evidence.
 
 ## Blockers
 
@@ -90,3 +90,7 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-17 isolated install: the wheel installed under Python 3.12; version, root help, guided no-argument output, scan help, nested help, and exit-2 Codex setup refusal were verified.
 - 2026-07-17 real scan smoke: JSON schema/collector structure and Markdown verified/limitations/unknown sections passed in memory; no inventory was persisted or added to Git.
 - 2026-07-17 Phase 1 audit: PARTIAL due to explicit application, Homebrew, drive, malicious-fixture, public-install, and hosted-CI gaps recorded in `docs/phase-1-acceptance.md`.
+- 2026-07-17 MW-009 TDD: schema-v2 migration, fixed metadata commands, application enrichment, Homebrew enrichment/correlation, storage topology/Time Machine parsing, and Markdown exposure each failed for the intended missing behavior before their minimal implementations passed.
+- 2026-07-17 MW-009 complete local gate: 94 tests passed; Ruff format/lint passed; Pyright reported 0 errors; sdist/wheel build, skill validation, workflow YAML parsing, and `git diff --check` passed.
+- 2026-07-17 MW-009 isolated install: the built wheel installed under Python 3.12; version, root/guided/scan help, explicit-root options, and exit-2 Codex setup refusal were verified.
+- 2026-07-17 MW-009 real read-only smokes: application signing/architecture/process evidence, Homebrew size/executable/state evidence, storage topology/ownership/Time Machine facts, schema-v2 JSON, and enriched Markdown were validated in memory without persisting host inventory.

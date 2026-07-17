@@ -2,7 +2,7 @@
 
 Date: 2026-07-17
 
-Verdict: **PARTIAL**. The Phase 1 user experience, schema, reports, help contract, safety boundary, local package build, and core collectors have direct evidence. Several inventory fields explicitly required by `GOAL.md` are not implemented, so Phase 1 and the overall MacWise goal remain open.
+Verdict: **PARTIAL**. The Phase 1 user experience, schema, reports, help contract, safety boundary, local package build, and MW-009 collector fields have direct evidence. Cross-parser hostile-metadata coverage, clean hosted platforms, public installation, and several later evidence fields remain open, so Phase 1 and the overall MacWise goal are not complete.
 
 ## Evidence scale
 
@@ -16,14 +16,14 @@ Verdict: **PARTIAL**. The Phase 1 user experience, schema, reports, help contrac
 |---|---|---|---|
 | `macwise` guided menu | PASS | CLI tests cover all nine choices, interactive routing, and non-interactive no-block behavior; isolated wheel smoke ran the command. | None for Phase 1. |
 | `macwise scan` | PASS | JSON, Markdown, and terminal formats are CLI-tested; real read-only JSON/Markdown smokes parsed successfully. | Terminal presentation can be polished further, but the command is functional. |
-| Application inventory | PARTIAL | Synthetic tests prove recursive approved-root scanning, plist identity/version, bundle size, storage location, partial limitations, no launch, and no symlink following. | Publisher/signing identity, architecture, running state, installation source, helpers/extensions, protected/system context, and configurable user-approved external roots are missing. |
-| Homebrew formula/cask inventory | PARTIAL | Fixtures and a real smoke prove formulae/casks, versions, explicit leaves, dependencies/reverse dependencies, services, descriptions/homepages, and cask app artifacts. | Installed sizes, executables, project references, linked/pinned state, caveats, and app/cask duplication are missing. |
+| Application inventory | PASS for Phase 1 deterministic fields | Synthetic tests and real smoke prove recursive default/approved-root scanning, plist identity/version, bundle size/location, signing publisher/team, architecture, point-in-time running state, App Store/system/Homebrew source signals, nested helpers/extensions, protected system context, partial limitations, no launch, and no symlink following. | Direct-download source remains unknown when no reliable receipt/cask/system signal exists; related user data and historical usage remain Phase 2. |
+| Homebrew formula/cask inventory | PASS for MW-009 fields; PARTIAL for full product evidence | Fixtures and real smoke prove formulae/casks, versions, explicit leaves, dependencies/reverse dependencies, services, descriptions/homepages, install paths/storage location/sizes, executables, linked/pinned state, caveats, approved project references, app artifacts, and guarded cask/app identity correlation. | Configuration locations, install dates, and broader project/shell/config references remain incomplete; no unapproved home scan is performed. |
 | Explicit versus dependency distinction | PASS | Model and collector tests classify `openssl@3`-style libraries as dependencies and retain reverse dependencies. | Recommendation use will be re-audited before planning. |
-| Drive inventory | PARTIAL | Plist tests and real smoke prove capacity/free space, filesystem, internal/external, mount state, read-only, encryption, removable, protocol, health, unavailable disks, and guarded path resolution. | Physical-disk/APFS-container hierarchy, ownership, Time Machine roles/exclusions, and richer mount/backup relationships are missing. |
-| Versioned JSON audit | PASS | Schema version 1 model round-trip, deterministic renderer tests, CLI format test, and real parse smoke. | Migration strategy is needed before schema version 2. |
+| Drive inventory | PASS for Phase 1 deterministic fields | Plist/text fixtures and real smoke prove capacity/free space, filesystem, internal/external, mount state, read-only, encryption, removable, protocol, health, parent/whole-disk/APFS physical-store hierarchy, ownership, Time Machine role/destination/exclusion facts, unavailable sources, and guarded path resolution. | These volume facts do not prove path-level backup coverage; richer backup history remains later work. |
+| Versioned JSON audit | PASS | Schema version 2 model round-trip, schema-version-1 migration, future-version rejection, deterministic renderer/CLI tests, and real parse smoke. | Add a migration for every future schema change. |
 | Markdown audit | PASS | Stable renderer tests and real smoke prove verified inventory, separate limitations/unknowns, read-only statement, and absence of “never used.” | Richer evidence sections arrive in Phase 2. |
 | Excellent `--help` | PASS | A parameterized matrix covers 24 root/nested command surfaces for useful-when, safety, examples, and next steps. Manual wheel help smoke covers root, scan, review, and nested review. | Re-audit when later-phase behavior replaces refusals. |
-| Tests | PASS for current behavior | Fresh local gate: 76 tests, Ruff format/lint, Pyright, sdist/wheel build. | CI has not run on GitHub yet; missing collector fields need their own tests. |
+| Tests | PASS for current behavior | Fresh local gate: 94 tests, Ruff format/lint, Pyright, sdist/wheel build, skill validation, workflow parse, isolated Python 3.12 wheel install, and real read-only scan smokes. | CI has not run on GitHub yet; MW-010 hostile-metadata coverage is still open. |
 
 ## Cross-cutting safety and release evidence
 
@@ -53,7 +53,7 @@ Additional evidence used an isolated Python 3.12 virtual environment to install 
 
 ## Required next work
 
-1. Close the application, Homebrew, and drive inventory field gaps above with fixture-backed tests.
-2. Add malicious metadata fixtures across every parser and renderer.
-3. Re-run this audit before declaring Phase 1 complete.
+1. Add malicious metadata fixtures across every parser and renderer under MW-010.
+2. Close the remaining full-product evidence fields in the owning later phase without broad unapproved scans.
+3. Re-run this audit and clean-platform acceptance before declaring Phase 1 complete.
 4. Continue Phase 2 explain/review evidence only after the deterministic substrate is complete enough to support it honestly.

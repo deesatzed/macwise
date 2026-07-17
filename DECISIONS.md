@@ -22,6 +22,15 @@ This file records durable architecture, UX, safety, privacy, dependency, and rel
 | D-012 | 2026-07-17 | Ship the initial `macwise` skill as a focused read-only, CLI-backed workflow while keeping `macwise setup codex` disabled. | The skill is already useful for evidence-shaped review, but enabling setup before typed integration and clean-install tests would misrepresent Phase 6 readiness. | Accepted |
 | D-013 | 2026-07-17 | Pin CI actions to resolved commits and test the lockfile on Linux and macOS with Python 3.12 and 3.13. | Public CI is a supply-chain and compatibility boundary; commit pins reduce tag drift and the matrix covers both parser portability and the product platform. | Accepted |
 
+## MW-009 Decisions
+
+| ID | Date | Category | Decision | Rationale | Alternatives Considered | Status |
+|---|---|---|---|---|---|---|
+| D-014 | 2026-07-17 | Data Model | Emit audit schema version 2 and migrate schema-version-1 documents in memory before strict validation. | The new optional evidence fields would be rejected by strict version-1 readers; an explicit migration keeps saved audits readable without weakening extra-field rejection. | Keep version 1 for additive fields; reject all older audits. | Accepted |
+| D-015 | 2026-07-17 | Security | Application enrichment may use only fixed `codesign`, `lipo`, and `ps` paths; storage enrichment may use only fixed `diskutil` and `tmutil` paths. | Signing, architecture, process, APFS, and backup-role facts require host tools, but discovered metadata must remain inert argv data under existing timeout/output/environment bounds. | Generic executable adapter; shell commands; omit the fields. | Accepted |
+| D-016 | 2026-07-17 | Privacy | Scan extra application and project roots only when supplied through repeatable explicit CLI options; never default to mounted volumes or the whole home folder. | External app and project-reference evidence is useful but can expose private paths and content if collected broadly. | Scan every mount/home directory; omit user-approved roots entirely. | Accepted |
+| D-017 | 2026-07-17 | Scope | Treat Time Machine role, destination, and exclusion results as volume facts that do not prove backup coverage for any application or data path. | A configured destination or inclusion state is not evidence that a recent usable backup contains the relevant data. | Infer coverage from destination presence; defer all Time Machine metadata. | Accepted |
+
 ## Initial Default Decisions
 
 - MIT license unless a later legal decision selects Apache-2.0.

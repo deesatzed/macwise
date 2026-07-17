@@ -27,7 +27,14 @@ def sample_audit() -> AuditDocument:
         display_name="Example App",
         version="2.4.1",
         install_path="/Applications/Example.app",
+        install_source="homebrew_cask:example-app",
+        publisher="Example Corp",
+        signing_identity="Developer ID Application: Example Corp (TEAM123456)",
+        team_identifier="TEAM123456",
         size_bytes=2048,
+        architectures=("arm64", "x86_64"),
+        running=True,
+        components=("Contents/PlugIns/Share.appex",),
         storage_location=StorageLocation.INTERNAL,
     )
     dependency = SoftwareRecord(
@@ -36,17 +43,33 @@ def sample_audit() -> AuditDocument:
         name="openssl@3",
         display_name="openssl@3",
         version="3.3.1",
+        install_path="/opt/homebrew/Cellar/openssl@3",
+        size_bytes=4096,
+        executables=("openssl",),
         install_role=InstallRole.DEPENDENCY,
         reverse_dependencies=("postgresql@16",),
+        linked=False,
+        pinned=True,
+        caveats="Synthetic caveat.",
+        project_references=("Brewfile",),
     )
     volume = VolumeRecord(
         id="volume:internal",
         name="System",
         device_identifier="disk1s1",
+        parent_device_identifier="disk0",
+        whole_disk=False,
+        content="Apple_APFS",
+        apfs_container_identifier="disk1",
+        physical_store_identifiers=("disk0s2",),
         mount_point="/",
         location=StorageLocation.INTERNAL,
         capacity_bytes=1_000_000,
         free_bytes=400_000,
+        ownership_enabled=True,
+        time_machine_role="Backup",
+        time_machine_destination=True,
+        time_machine_excluded=False,
     )
     return AuditDocument(
         audit_id="audit:report",
@@ -137,10 +160,25 @@ def test_markdown_separates_verified_inventory_limitations_and_unknowns() -> Non
     assert "### Applications" in report
     assert "**Example App**" in report
     assert "2.0 KiB on internal storage" in report
+    assert "Publisher: Example Corp" in report
+    assert r"Architectures: arm64, x86\_64" in report
+    assert "Running at collection time: yes" in report
+    assert r"Install source: homebrew\_cask:example-app" in report
+    assert "Components: Contents/PlugIns/Share.appex" in report
     assert "### Homebrew software" in report
     assert "**openssl@3** — dependency" in report
     assert "Required by: postgresql@16" in report
+    assert "Executables: openssl" in report
+    assert "Linked: no; pinned: yes" in report
+    assert "Project references: Brewfile" in report
+    assert "Caveats: Synthetic caveat." in report
     assert "### Storage" in report
+    assert "Parent disk: disk0; APFS container: disk1" in report
+    assert "Physical stores: disk0s2" in report
+    assert "Ownership enabled: yes" in report
+    assert "Time Machine role: Backup" in report
+    assert "Configured Time Machine destination: yes" in report
+    assert "Excluded from Time Machine: no" in report
     assert "## Collection limitations" in report
     assert "One configured application folder was unavailable." in report
     assert "## Unknown in this phase" in report

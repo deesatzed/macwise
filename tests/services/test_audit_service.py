@@ -80,6 +80,7 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
             entity_type=EntityType.HOMEBREW_FORMULA,
             name="alpha",
             display_name="alpha",
+            install_path="/Volumes/Archive/homebrew/Cellar/alpha",
         )
         return HomebrewCollection(
             software=(record,),
@@ -104,6 +105,10 @@ def test_audit_runs_storage_first_aggregates_partial_results_and_sorts_records()
         EntityType.APPLICATION,
         EntityType.HOMEBREW_FORMULA,
     ]
+    formula = next(
+        record for record in audit.software if record.entity_type is EntityType.HOMEBREW_FORMULA
+    )
+    assert formula.storage_location is StorageLocation.EXTERNAL
     assert [collector.collector for collector in audit.collectors] == [
         "applications",
         "homebrew",
