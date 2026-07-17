@@ -5,7 +5,7 @@ Tasks are ordered. Start the first `ready` task, preserve the full goal, and upd
 | ID | Phase | Task | Status | Acceptance Evidence |
 |---|---:|---|---|---|
 | MW-000 | 0 | Establish truth files, design, implementation plan, Git baseline | done | Files exist, privacy scan passed, initial commit recorded |
-| MW-001 | 0/1 | Create installable Python package and tested no-argument guided CLI | ready | CLI tests, `uv build`, wheel install smoke |
+| MW-001 | 0/1 | Create installable Python package and tested no-argument guided CLI | done | 2 CLI tests, lint/types/build, and isolated Python 3.12 wheel install smoke passed |
 | MW-002 | 1 | Implement versioned evidence/audit models and provenance | pending | Model tests including absent-evidence language invariant |
 | MW-003 | 1 | Implement safe bounded read-command adapter | pending | Unit tests prove no shell, timeout/output bounds, structured failures |
 | MW-004 | 1 | Inventory applications from approved roots | pending | Synthetic plist fixtures and read-only macOS smoke |
