@@ -15,8 +15,8 @@ Tasks are ordered. Start the first `ready` task, preserve the full goal, and upd
 | MW-008 | 1 | Complete all Phase 1 commands/help and guided routing | done | 36 CLI tests cover 24 help surfaces, required hierarchy, guided/noninteractive routing, formats, explicit output safeguards, and later-phase refusal paths |
 | MW-009 | 1 | Close application, Homebrew, and drive inventory field gaps | done | 94-test gate plus real read-only smokes cover schema migration, signing/architecture/running/helpers, approved roots, Brew sizes/executables/project refs/linked state/location/correlation, and physical/APFS/ownership/Time Machine fields |
 | MW-010 | 1 | Add malicious metadata and cross-parser/rendering security fixtures | done | 98-test gate plus hostile plist/Homebrew/disk/prompt fixtures prove containment, raw JSON preservation, Markdown/terminal neutralization, inert CLI matching, and the future prompt boundary |
-| MW-011 | 1 | Re-run Phase 1 requirement and clean-platform acceptance | ready | Updated acceptance matrix, fresh complete gate, macOS/Linux CI, clean wheel/pipx smoke |
-| MW-100 | 2 | Explain/review with usage, startup, related data, and backups | pending | Phase 2 acceptance suite and reports |
+| MW-011 | 1 | Re-run Phase 1 requirement and clean-platform acceptance | partial | Python 3.12/3.13 macOS, full local gate, clean wheel, and actual isolated pipx pass; no remote/hosted Linux runner or active local container engine exists |
+| MW-100 | 2 | Explain/review with usage, startup, related data, and backups | ready | Phase 2 acceptance suite and reports |
 | MW-200 | 3 | Role-aware overlap and learning-value intelligence | pending | Required comparison fixture suite |
 | MW-300 | 4 | Persistent cleanup plan and exact previews, no actions | pending | Safety/preflight tests prove zero mutation |
 | MW-400 | 5 | Approval-gated reversible apply/verify/undo | pending | Isolated filesystem/Homebrew adapter tests and manual safe demo |

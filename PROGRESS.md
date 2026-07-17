@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-45% complete – MacWise now has a locally verified public-repository foundation, schema-v2 audit migration, enriched read-only application/Homebrew/storage evidence, hostile cross-parser/display fixtures, a valid read-only Codex skill, CI definition, isolated wheel install proof, and real read-only scan proof. MW-009 and MW-010 are closed. The requirement-level Phase 1 audit remains intentionally PARTIAL: clean-platform/hosted CI, several later evidence fields, and public pipx/Homebrew installation are still unproven.
+47% complete – MacWise now has a locally verified public-repository foundation, schema-v2 audit migration, enriched read-only application/Homebrew/storage evidence, hostile cross-parser/display fixtures, a valid read-only Codex skill, CI definition, Python 3.12/3.13 and actual isolated pipx/wheel proof, and real read-only scan proof. MW-009 and MW-010 are closed; MW-011 is PARTIAL because no hosted/Linux runner or Git remote exists. Several later evidence fields and public Homebrew/release proof also remain open.
 
 ## Current Assumptions
 
@@ -33,6 +33,7 @@
 | Audit Phase 1 against `GOAL.md` | Done | Codex | `docs/phase-1-acceptance.md` verdict is PARTIAL with direct evidence and explicit collector/release gaps. |
 | Close MW-009 inventory field gaps | Done | Codex | Schema v2 plus application signing/architecture/process/components/source, Homebrew size/executable/state/reference/location/correlation, and storage topology/ownership/Time Machine facts are fixture-tested and real-smoked. |
 | Complete MW-010 hostile metadata coverage | Done | Codex | Synthetic plist/Homebrew/disk/prompt fixtures prove path containment, raw JSON provenance, Markdown/terminal neutralization, inert CLI matching, and the skill's prompt boundary. |
+| Run MW-011 clean-platform acceptance | Partial | Codex | Python 3.12 and 3.13 pass on macOS; clean wheel and isolated pipx installs pass. Hosted Linux/macOS CI cannot run without a remote runner; Docker/Podman engines are not running. |
 | Complete Phases 2–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -41,17 +42,17 @@
 
 ## Current Milestone
 
-Phase 1 clean-platform acceptance: rerun the requirement matrix and prove clean wheel/pipx plus hosted macOS/Linux CI where authority and tooling permit.
+Phase 2 explain/review evidence while the external hosted-CI/public-release gates remain explicitly open.
 
 ## Next Actions
 
-1. Re-audit Phase 1 and run clean-platform acceptance under MW-011.
-2. Prove a local `pipx`-equivalent or actual `pipx` install without publishing; hosted CI remains external-state dependent.
-3. Continue into Phase 2 without collapsing later phases or overstating backup/usage evidence.
+1. Begin MW-100 with stable item matching, direct/indirect usage evidence, startup ownership, related-data estimates, and backup limitations.
+2. Re-run hosted Linux/macOS CI once a Git remote/runner is authorized and available; do not treat the workflow definition as a run result.
+3. Keep public Homebrew/release proof deferred until tap/artifact authority exists.
 
 ## Blockers
 
-None for local implementation.
+No blocker for local implementation. MW-011 hosted Linux/macOS CI is externally blocked by the absence of a Git remote/runner; local container CLIs have no running engine or VM.
 
 ## Questions for User
 
@@ -99,3 +100,6 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-17 MW-010 GREEN: 4 focused security tests and 46 security/reporting/CLI regressions passed after shared human-display sanitization and the strengthened skill boundary.
 - 2026-07-17 MW-010 complete local gate: 98 tests passed; Ruff format/lint, Pyright, build, skill validation, workflow parse, privacy contract, and diff checks passed.
 - 2026-07-17 MW-010 isolated/real smokes: the Python 3.12 wheel neutralized hostile control/bidi/newline text; a real in-memory Markdown scan contained only the three genuine level-2 sections and was discarded.
+- 2026-07-17 MW-011 Python matrix: all 98 tests passed under Python 3.12.11 and Python 3.13.13 on macOS; the full Ruff/Pyright/build/skill/workflow gate passed under 3.13.
+- 2026-07-17 MW-011 pipx RED/GREEN: the first ephemeral install refused an incompatible default uv backend; a fresh isolated `pipx --backend pip` install succeeded and version/root/scan help smokes passed without changing the user's PATH.
+- 2026-07-17 MW-011 external audit: no Git remote, hosted runner, running Docker daemon, or Podman VM exists, so Linux/hosted CI remains unverified rather than inferred from workflow YAML.

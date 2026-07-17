@@ -34,7 +34,7 @@ Verdict: **PARTIAL**. The Phase 1 user experience, schema, reports, help contrac
 | Homebrew dependencies are not ordinary selected apps | PASS | Explicit/dependency and reverse-dependency regression tests. |
 | Malicious metadata cannot inject shell commands or human-facing structure | PASS for implemented paths | Fixed-argv hostile arguments, synthetic application/Homebrew/disk/prompt fixtures, path containment, raw JSON round-trip, Markdown/terminal control/format/newline neutralization, inert CLI matching, and a validated skill prompt-boundary contract all pass. Typed AI/action integrations must repeat this gate when built. |
 | Public repository foundation | PASS locally | README, MIT license, security/contribution/changelog/privacy/threat-model docs, valid initial skill, and CI workflow exist; repository privacy contract passes. | No public GitHub remote or hosted CI result exists yet. |
-| `pipx install macwise` | MISSING publicly | Wheel installs in a fresh Python 3.12 environment. The package is not published and `pipx` is unavailable on the development host. |
+| `pipx install macwise` | PASS locally; MISSING publicly | The wheel installs under Python 3.12 and an actual isolated ephemeral `pipx --backend pip` home under Python 3.13; version/root/scan help smokes pass. The package is not published, so the public package-index command remains unproven. |
 | `brew install deesatzed/tap/macwise` | MISSING | No tap formula or public release artifact exists. |
 | `macwise setup codex` and `$macwise` | PARTIAL | Initial read-only skill validates; CLI setup safely refuses. Installation, typed tools, and integration tests remain Phase 6. |
 
@@ -51,9 +51,11 @@ python3 /path/to/skill-creator/scripts/quick_validate.py skills/macwise
 
 Additional evidence used an isolated Python 3.12 virtual environment to install the built wheel and smoke `--version`, root help, no-argument guidance, scan help, nested help, and safe Codex-setup refusal. Real JSON and Markdown scans were captured in memory, structurally checked, summarized without names or paths, and discarded.
 
+MW-011 also ran all 98 tests under Python 3.12.11 and 3.13.13 on macOS and installed the wheel through an isolated actual pipx home. The repository has no Git remote/hosted runner, Docker has no running daemon, and Podman has no VM, so Linux/hosted CI is explicitly unverified.
+
 ## Required next work
 
-1. Re-run clean-platform acceptance under MW-011, including actual/local-equivalent `pipx` and hosted macOS/Linux CI where available.
+1. Re-run the remaining MW-011 hosted macOS/Linux CI gate when a remote runner is authorized and available.
 2. Close the remaining full-product evidence fields in the owning later phase without broad unapproved scans.
 3. Keep public Homebrew installation and release proof open until artifacts and tap authority exist.
 4. Continue Phase 2 explain/review evidence only after the deterministic substrate is complete enough to support it honestly.
