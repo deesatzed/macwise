@@ -54,6 +54,16 @@ This file records durable architecture, UX, safety, privacy, dependency, and rel
 | D-024 | 2026-07-17 | Persistence and Safety | Store complete immutable plan revisions as canonical JSON plus integrity digests in a versioned local SQLite database; later actions must revalidate typed intent rather than execute persisted command text. | Append-only snapshots preserve exactly what was reviewed, support later approval integrity, and prevent stale or hostile persisted values from becoming execution authority. | Mutable normalized rows; atomic JSON files. | Accepted |
 | D-025 | 2026-07-17 | UX and Safety | Reject names without one exact identity, but retain exact unsafe candidates as visibly blocked plan items with explicit preflight outcomes. | A blocked review workspace exposes why a candidate is unsafe without guessing identity or granting action authority. | Reject every unsafe candidate at add time; accept and merely warn for all risks. | Accepted |
 
+## MW-400 Decisions
+
+| ID | Date | Category | Decision | Rationale | Alternatives Considered | Status |
+|---|---|---|---|---|---|---|
+| D-026 | 2026-07-18 | Approval | Bind action-time consent to the exact active plan revision digest with an explicit `APPLY` phrase; treat the fingerprint as consent evidence, not a reusable secret. | Approval must expire when any reviewed byte or active pointer changes and must work safely in TTY and non-TTY flows. | Stored reusable approval token; yes/no prompt; approval per raw command. | Accepted |
+| D-027 | 2026-07-18 | Persistence | Store append-only integrity-checked execution-manifest revisions in a separate versioned `executions.db`, committing an in-progress revision before every mutator call. | Crash ambiguity and action history have a different risk/lifecycle from plan previews; durable before/after snapshots make interrupted state visible. | Mutable execution rows in `macwise.db`; log files; no persistent journal. | Accepted |
+| D-028 | 2026-07-18 | Failure Safety | Stop on the first action or verification failure and require separately approved reverse-order undo; do not auto-rollback. | Automatic rollback performs more mutations without a fresh user choice and Homebrew restoration may be only best effort. | Automatic all-or-nothing rollback; continue remaining actions; no undo after partial runs. | Accepted |
+| D-029 | 2026-07-18 | Execution Boundary | Permit only same-filesystem atomic moves to canonical Trash, exact formula/cask Homebrew argv, and reversible current-user LaunchAgent/Homebrew-service operations through dedicated allowlisted adapters; never elevate privileges. | These operations are bounded, previewable, testable, and have explicit inverse/verification paths without arbitrary deletion or shell execution. | Generic subprocess adapter; recursive move/copy fallback; system daemon support; sudo/Finder authorization. | Accepted |
+| D-030 | 2026-07-18 | Startup Planning | Make startup changes opt-in and preview every supported startup action in plan schema 2; keep system/privileged/ambiguous startup kinds blocked. | Phase 5 cannot silently add startup mutations to a Phase 4 preview, and the public contract requires reversible startup disable. | Implicitly disable all owned startup items during removal; defer startup disable; manage startup outside cleanup plans. | Accepted |
+
 ## Initial Default Decisions
 
 - MIT license unless a later legal decision selects Apache-2.0.
@@ -75,6 +85,5 @@ None.
 
 ## Pending Decision Questions
 
-- D-P01: Select the SQLite migration mechanism before persistent audit history lands.
 - D-P02: Select and pin the Phase 6 local typed protocol after evaluating current official support.
 - D-P03: Confirm tap/repository ownership and release credentials before external publication.

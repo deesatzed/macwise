@@ -47,11 +47,12 @@
 | Build MW-300 cleanup planning | Done | Codex | Immutable plan models, pure preview construction, append-only SQLite revisions, persistent CLI review, hostile-input defenses, and zero-host-mutation tests pass the 186-test gate. |
 | Adjudicate independent MW-300 review | Done | Codex | Four recommendations were Accepted and Resolved test-first: read-only zero-version display, ancestor-symlink rejection, optimistic active-plan concurrency, and one-to-one action/rollback integrity. No critical finding remained. |
 | Run MW-300 acceptance | Done | Codex | `docs/phase-4-acceptance.md` records a local PASS from 186 tests on Python 3.12/3.13, quality/build/privacy/skill/clean-wheel gates, independent review, and an aggregate-only real planner smoke. |
+| Design MW-400 reversible cleanup | Done | Codex | Fingerprint approval, fresh revalidation, append-only crash-visible manifests, allowlisted Trash/Homebrew/startup adapters, stop-on-failure, and separately approved undo are saved under `docs/plans/`; D-026 through D-030 record the boundaries. |
 | Complete Phases 5–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
 
-- D-001 through D-025 are in `DECISIONS.md`.
+- D-001 through D-030 are in `DECISIONS.md`.
 
 ## Current Milestone
 
@@ -59,7 +60,7 @@ Phase 5 approval-gated reversible apply, action-time verification, manifests, an
 
 ## Next Actions
 
-1. Design and plan MW-400 approval-gated reversible apply, action-time revalidation, verification manifests, and undo without weakening the accepted Phase 4 preview boundary.
+1. Write the MW-400 TDD implementation plan and implementation packet, then begin strict execution models and append-only manifest persistence.
 2. Re-run hosted Linux/macOS CI once a Git remote/runner is authorized and available; do not treat the workflow definition as a run result.
 3. Keep public Homebrew/release proof deferred until tap/artifact authority exists.
 
