@@ -48,8 +48,21 @@ def test_every_public_command_has_novice_friendly_help(command: tuple[str, ...])
             "does not remove or change anything",
             "can change installed software",
             "can restore installed software",
+            "writes only local MacWise planning state",
         )
     )
+
+
+def test_plan_help_distinguishes_local_state_from_host_changes() -> None:
+    root = runner.invoke(app, ["plan", "--help"])
+    add = runner.invoke(app, ["plan", "add", "--help"])
+    show = runner.invoke(app, ["plan", "show", "--help"])
+
+    assert root.exit_code == add.exit_code == show.exit_code == 0
+    assert "writes only local MacWise planning state" in root.stdout
+    assert "writes only local MacWise planning state" in add.stdout
+    assert "read-only" in show.stdout
+    assert "does not change installed software or user data" in " ".join(add.stdout.split())
 
 
 def test_root_help_lists_the_small_public_hierarchy() -> None:

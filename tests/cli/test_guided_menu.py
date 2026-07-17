@@ -5,6 +5,7 @@ from typer.testing import CliRunner
 
 import macwise.cli as cli
 from macwise.models import AuditDocument
+from macwise.persistence import PlanStore
 
 runner = CliRunner()
 
@@ -44,3 +45,21 @@ def test_noninteractive_guided_menu_never_prompts(monkeypatch: pytest.MonkeyPatc
     assert result.exit_code == 0
     assert "Choose 1-9" not in result.stdout
     assert "Run macwise --help to see direct commands." in result.stdout
+
+
+def test_interactive_choice_eight_routes_to_real_plan_view_without_scanning(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(cli, "_is_interactive", lambda: True)
+    monkeypatch.setattr(
+        cli,
+        "_plan_store_factory",
+        lambda: PlanStore(tmp_path / "state" / "macwise.db"),
+    )
+
+    result = runner.invoke(cli.app, input="8\n")
+
+    assert result.exit_code == 0, result.stdout
+    assert "No active cleanup plan exists" in result.stdout
+    assert "macwise plan add NAME" in result.stdout

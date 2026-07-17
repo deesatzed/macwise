@@ -29,6 +29,14 @@ AUDIT_FILE = (
     "Scanning is read-only and does not change installed software. A file is written only when "
     "you explicitly use --output."
 )
+PLAN_STATE = (
+    "This command writes only local MacWise planning state when an item is added; it does "
+    "not change installed software or user data."
+)
+PLAN_ADD_STATE = (
+    "This command writes only local MacWise planning state; it does not change installed "
+    "software or user data."
+)
 
 HELP: dict[str, str] = {
     "root": _help(
@@ -141,16 +149,16 @@ HELP: dict[str, str] = {
         ("Run macwise storage.", "Run macwise plan after backup evidence is available."),
     ),
     "plan": _help(
-        "Builds and previews a cleanup plan only after planning safety checks are available.",
+        "Builds and previews an immutable cleanup plan with explicit safety checks.",
         "you have reviewed software and want an exact, non-destructive preview.",
-        READ_ONLY,
+        PLAN_STATE,
         ("macwise plan", "macwise plan show", 'macwise plan add "Example.app"'),
-        ("Run macwise scan.", "Run macwise explain NAME."),
+        ("Run macwise plan add NAME.", "Run macwise explain NAME."),
     ),
     "plan_add": _help(
-        "Adds one unambiguous reviewed item to a future cleanup preview.",
+        "Adds one exact reviewed item to a saved cleanup preview and runs planning preflight.",
         "you have inspected an item and want to consider it without changing the Mac.",
-        READ_ONLY,
+        PLAN_ADD_STATE,
         ('macwise plan add "Example.app"', "macwise plan show"),
         ("Run macwise plan show.", "Run macwise explain NAME."),
     ),

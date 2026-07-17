@@ -3,10 +3,12 @@
 import platform
 import sys
 from collections.abc import Callable, Sequence
+from datetime import UTC, datetime
 from enum import StrEnum
 from itertools import combinations
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Never
+from uuid import uuid4
 
 import typer
 
@@ -20,11 +22,16 @@ from macwise.models import (
     FindingTopic,
     OverlapCategory,
     OverlapRelation,
+    PlanActionKind,
+    PlanDocument,
+    PlanEligibility,
+    PreflightOutcome,
     SoftwareRecord,
     UsageLabel,
 )
+from macwise.persistence import PlanStore, PlanStoreError
 from macwise.reporting import render_json, render_markdown
-from macwise.services import AuditService
+from macwise.services import AuditService, add_candidate
 from macwise.system.commands import ReadCommand, resolve_executable
 from macwise.text import safe_display_text
 
@@ -81,6 +88,19 @@ app.add_typer(plan_app, name="plan")
 app.add_typer(setup_app, name="setup")
 
 _service_factory: Callable[[], AuditService] = AuditService
+_plan_store_factory: Callable[[], PlanStore] = PlanStore
+
+
+def _planning_clock() -> datetime:
+    return datetime.now(UTC)
+
+
+def _plan_id_factory() -> str:
+    return f"plan:{uuid4().hex}"
+
+
+def _trash_root_factory() -> Path:
+    return Path.home() / ".Trash"
 
 
 def _is_interactive() -> bool:
@@ -320,6 +340,115 @@ def _relation_for(
         ),
         None,
     )
+
+
+def _echo_plan_checks(plan: PlanDocument, outcome: PreflightOutcome, heading: str) -> None:
+    typer.echo(f"\n{heading}")
+    selected = tuple(item for item in plan.checks if item.outcome is outcome)
+    if not selected:
+        typer.echo("- None.")
+        return
+    names = {item.subject_id: item.display_name for item in plan.candidates}
+    for item in selected:
+        name = names.get(item.subject_id, item.subject_id)
+        typer.echo(
+            f"- {safe_display_text(name)} — {_human_label(item.kind.value)}: "
+            f"{safe_display_text(item.statement)}"
+        )
+        for limitation in item.limitations:
+            typer.echo(f"  Limitation: {safe_display_text(limitation)}")
+
+
+def _echo_plan(plan: PlanDocument) -> None:
+    """Render one saved snapshot without collecting or interpreting current host state."""
+    typer.echo("Cleanup plan preview\n")
+    typer.echo(f"Plan: {safe_display_text(plan.plan_id)} — revision {plan.revision}")
+    typer.echo(f"Snapshot: {plan.source_audit_collected_at.isoformat()}")
+    typer.echo(f"Eligibility: {_human_label(plan.eligibility.value)}")
+    typer.echo("This eligibility is not approval or action authority.\n")
+
+    actions = {item.subject_id: item for item in plan.actions}
+    for candidate in plan.candidates:
+        candidate_kind = {
+            EntityType.APPLICATION: "application",
+            EntityType.HOMEBREW_CASK: "Homebrew cask",
+            EntityType.HOMEBREW_FORMULA: "Homebrew formula",
+        }[candidate.entity_type]
+        typer.echo(f"- {safe_display_text(candidate.display_name)} ({candidate_kind})")
+        typer.echo(
+            f"  Candidate snapshot: {candidate.source_audit_collected_at.isoformat()} "
+            f"from {safe_display_text(candidate.source_audit_id)}"
+        )
+        action = actions.get(candidate.subject_id)
+        if action is None:
+            typer.echo("  Preview: no exact supported action can be planned.")
+        elif action.kind is PlanActionKind.MOVE_APPLICATION_TO_TRASH:
+            typer.echo(
+                "  Preview: move application bundle from "
+                f"{safe_display_text(action.source_path or 'unknown')} to "
+                f"{safe_display_text(action.destination_path or 'unknown')}"
+            )
+        else:
+            package_kind = (
+                "formula" if action.kind is PlanActionKind.HOMEBREW_UNINSTALL_FORMULA else "cask"
+            )
+            typer.echo(
+                f"  Preview: brew uninstall --{package_kind} "
+                f"{safe_display_text(action.homebrew_token or 'unknown')}"
+            )
+        typer.echo(f"  Related data records preserved: {len(candidate.related_path_ids)}")
+        typer.echo(f"  Startup records left unchanged: {len(candidate.startup_ids)}")
+
+    _echo_plan_checks(plan, PreflightOutcome.BLOCK, "Blockers")
+    _echo_plan_checks(plan, PreflightOutcome.WARNING, "Warnings")
+    _echo_plan_checks(plan, PreflightOutcome.PASS, "Observed passes")
+
+    typer.echo("\nRollback blueprints")
+    if not plan.rollback:
+        typer.echo("- None available.")
+    for item in plan.rollback:
+        typer.echo(
+            f"- Rollback: {_human_label(item.feasibility.value)} — "
+            f"{safe_display_text(item.strategy)}"
+        )
+        for limitation in item.limitations:
+            typer.echo(f"  Limitation: {safe_display_text(limitation)}")
+
+    typer.echo("\nPlan limitations")
+    for limitation in plan.limitations:
+        typer.echo(f"- {safe_display_text(limitation)}")
+    typer.echo("\nNo changes were made to installed software, startup state, or user data.")
+    if plan.eligibility is PlanEligibility.BLOCKED:
+        typer.echo("Next: resolve every blocker, then create a fresh preview.")
+    else:
+        typer.echo("Next: review this preview. Phase 5 apply remains disabled.")
+
+
+def _plan_store_failure(*, writing: bool) -> Never:
+    operation = "save" if writing else "read"
+    typer.echo(f"MacWise could not {operation} local planning state safely.")
+    typer.echo("Move or back up the planning database, then run macwise plan show again.")
+    typer.echo("No changes were made to installed software, startup state, or user data.")
+    raise typer.Exit(2)
+
+
+def _active_plan() -> PlanDocument | None:
+    try:
+        return _plan_store_factory().active()
+    except PlanStoreError:
+        _plan_store_failure(writing=False)
+
+
+def _show_active_plan() -> None:
+    plan = _active_plan()
+    if plan is None:
+        typer.echo("No active cleanup plan exists.")
+        typer.echo("No changes were made.")
+        typer.echo("\nNext:")
+        typer.echo("  macwise explain NAME")
+        typer.echo("  macwise plan add NAME")
+        return
+    _echo_plan(plan)
 
 
 def _list_records(records: Sequence[SoftwareRecord]) -> None:
@@ -789,39 +918,54 @@ def backups() -> None:
 @plan_app.callback()
 def plan_root(ctx: typer.Context) -> None:
     if ctx.invoked_subcommand is None:
-        _phase_message(
-            "Cleanup planning is not available until dependency, backup, and rollback preflight exists.",
-            "macwise explain NAME",
-            "macwise scan",
-            failure=True,
-        )
+        _show_active_plan()
 
 
 @plan_app.command("add", help=HELP["plan_add"])
 def plan_add(
     name: Annotated[str, typer.Argument(help="One reviewed, unambiguous item name.")],
 ) -> None:
-    _phase_message(
-        f'MacWise did not add "{safe_display_text(name)}" because cleanup planning is not available yet.',
-        "macwise explain NAME",
-        "macwise plan show",
-        failure=True,
+    store = _plan_store_factory()
+    try:
+        current = store.active()
+    except PlanStoreError:
+        _plan_store_failure(writing=False)
+    audit = _audit()
+    record = _resolve_record(audit, name)
+    result = add_candidate(
+        current,
+        audit,
+        record.id,
+        clock=_planning_clock,
+        plan_id_factory=_plan_id_factory,
+        trash_root=_trash_root_factory(),
     )
+    if result.changed:
+        try:
+            store.append(result.plan)
+        except PlanStoreError:
+            _plan_store_failure(writing=True)
+        typer.echo(
+            f"Added {safe_display_text(record.display_name)} to cleanup plan "
+            f"revision {result.plan.revision}.\n"
+        )
+    else:
+        typer.echo(
+            f"{safe_display_text(record.display_name)} already appears in cleanup plan "
+            f"revision {result.plan.revision}.\n"
+        )
+    _echo_plan(result.plan)
 
 
 @plan_app.command("show", help=HELP["plan_show"])
 def plan_show() -> None:
-    _phase_message(
-        "No cleanup plan exists because Phase 4 planning has not been enabled.",
-        "macwise explain NAME",
-        "macwise scan",
-    )
+    _show_active_plan()
 
 
 @app.command("apply", help=HELP["apply"])
 def apply_plan() -> None:
     _phase_message(
-        "MacWise cannot apply changes because reversible execution and an approved plan are unavailable.",
+        "MacWise cannot apply this preview because current-state revalidation, action-time approval, verification and undo remain unavailable until Phase 5.",
         "macwise plan show",
         "macwise scan",
         failure=True,
