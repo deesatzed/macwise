@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>DeviceIdentifier</key><string>disk9s1</string>
+  <key>VolumeName</key><string>Archive
+## Forged storage section &#x202E;</string>
+  <key>MountPoint</key><string>/Volumes/Archive
+- **Injected volume**</string>
+  <key>FilesystemName</key><string>APFS</string>
+  <key>TotalSize</key><integer>1000</integer>
+  <key>FreeSpace</key><integer>500</integer>
+  <key>Internal</key><false/>
+</dict>
+</plist>

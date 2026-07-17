@@ -1,10 +1,11 @@
 """Plain-language Markdown rendering for MacWise audit documents."""
 
 from macwise.models import AuditDocument, EntityType, InstallRole, SoftwareRecord
+from macwise.text import safe_display_text
 
 
 def _markdown_text(value: str) -> str:
-    escaped = value.replace("\\", "\\\\")
+    escaped = safe_display_text(value).replace("\\", "\\\\")
     for character in ("`", "*", "_", "[", "]", "<", ">"):
         escaped = escaped.replace(character, f"\\{character}")
     return escaped

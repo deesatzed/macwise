@@ -15,6 +15,7 @@ from macwise.models import AuditDocument, EntityType, SoftwareRecord
 from macwise.reporting import render_json, render_markdown
 from macwise.services import AuditService
 from macwise.system.commands import ReadCommand, resolve_executable
+from macwise.text import safe_display_text
 
 GUIDED_MENU = """MacWise
 
@@ -108,16 +109,21 @@ def _write_or_print(content: str, output: Path | None, force: bool) -> None:
         typer.echo(content, nl=False)
         return
     if output.exists() and not force:
-        typer.echo(f"MacWise did not replace {output} because it already exists.")
+        typer.echo(
+            f"MacWise did not replace {safe_display_text(output)} because it already exists."
+        )
         typer.echo("Run again with --force only after reviewing that file.")
         raise typer.Exit(2)
     try:
         output.write_text(content, encoding="utf-8")
     except OSError as error:
-        typer.echo(f"MacWise could not save {output}: {error.strerror or error}.")
+        typer.echo(
+            f"MacWise could not save {safe_display_text(output)}: "
+            f"{safe_display_text(error.strerror or error)}."
+        )
         typer.echo("Run with a writable --output path.")
         raise typer.Exit(2) from error
-    typer.echo(f"Saved the read-only audit to {output}.")
+    typer.echo(f"Saved the read-only audit to {safe_display_text(output)}.")
 
 
 def _phase_message(message: str, *next_steps: str, failure: bool = False) -> None:
@@ -167,7 +173,7 @@ def _record_label(record: SoftwareRecord) -> str:
         EntityType.HOMEBREW_CASK: "Homebrew cask",
         EntityType.HOMEBREW_FORMULA: "Homebrew formula",
     }[record.entity_type]
-    return f"{record.display_name} ({kind})"
+    return f"{safe_display_text(record.display_name)} ({kind})"
 
 
 def _list_records(records: Sequence[SoftwareRecord]) -> None:
@@ -177,10 +183,10 @@ def _list_records(records: Sequence[SoftwareRecord]) -> None:
         )
         return
     for record in records:
-        version = f" — version {record.version}" if record.version else ""
+        version = f" — version {safe_display_text(record.version)}" if record.version else ""
         typer.echo(f"- {_record_label(record)}{version}")
         if record.install_path:
-            typer.echo(f"  Location: {record.install_path}")
+            typer.echo(f"  Location: {safe_display_text(record.install_path)}")
         if record.entity_type is EntityType.HOMEBREW_FORMULA:
             typer.echo(f"  Installation role: {record.install_role.value}")
 
@@ -274,7 +280,8 @@ def review_largest() -> None:
     typer.echo("Largest measured application bundles\n")
     for record in measured:
         typer.echo(
-            f"- {record.display_name}: {record.size_bytes} bytes ({record.storage_location.value})"
+            f"- {safe_display_text(record.display_name)}: {record.size_bytes} bytes "
+            f"({record.storage_location.value})"
         )
     if not measured:
         typer.echo("No application bundle sizes were collected.")
@@ -303,7 +310,7 @@ def explain(
 ) -> None:
     matches = _matching_records(_audit(), name)
     if not matches:
-        typer.echo(f'MacWise did not find an installed item matching "{name}".')
+        typer.echo(f'MacWise did not find an installed item matching "{safe_display_text(name)}".')
         typer.echo("Run macwise review apps or macwise review brew, then use the displayed name.")
         raise typer.Exit(2)
     if len(matches) > 1:
@@ -313,11 +320,14 @@ def explain(
         typer.echo("\nRun a qualified name such as app:NAME, cask:NAME, or formula:NAME.")
         raise typer.Exit(2)
     record = next(iter(matches))
-    typer.echo(f"{record.display_name}\n")
+    typer.echo(f"{safe_display_text(record.display_name)}\n")
     typer.echo(f"Verified type: {record.entity_type.value}")
-    typer.echo(f"Version: {record.version or 'Unknown'}")
-    typer.echo(f"Installed by: {record.install_source or 'Unknown'}")
-    typer.echo(f"Purpose: {record.description or 'Unknown in the current local catalog'}")
+    typer.echo(f"Version: {safe_display_text(record.version or 'Unknown')}")
+    typer.echo(f"Installed by: {safe_display_text(record.install_source or 'Unknown')}")
+    typer.echo(
+        "Purpose: "
+        f"{safe_display_text(record.description or 'Unknown in the current local catalog')}"
+    )
     typer.echo("Usage: No reliable usage assessment has been collected yet.")
     typer.echo("Backup coverage: Not verified.")
     typer.echo(
@@ -330,7 +340,7 @@ def explain(
 def compare(
     names: Annotated[list[str], typer.Argument(help="One or more installed names.")],
 ) -> None:
-    typer.echo(f"Requested comparison: {', '.join(names)}")
+    typer.echo(f"Requested comparison: {', '.join(map(safe_display_text, names))}")
     _phase_message(
         "Role-aware overlap categories and actual-use comparison are not available until Phase 3.",
         "macwise review duplicates",
@@ -343,7 +353,10 @@ def startup() -> None:
     services = tuple(item for item in _audit().software if item.service_status)
     typer.echo("Verified Homebrew services\n")
     for record in services:
-        typer.echo(f"- {record.display_name}: {record.service_status}")
+        typer.echo(
+            f"- {safe_display_text(record.display_name)}: "
+            f"{safe_display_text(record.service_status)}"
+        )
     if not services:
         typer.echo("No active Homebrew service metadata was collected.")
     typer.echo("\nLogin items, LaunchAgents, and system extensions are unknown until Phase 2.")
@@ -355,9 +368,10 @@ def storage() -> None:
     audit = _audit()
     typer.echo("Storage volumes\n")
     for volume in audit.volumes:
-        mount = volume.mount_point or "unmounted"
+        mount = safe_display_text(volume.mount_point or "unmounted")
         typer.echo(
-            f"- {volume.name}: {volume.location.value}, {volume.free_bytes or 0} bytes free, {mount}"
+            f"- {safe_display_text(volume.name)}: {volume.location.value}, "
+            f"{volume.free_bytes or 0} bytes free, {mount}"
         )
     if not audit.volumes:
         typer.echo("No storage metadata was collected.")
@@ -389,7 +403,7 @@ def plan_add(
     name: Annotated[str, typer.Argument(help="One reviewed, unambiguous item name.")],
 ) -> None:
     _phase_message(
-        f'MacWise did not add "{name}" because cleanup planning is not available yet.',
+        f'MacWise did not add "{safe_display_text(name)}" because cleanup planning is not available yet.',
         "macwise explain NAME",
         "macwise plan show",
         failure=True,
