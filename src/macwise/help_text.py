@@ -92,7 +92,7 @@ HELP: dict[str, str] = {
         ("Run macwise explain NAME.", "Run macwise plan."),
     ),
     "review_unused": _help(
-        "Explains why reliable unused-software conclusions require more evidence than a missing date.",
+        "Lists only possibly-unused or user-confirmed-unused findings and shows the evidence and limitations behind each label.",
         "you want to find possibly unused tools without unsafe assumptions.",
         READ_ONLY,
         ("macwise review unused", "macwise explain NAME"),
@@ -106,7 +106,7 @@ HELP: dict[str, str] = {
         ("Run macwise explain NAME.", "Run macwise scan --format markdown."),
     ),
     "explain": _help(
-        "Explains verified identity and installation facts for one installed item and labels missing evidence.",
+        "Explains one installed item's verified facts, usage findings, startup components, related data, and backup limitations.",
         "you see an unfamiliar app or Homebrew tool and want a cautious first explanation.",
         READ_ONLY,
         ("macwise explain Raycast", "macwise explain ollama", "macwise explain formula:openssl@3"),
@@ -120,7 +120,7 @@ HELP: dict[str, str] = {
         ("Run macwise review duplicates.", "Run macwise explain NAME."),
     ),
     "startup": _help(
-        "Shows verified Homebrew service activity and clearly marks other startup sources not yet assessed.",
+        "Shows collected launch and Homebrew startup items, conservative owners, and enabled/running unknowns.",
         "you want a cautious view of software that may run in the background.",
         READ_ONLY,
         ("macwise startup", "macwise review startup"),

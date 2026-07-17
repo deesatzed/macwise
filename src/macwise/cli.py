@@ -11,7 +11,15 @@ import typer
 
 from macwise import __version__
 from macwise.help_text import HELP
-from macwise.models import AuditDocument, EntityType, SoftwareRecord
+from macwise.models import (
+    AuditDocument,
+    ClaimBasis,
+    EntityType,
+    Finding,
+    FindingTopic,
+    SoftwareRecord,
+    UsageLabel,
+)
 from macwise.reporting import render_json, render_markdown
 from macwise.services import AuditService
 from macwise.system.commands import ReadCommand, resolve_executable
@@ -176,6 +184,51 @@ def _record_label(record: SoftwareRecord) -> str:
     return f"{safe_display_text(record.display_name)} ({kind})"
 
 
+def _human_label(value: str) -> str:
+    return safe_display_text(value.replace("_", " "))
+
+
+def _tri_state(value: bool | None) -> str:
+    if value is None:
+        return "unknown"
+    return "yes" if value else "no"
+
+
+def _bytes(value: int | None) -> str:
+    if value is None:
+        return "unknown size"
+    amount = float(value)
+    units = ("bytes", "KiB", "MiB", "GiB", "TiB")
+    unit = units[0]
+    for candidate in units:
+        unit = candidate
+        if amount < 1024 or candidate == units[-1]:
+            break
+        amount /= 1024
+    return f"{int(amount)} {unit}" if unit == "bytes" else f"{amount:.1f} {unit}"
+
+
+def _finding_summary(finding: Finding) -> str:
+    if finding.topic is FindingTopic.USAGE and finding.usage_label is not None:
+        topic = f"Usage: {_human_label(finding.usage_label.value)}"
+    else:
+        topic = _human_label(finding.topic.value).capitalize()
+    return (
+        f"{topic} ({_human_label(finding.confidence.value)} confidence) — "
+        f"{safe_display_text(finding.statement)}"
+    )
+
+
+def _echo_findings(findings: Sequence[Finding]) -> None:
+    if not findings:
+        typer.echo("- None recorded.")
+        return
+    for finding in findings:
+        typer.echo(f"- {_finding_summary(finding)}")
+        for limitation in finding.limitations:
+            typer.echo(f"  Limitation: {safe_display_text(limitation)}")
+
+
 def _list_records(records: Sequence[SoftwareRecord]) -> None:
     if not records:
         typer.echo(
@@ -290,11 +343,36 @@ def review_largest() -> None:
 
 @review_app.command("unused", help=HELP["review_unused"])
 def review_unused() -> None:
-    _phase_message(
-        "Reliable usage evidence is not collected until Phase 2. Missing metadata is not proof of non-use.",
-        "macwise review unknown",
-        "macwise explain NAME",
+    audit = _audit()
+    records = {record.id: record for record in audit.software}
+    supported_labels = {
+        UsageLabel.POSSIBLY_UNUSED,
+        UsageLabel.USER_CONFIRMED_UNUSED,
+    }
+    candidates = sorted(
+        (
+            (records[finding.subject_id], finding)
+            for finding in audit.findings
+            if finding.topic is FindingTopic.USAGE
+            and finding.usage_label in supported_labels
+            and finding.subject_id in records
+        ),
+        key=lambda item: (item[0].display_name.casefold(), item[0].id),
     )
+    typer.echo("Items with cautious non-use evidence\n")
+    if not candidates:
+        typer.echo("No items met the supported possibly-unused or user-confirmed-unused labels.")
+    for record, finding in candidates:
+        assert finding.usage_label is not None
+        typer.echo(
+            f"- {_record_label(record)}: {_human_label(finding.usage_label.value)} "
+            f"({_human_label(finding.basis.value)}, {finding.confidence.value} confidence)"
+        )
+        typer.echo(f"  Reason: {safe_display_text(finding.statement)}")
+        for limitation in finding.limitations:
+            typer.echo(f"  Limitation: {safe_display_text(limitation)}")
+    typer.echo("\nMissing evidence alone never qualifies an item for this list.")
+    typer.echo("This review is read-only. MacWise did not change this Mac.")
 
 
 @review_app.command("unknown", help=HELP["review_unknown"])
@@ -308,7 +386,8 @@ def review_unknown() -> None:
 def explain(
     name: Annotated[str, typer.Argument(help="Installed app, cask, or formula name.")],
 ) -> None:
-    matches = _matching_records(_audit(), name)
+    audit = _audit()
+    matches = _matching_records(audit, name)
     if not matches:
         typer.echo(f'MacWise did not find an installed item matching "{safe_display_text(name)}".')
         typer.echo("Run macwise review apps or macwise review brew, then use the displayed name.")
@@ -321,17 +400,79 @@ def explain(
         raise typer.Exit(2)
     record = next(iter(matches))
     typer.echo(f"{safe_display_text(record.display_name)}\n")
-    typer.echo(f"Verified type: {record.entity_type.value}")
-    typer.echo(f"Version: {safe_display_text(record.version or 'Unknown')}")
-    typer.echo(f"Installed by: {safe_display_text(record.install_source or 'Unknown')}")
+    typer.echo("Verified facts")
+    typer.echo(f"- Type: {_human_label(record.entity_type.value)}")
+    typer.echo(f"- Version: {safe_display_text(record.version or 'unknown')}")
+    typer.echo(f"- Installed by: {safe_display_text(record.install_source or 'unknown')}")
     typer.echo(
-        "Purpose: "
-        f"{safe_display_text(record.description or 'Unknown in the current local catalog')}"
+        f"- Purpose: {safe_display_text(record.description or 'unknown in the local catalog')}"
     )
-    typer.echo("Usage: No reliable usage assessment has been collected yet.")
-    typer.echo("Backup coverage: Not verified.")
+    if record.dependencies:
+        typer.echo(f"- Depends on: {', '.join(map(safe_display_text, record.dependencies))}")
+    if record.reverse_dependencies:
+        typer.echo(
+            f"- Required by: {', '.join(map(safe_display_text, record.reverse_dependencies))}"
+        )
+    if record.size_bytes is not None:
+        typer.echo(f"- Installed size: {_bytes(record.size_bytes)}")
+
+    startup_items = sorted(
+        (item for item in audit.startup if record.id in item.owner_software_ids),
+        key=lambda item: (item.kind.value, item.label.casefold(), item.id),
+    )
+    for item in startup_items:
+        typer.echo(
+            f"- {_human_label(item.kind.value).capitalize()}: {safe_display_text(item.label)}"
+        )
+        typer.echo(f"  Enabled: {_tri_state(item.enabled)}; Running: {_tri_state(item.running)}")
+
+    related_paths = sorted(
+        (item for item in audit.path_evidence if item.subject_id == record.id),
+        key=lambda item: (item.kind, item.path.casefold(), item.id),
+    )
+    for item in related_paths:
+        typer.echo(
+            f"- Related {_human_label(item.kind)}: {safe_display_text(item.path)} — "
+            f"{_bytes(item.size_bytes)} on {item.storage_location.value} storage"
+        )
+        if item.backup_excluded is True:
+            typer.echo("  Backup fact: excluded from Time Machine.")
+        elif item.backup_excluded is False:
+            typer.echo(
+                "  Backup fact: not excluded from Time Machine; this does not prove coverage."
+            )
+        else:
+            typer.echo("  Backup fact: Time Machine exclusion is unknown.")
+
+    subject_findings = tuple(
+        finding for finding in audit.findings if finding.subject_id == record.id
+    )
+    verified = tuple(
+        finding for finding in subject_findings if finding.basis is ClaimBasis.VERIFIED
+    )
+    inferred = tuple(
+        finding for finding in subject_findings if finding.basis is ClaimBasis.INFERRED
+    )
+    confirmed = tuple(
+        finding for finding in subject_findings if finding.basis is ClaimBasis.USER_CONFIRMED
+    )
+    unknown = tuple(finding for finding in subject_findings if finding.basis is ClaimBasis.UNKNOWN)
+    _echo_findings(verified)
+    typer.echo("\nInferred findings")
+    _echo_findings(inferred)
+    typer.echo("\nUser-confirmed findings")
+    _echo_findings(confirmed)
+    typer.echo("\nUnknowns and limitations")
+    _echo_findings(unknown)
+    if audit.backup is None:
+        typer.echo("- Time Machine configuration is unknown.")
+    else:
+        typer.echo(f"- Time Machine configured: {_tri_state(audit.backup.configured)}")
+        for limitation in audit.backup.limitations:
+            typer.echo(f"- Backup limitation: {safe_display_text(limitation)}")
+    typer.echo("- Backup coverage: Not verified.")
     typer.echo(
-        "Recommendation: Not available until dependency, usage, data, and backup checks complete."
+        "Recommendation: Not available until overlap, learning-value, and cleanup preflight complete."
     )
     typer.echo("\nThis command is read-only. MacWise did not change this Mac.")
 
@@ -350,16 +491,27 @@ def compare(
 
 @app.command(help=HELP["startup"])
 def startup() -> None:
-    services = tuple(item for item in _audit().software if item.service_status)
-    typer.echo("Verified Homebrew services\n")
-    for record in services:
-        typer.echo(
-            f"- {safe_display_text(record.display_name)}: "
-            f"{safe_display_text(record.service_status)}"
-        )
-    if not services:
-        typer.echo("No active Homebrew service metadata was collected.")
-    typer.echo("\nLogin items, LaunchAgents, and system extensions are unknown until Phase 2.")
+    audit = _audit()
+    records = {record.id: record for record in audit.software}
+    typer.echo("Startup and background items\n")
+    startup_items = sorted(
+        audit.startup,
+        key=lambda item: (item.kind.value, item.label.casefold(), item.id),
+    )
+    if not startup_items:
+        typer.echo("No startup or background records were collected.")
+    for item in startup_items:
+        owners = [
+            safe_display_text(records[owner_id].display_name)
+            for owner_id in item.owner_software_ids
+            if owner_id in records
+        ]
+        typer.echo(f"- {safe_display_text(item.label)} — {_human_label(item.kind.value)}")
+        typer.echo(f"  Owner: {', '.join(owners) if owners else 'unknown'}")
+        typer.echo(f"  Enabled: {_tri_state(item.enabled)}")
+        typer.echo(f"  Running: {_tri_state(item.running)}")
+        if item.source_path:
+            typer.echo(f"  Source: {safe_display_text(item.source_path)}")
     typer.echo("This command is read-only. MacWise did not change this Mac.")
 
 
@@ -380,11 +532,42 @@ def storage() -> None:
 
 @app.command(help=HELP["backups"])
 def backups() -> None:
-    _phase_message(
-        "Backup coverage has not been verified in Phase 1. MacWise will not infer coverage from configuration alone.",
-        "macwise storage",
-        "macwise scan",
-    )
+    audit = _audit()
+    backup = audit.backup
+    volumes = {volume.id: volume for volume in audit.volumes}
+    typer.echo("Time Machine facts\n")
+    if backup is None:
+        typer.echo("Configured: unknown")
+        typer.echo("Available destinations: unknown")
+        typer.echo("Last verifiable backup: unknown")
+    else:
+        typer.echo(f"Configured: {_tri_state(backup.configured)}")
+        if backup.available_destination_volume_ids:
+            for volume_id in backup.available_destination_volume_ids:
+                destination = volumes.get(volume_id)
+                label = destination.name if destination is not None else volume_id
+                typer.echo(f"Available destination: {safe_display_text(label)}")
+        else:
+            typer.echo("Available destination: none observed")
+        latest = backup.last_backup_at.isoformat() if backup.last_backup_at else "unknown"
+        typer.echo(f"Last verifiable backup: {latest}")
+
+    typer.echo("\nRelated-path exclusion observations")
+    if not audit.path_evidence:
+        typer.echo("- No related paths were measured.")
+    for item in sorted(audit.path_evidence, key=lambda value: (value.path.casefold(), value.id)):
+        if item.backup_excluded is True:
+            state = "excluded from Time Machine"
+        elif item.backup_excluded is False:
+            state = "not excluded from Time Machine"
+        else:
+            state = "Time Machine exclusion unknown"
+        typer.echo(f"- {safe_display_text(item.path)}: {state}; this does not prove coverage.")
+    if backup is not None:
+        for limitation in backup.limitations:
+            typer.echo(f"Limitation: {safe_display_text(limitation)}")
+    typer.echo("\nBackup coverage: Not verified.")
+    typer.echo("This command is read-only. MacWise did not change this Mac.")
 
 
 @plan_app.callback()

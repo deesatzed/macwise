@@ -1,6 +1,6 @@
 """Plain-language Markdown rendering for MacWise audit documents."""
 
-from macwise.models import AuditDocument, EntityType, InstallRole, SoftwareRecord
+from macwise.models import AuditDocument, ClaimBasis, EntityType, InstallRole, SoftwareRecord
 from macwise.text import safe_display_text
 
 
@@ -35,6 +35,14 @@ def _role(record: SoftwareRecord) -> str:
 
 def _yes_no(value: bool) -> str:
     return "yes" if value else "no"
+
+
+def _tri_state(value: bool | None) -> str:
+    return "unknown" if value is None else _yes_no(value)
+
+
+def _human_label(value: str) -> str:
+    return _markdown_text(value.replace("_", " "))
 
 
 def _software_lines(record: SoftwareRecord) -> list[str]:
@@ -162,6 +170,116 @@ def render_markdown(audit: AuditDocument) -> str:
     else:
         lines.append("- No storage records were collected.")
 
+    software_by_id = {record.id: record for record in audit.software}
+    volume_by_id = {volume.id: volume for volume in audit.volumes}
+    basis_sections = (
+        (ClaimBasis.VERIFIED, "Verified"),
+        (ClaimBasis.INFERRED, "Inferred"),
+        (ClaimBasis.USER_CONFIRMED, "User-confirmed"),
+        (ClaimBasis.UNKNOWN, "Unknown"),
+    )
+    lines.extend(["", "## Evidence-linked findings", ""])
+    for basis, heading in basis_sections:
+        lines.extend([f"### {heading}", ""])
+        findings = [finding for finding in audit.findings if finding.basis is basis]
+        if not findings:
+            lines.append("- None recorded.")
+            lines.append("")
+            continue
+        for finding in findings:
+            subject = software_by_id.get(finding.subject_id)
+            subject_label = subject.display_name if subject is not None else finding.subject_id
+            if finding.usage_label is not None:
+                topic = f"Usage: {_human_label(finding.usage_label.value)}"
+            else:
+                topic = _human_label(finding.topic.value).capitalize()
+            lines.append(
+                f"- **{_markdown_text(subject_label)}** — {topic}; "
+                f"{_human_label(finding.confidence.value)} confidence"
+            )
+            lines.append(f"  - {_markdown_text(finding.statement)}")
+            if finding.evidence_kinds:
+                lines.append(
+                    "  - Evidence: "
+                    f"{', '.join(_human_label(value) for value in finding.evidence_kinds)}"
+                )
+            for limitation in finding.limitations:
+                lines.append(f"  - Limitation: {_markdown_text(limitation)}")
+        lines.append("")
+
+    lines.extend(["## Startup and background items", ""])
+    if audit.startup:
+        for item in audit.startup:
+            owners = [
+                software_by_id[owner_id].display_name
+                for owner_id in item.owner_software_ids
+                if owner_id in software_by_id
+            ]
+            lines.append(f"- **{_markdown_text(item.label)}** — {_human_label(item.kind.value)}")
+            lines.append(
+                f"  - Owner: {', '.join(map(_markdown_text, owners)) if owners else 'unknown'}"
+            )
+            lines.append(
+                f"  - Enabled: {_tri_state(item.enabled)}; running: {_tri_state(item.running)}"
+            )
+            if item.source_path:
+                lines.append(f"  - Source: `{_markdown_text(item.source_path)}`")
+    else:
+        lines.append("- No startup or background records were collected.")
+
+    lines.extend(["", "## Related data measurements", ""])
+    if audit.path_evidence:
+        for item in audit.path_evidence:
+            subject = software_by_id.get(item.subject_id)
+            subject_label = subject.display_name if subject is not None else item.subject_id
+            lines.append(
+                f"- **{_markdown_text(subject_label)}** — {_human_label(item.kind)}: "
+                f"{_bytes(item.size_bytes)} on {item.storage_location.value} storage at "
+                f"`{_markdown_text(item.path)}`"
+            )
+            if item.backup_excluded is True:
+                backup_fact = "excluded from Time Machine"
+            elif item.backup_excluded is False:
+                backup_fact = "not excluded from Time Machine"
+            else:
+                backup_fact = "Time Machine exclusion unknown"
+            lines.append(f"  - Backup fact: {backup_fact}; this does not prove coverage.")
+            if item.last_modified_at is not None:
+                lines.append(f"  - Last modified: {item.last_modified_at.isoformat()}")
+    else:
+        lines.append("- No related-data paths were measured.")
+
+    lines.extend(["", "## Backup facts", ""])
+    if audit.backup is None:
+        lines.extend(
+            [
+                "- Configured: unknown",
+                "- Available destinations: unknown",
+                "- Last verifiable backup: unknown",
+            ]
+        )
+    else:
+        lines.append(f"- Configured: {_tri_state(audit.backup.configured)}")
+        if audit.backup.available_destination_volume_ids:
+            destinations = [
+                volume_by_id[volume_id].name if volume_id in volume_by_id else volume_id
+                for volume_id in audit.backup.available_destination_volume_ids
+            ]
+            lines.append(
+                f"- Available destinations: {', '.join(map(_markdown_text, destinations))}"
+            )
+        else:
+            lines.append("- Available destinations: none observed")
+        latest = (
+            audit.backup.last_backup_at.isoformat()
+            if audit.backup.last_backup_at is not None
+            else "unknown"
+        )
+        lines.append(f"- Last verifiable backup: {latest}")
+        for limitation in audit.backup.limitations:
+            lines.append(f"- Limitation: {_markdown_text(limitation)}")
+    lines.append("- Backup coverage is not verified.")
+
     lines.extend(["", "## Collection limitations", ""])
     limitation_lines = [
         f"- {_markdown_text(status.collector)}: {_markdown_text(limitation)}"
@@ -175,8 +293,16 @@ def render_markdown(audit: AuditDocument) -> str:
             "",
             "## Unknown in this phase",
             "",
-            "- Direct and recent usage evidence has not been collected.",
-            "- Startup ownership and related user data have not been fully assessed.",
+            *(
+                []
+                if audit.findings
+                else ["- Direct and recent usage evidence has not been collected."]
+            ),
+            *(
+                []
+                if audit.startup and audit.path_evidence
+                else ["- Startup ownership and related user data have not been fully assessed."]
+            ),
             "- Backup coverage has not been verified.",
             "- No cleanup recommendation or removal-safety conclusion is made here.",
             "",

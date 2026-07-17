@@ -5,12 +5,21 @@ import pytest
 
 from macwise.models import (
     AuditDocument,
+    BackupStatus,
+    ClaimBasis,
     CollectorState,
     CollectorStatus,
     EntityType,
+    Finding,
+    FindingTopic,
     InstallRole,
+    PathEvidence,
+    Reliability,
     SoftwareRecord,
+    StartupKind,
+    StartupRecord,
     StorageLocation,
+    UsageLabel,
     VolumeRecord,
     stable_software_id,
 )
@@ -193,3 +202,70 @@ def test_markdown_separates_verified_inventory_limitations_and_unknowns() -> Non
 
 def test_markdown_output_is_stable_for_the_same_audit() -> None:
     assert render_markdown(sample_audit()) == render_markdown(sample_audit())
+
+
+def test_markdown_renders_phase_two_facts_by_basis_without_backup_coverage_claim() -> None:
+    audit = sample_audit()
+    application = audit.software[0]
+    phase_two = audit.model_copy(
+        update={
+            "findings": (
+                Finding(
+                    subject_id=application.id,
+                    topic=FindingTopic.USAGE,
+                    statement="Only stale positive usage metadata was found.",
+                    basis=ClaimBasis.INFERRED,
+                    confidence=Reliability.LOW,
+                    usage_label=UsageLabel.POSSIBLY_UNUSED,
+                    evidence_kinds=("spotlight_last_used",),
+                    limitations=("Stale metadata does not prove non-use.",),
+                ),
+            ),
+            "startup": (
+                StartupRecord(
+                    id="startup:example",
+                    label="org.example.agent",
+                    kind=StartupKind.LAUNCH_AGENT,
+                    owner_software_ids=(application.id,),
+                    enabled=None,
+                    running=True,
+                ),
+            ),
+            "path_evidence": (
+                PathEvidence(
+                    id="path:example",
+                    subject_id=application.id,
+                    path="/Users/example/Library/Application Support/Example",
+                    kind="application_support",
+                    size_bytes=8192,
+                    storage_location=StorageLocation.INTERNAL,
+                    backup_excluded=False,
+                ),
+            ),
+            "backup": BackupStatus(
+                configured=True,
+                available_destination_volume_ids=(audit.volumes[0].id,),
+                last_backup_at=datetime(2026, 7, 16, 23, 15, tzinfo=UTC),
+                limitations=("A timestamp does not prove path-level recoverability.",),
+            ),
+        }
+    )
+
+    report = render_markdown(phase_two)
+
+    assert "## Evidence-linked findings" in report
+    assert "### Inferred" in report
+    assert "Usage: possibly unused" in report
+    assert "Only stale positive usage metadata was found." in report
+    assert "## Startup and background items" in report
+    assert "Owner: Example App" in report
+    assert "Enabled: unknown; running: yes" in report
+    assert "## Related data measurements" in report
+    assert "8.0 KiB on internal storage" in report
+    assert "not excluded from Time Machine" in report
+    assert "## Backup facts" in report
+    assert "Configured: yes" in report
+    assert "Last verifiable backup: 2026-07-16T23:15:00+00:00" in report
+    assert "A timestamp does not prove path-level recoverability." in report
+    assert "Backup coverage is not verified." in report
+    assert "never used" not in report.casefold()

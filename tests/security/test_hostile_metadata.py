@@ -122,7 +122,15 @@ def test_json_preserves_raw_evidence_but_markdown_cannot_forge_structure(tmp_pat
     assert "\n## Forged storage section" not in report
     assert "\n- **Injected record**" not in report
     assert "\n- **Injected volume**" not in report
-    assert report.count("\n## ") == 3
+    assert [line for line in report.splitlines() if line.startswith("## ")] == [
+        "## Verified inventory",
+        "## Evidence-linked findings",
+        "## Startup and background items",
+        "## Related data measurements",
+        "## Backup facts",
+        "## Collection limitations",
+        "## Unknown in this phase",
+    ]
 
 
 def test_cli_matching_treats_hostile_query_and_metadata_as_inert_text(

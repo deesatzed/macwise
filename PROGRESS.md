@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-52% complete – MacWise now has a locally verified public-repository foundation and a schema-3 Phase 2 evidence core: multi-signal usage findings, startup ownership, bounded related-path measurements, and honest Time Machine configuration/exclusion facts. MW-009 and MW-010 are closed; MW-011 remains PARTIAL because no hosted/Linux runner or Git remote exists. MW-100 is in progress with its read-only CLI/reporting views still to complete.
+55% complete – MacWise now has a locally verified public-repository foundation and an implemented schema-3 Phase 2 explain/review slice: multi-signal usage findings, startup ownership, bounded related paths, honest Time Machine facts, and deterministic read-only CLI/Markdown views. MW-009 and MW-010 are closed; MW-011 remains PARTIAL because no hosted/Linux runner or Git remote exists. MW-100 is implemented locally and awaiting its broader acceptance gates.
 
 ## Current Assumptions
 
@@ -35,7 +35,8 @@
 | Complete MW-010 hostile metadata coverage | Done | Codex | Synthetic plist/Homebrew/disk/prompt fixtures prove path containment, raw JSON provenance, Markdown/terminal neutralization, inert CLI matching, and the skill's prompt boundary. |
 | Run MW-011 clean-platform acceptance | Partial | Codex | Python 3.12 and 3.13 pass on macOS; clean wheel and isolated pipx installs pass. Hosted Linux/macOS CI cannot run without a remote runner; Docker/Podman engines are not running. |
 | Build MW-100 evidence and analysis core | Done | Codex | Schema 3, v1/v2 migration, usage/startup collectors, evidence-basis findings, bounded related paths, and backup facts pass the 112-test gate. |
-| Build MW-100 explain/review views | In progress | Codex | Replace the Phase 1 refusal surfaces for explain, review unused, startup, and backups; add schema-3 Markdown sections. |
+| Build MW-100 explain/review views | Done | Codex | Explain, review unused, startup, backups, help, and four-basis Markdown views pass focused, hostile-render, and 118-test full gates. |
+| Run MW-100 acceptance | In progress | Codex | Run cross-version, build, privacy, skill, clean-install, and real read-only evidence; keep later phases disabled. |
 | Complete Phases 2–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -48,7 +49,7 @@ Phase 2 explain/review evidence while the external hosted-CI/public-release gate
 
 ## Next Actions
 
-1. Complete MW-100 deterministic CLI and Markdown views for explain, review unused, startup, related paths, and backups.
+1. Run MW-100 full acceptance across Python 3.12/3.13, build, privacy, skill, clean install, and real read-only command/report smokes.
 2. Re-run hosted Linux/macOS CI once a Git remote/runner is authorized and available; do not treat the workflow definition as a run result.
 3. Keep public Homebrew/release proof deferred until tap/artifact authority exists.
 
@@ -108,3 +109,5 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-17 MW-100 schema/collector/analysis TDD: schema-3 migration, bounded usage and related-path evidence, launch/Homebrew startup ownership, and evidence-basis usage labels each failed for their intended missing behavior before passing focused tests.
 - 2026-07-17 MW-100 backup RED/GREEN: service tests first rejected the missing backup collector boundary, and a failure-path regression proved that unavailable `tmutil isexcluded` output must preserve an existing path fact rather than replace it with unknown.
 - 2026-07-17 MW-100 evidence-core gate: 112 tests passed; Ruff lint/format passed; Pyright reported 0 errors. Backup facts include configuration, available destinations, last-verifiable timestamp, and path exclusion state but deliberately no coverage field.
+- 2026-07-17 MW-100 UX RED/GREEN: five command/report tests failed on the Phase 1 refusal surfaces and missing Markdown sections before deterministic explain, cautious unused review, startup ownership/state, backup facts, and four-basis report rendering were added.
+- 2026-07-17 MW-100 UX gate: 118 tests passed; Ruff lint/format passed; Pyright reported 0 errors; the hostile renderer now asserts the exact seven allowed level-2 headings and rejects forged structure.
