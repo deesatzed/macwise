@@ -44,6 +44,28 @@ Collector errors become partial/unavailable status and limitations. Missing usag
 
 Reports are printed by default and saved only to an explicit path. Existing files require `--force`. Public fixtures and repository checks reject current machine identity and secret-shaped assignments.
 
+### Persisted planning-state tampering
+
+Phase 4 stores complete immutable plan revisions in a local SQLite database only after an
+explicit `macwise plan add`. Documents use a versioned strict schema, canonical JSON,
+an integrity digest, append-only revision keys, and an atomic active pointer. The state
+path refuses symbolic-link database targets, SQL values use bound parameters, and
+corrupt, malformed, or future-schema state fails closed.
+
+A persisted plan is **not execution authority**. It contains typed preview intent rather
+than an arbitrary command, shell string, or executable. Phase 5 must revalidate exact
+identity, protection, dependencies, usage, related data, backup limitations, rollback,
+and current host state before it may construct any allowlisted action. Hostile or stale
+persisted values remain untrusted data.
+
+### Phase 4 zero-action boundary
+
+Phase 4 may write only MacWise planning state. It has no action executor and performs no
+action against application bundles, Trash, Homebrew packages, startup components, or
+related user data. `macwise apply` and `macwise undo` continue to refuse. Tests guard
+filesystem and subprocess mutation APIs while permitting writes only inside an injected
+planning-state directory.
+
 ## Future write-boundary requirements
 
 Before cleanup is enabled, MacWise must prove:
@@ -56,6 +78,6 @@ Before cleanup is enabled, MacWise must prove:
 - rollback manifests, post-action verification, and tested undo,
 - resilience to malicious names, symlinks, races, and changed state.
 
-## Out of scope for Phase 1
+## Out of scope through Phase 4
 
-Phase 1 does not claim malware detection, vulnerability scanning, complete backup verification, complete usage history, or safe software removal. macOS, Homebrew, Codex, terminal history, backups, and third-party security products retain their own trust and privacy boundaries.
+MacWise does not yet claim malware detection, vulnerability scanning, complete backup verification, complete usage history, action approval, or safe software removal. macOS, Homebrew, Codex, terminal history, backups, and third-party security products retain their own trust and privacy boundaries.

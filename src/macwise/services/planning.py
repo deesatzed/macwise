@@ -1,6 +1,7 @@
 """Pure Phase 4 cleanup-plan preview and preflight analysis."""
 
 import re
+import unicodedata
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
@@ -103,6 +104,8 @@ def _candidate(audit: AuditDocument, record: SoftwareRecord) -> PlanCandidate:
 
 def _valid_application_path(value: str | None) -> bool:
     if value is None:
+        return False
+    if any(unicodedata.category(character) in {"Cc", "Cf"} for character in value):
         return False
     path = Path(value)
     return path.is_absolute() and path.suffix.casefold() == ".app" and ".." not in path.parts
