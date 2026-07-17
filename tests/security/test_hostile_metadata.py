@@ -12,9 +12,15 @@ from macwise.collectors.homebrew import parse_homebrew_inventory
 from macwise.collectors.storage import parse_volume_info
 from macwise.models import (
     AuditDocument,
+    CatalogAssessment,
+    ClaimBasis,
     CollectorState,
     CollectorStatus,
     EntityType,
+    GuardedRecommendation,
+    LearningValue,
+    RecommendationAction,
+    Reliability,
     SoftwareRecord,
 )
 from macwise.reporting import render_json, render_markdown
@@ -106,6 +112,30 @@ def hostile_audit(tmp_path: Path) -> AuditDocument:
                 records_count=2,
             ),
         ),
+        catalog_assessments=(
+            CatalogAssessment(
+                subject_id=record.id,
+                catalog_key="hostile-fixture",
+                catalog_version="test",
+                catalog_source="synthetic catalog",
+                roles=(values["display_name"],),
+                learning_value=LearningValue.UNKNOWN,
+                learning_statement=values["prompt"],
+                basis=ClaimBasis.INFERRED,
+                confidence=Reliability.LOW,
+            ),
+        ),
+        recommendations=(
+            GuardedRecommendation(
+                id="recommendation:hostile",
+                subject_ids=(record.id,),
+                action=RecommendationAction.NO_RECOMMENDATION,
+                statement=values["display_name"],
+                basis=ClaimBasis.UNKNOWN,
+                confidence=Reliability.UNKNOWN,
+                limitations=(values["markup"],),
+            ),
+        ),
     )
 
 
@@ -128,6 +158,9 @@ def test_json_preserves_raw_evidence_but_markdown_cannot_forge_structure(tmp_pat
         "## Startup and background items",
         "## Related data measurements",
         "## Backup facts",
+        "## Catalog role assessments",
+        "## Role-aware overlaps",
+        "## Guarded recommendations",
         "## Collection limitations",
         "## Unknown in this phase",
     ]

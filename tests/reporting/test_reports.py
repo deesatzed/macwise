@@ -24,6 +24,7 @@ from macwise.models import (
     stable_software_id,
 )
 from macwise.reporting import parse_json, render_json, render_markdown
+from macwise.services.overlap import analyze_overlaps
 
 COLLECTED_AT = datetime(2026, 7, 17, 17, 0, tzinfo=UTC)
 
@@ -268,4 +269,68 @@ def test_markdown_renders_phase_two_facts_by_basis_without_backup_coverage_claim
     assert "Last verifiable backup: 2026-07-16T23:15:00+00:00" in report
     assert "A timestamp does not prove path-level recoverability." in report
     assert "Backup coverage is not verified." in report
+    assert "never used" not in report.casefold()
+
+
+def test_markdown_renders_catalog_overlaps_actual_use_and_guarded_guidance() -> None:
+    audit = sample_audit()
+    docker = SoftwareRecord(
+        id="application:docker",
+        entity_type=EntityType.APPLICATION,
+        name="Docker",
+        display_name="Docker Desktop",
+        identifier="com.docker.docker",
+    )
+    podman = SoftwareRecord(
+        id="homebrew_formula:podman",
+        entity_type=EntityType.HOMEBREW_FORMULA,
+        name="podman",
+        display_name="Podman",
+    )
+    findings = (
+        Finding(
+            subject_id=docker.id,
+            topic=FindingTopic.USAGE,
+            statement="Currently active.",
+            basis=ClaimBasis.VERIFIED,
+            confidence=Reliability.HIGH,
+            usage_label=UsageLabel.ACTIVELY_USED,
+        ),
+        Finding(
+            subject_id=podman.id,
+            topic=FindingTopic.USAGE,
+            statement="Only stale positive evidence was found.",
+            basis=ClaimBasis.INFERRED,
+            confidence=Reliability.LOW,
+            usage_label=UsageLabel.POSSIBLY_UNUSED,
+        ),
+    )
+    overlap = analyze_overlaps((docker, podman), usage_findings=findings)
+    phase_three = audit.model_copy(
+        update={
+            "software": (docker, podman),
+            "findings": findings,
+            "catalog_assessments": overlap.assessments,
+            "overlaps": overlap.relations,
+            "recommendations": overlap.recommendations,
+        }
+    )
+
+    report = render_markdown(phase_three)
+
+    assert "## Catalog role assessments" in report
+    assert "container desktop, container runtime bundle" in report
+    assert "Learning value: moderate" in report
+    assert "Integrated desktop controls" in report
+    assert "## Role-aware overlaps" in report
+    assert "Strong substitute" in report
+    assert "Shared capabilities: containers, images" in report
+    assert "Docker Desktop usage: actively used (verified, high confidence)" in report
+    assert "Podman usage: possibly unused (inferred, low confidence)" in report
+    assert "## Guarded recommendations" in report
+    assert "Review consolidation" in report
+    assert "Review unique capabilities and related data" in report
+    assert "does not authorize removal" in report
+    assert "No cleanup action is authorized" in report
+    assert "safe to remove" not in report.casefold()
     assert "never used" not in report.casefold()

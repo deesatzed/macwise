@@ -280,6 +280,118 @@ def render_markdown(audit: AuditDocument) -> str:
             lines.append(f"- Limitation: {_markdown_text(limitation)}")
     lines.append("- Backup coverage is not verified.")
 
+    lines.extend(["", "## Catalog role assessments", ""])
+    if audit.catalog_assessments:
+        for assessment in audit.catalog_assessments:
+            subject = software_by_id.get(assessment.subject_id)
+            subject_label = subject.display_name if subject is not None else assessment.subject_id
+            lines.append(
+                f"- **{_markdown_text(subject_label)}** — "
+                f"{', '.join(map(_markdown_text, assessment.roles))}"
+            )
+            if assessment.capabilities:
+                lines.append(
+                    f"  - Capabilities: {', '.join(map(_markdown_text, assessment.capabilities))}"
+                )
+            if assessment.unique_capabilities:
+                unique = ", ".join(
+                    _human_label(value).capitalize() for value in assessment.unique_capabilities
+                )
+                lines.append(f"  - Unique capabilities: {unique}")
+            lines.append(
+                f"  - Learning value: {_human_label(assessment.learning_value.value)} — "
+                f"{_markdown_text(assessment.learning_statement)}"
+            )
+            lines.append(
+                f"  - Basis: {_human_label(assessment.basis.value)}; "
+                f"{_human_label(assessment.confidence.value)} confidence; "
+                f"catalog {_markdown_text(assessment.catalog_version)}"
+            )
+            for limitation in assessment.limitations:
+                lines.append(f"  - Limitation: {_markdown_text(limitation)}")
+    else:
+        lines.append("- No exact bundled-catalog assessments were available.")
+
+    usage_by_subject = {
+        finding.subject_id: finding for finding in audit.findings if finding.usage_label is not None
+    }
+    lines.extend(["", "## Role-aware overlaps", ""])
+    if audit.overlaps:
+        for relation in audit.overlaps:
+            left = software_by_id.get(relation.left_subject_id)
+            right = software_by_id.get(relation.right_subject_id)
+            left_label = left.display_name if left is not None else relation.left_subject_id
+            right_label = right.display_name if right is not None else relation.right_subject_id
+            lines.append(
+                f"- **{_markdown_text(left_label)}** and **{_markdown_text(right_label)}** — "
+                f"{_human_label(relation.category.value).capitalize()}"
+            )
+            lines.append(f"  - {_markdown_text(relation.statement)}")
+            if relation.shared_capabilities:
+                lines.append(
+                    "  - Shared capabilities: "
+                    f"{', '.join(map(_markdown_text, relation.shared_capabilities))}"
+                )
+            if relation.left_unique_capabilities:
+                unique = ", ".join(
+                    _human_label(value).capitalize() for value in relation.left_unique_capabilities
+                )
+                lines.append(f"  - {_markdown_text(left_label)} unique: {unique}")
+            if relation.right_unique_capabilities:
+                unique = ", ".join(
+                    _human_label(value).capitalize() for value in relation.right_unique_capabilities
+                )
+                lines.append(f"  - {_markdown_text(right_label)} unique: {unique}")
+            for subject_id, label in (
+                (relation.left_subject_id, left_label),
+                (relation.right_subject_id, right_label),
+            ):
+                finding = usage_by_subject.get(subject_id)
+                if finding is None or finding.usage_label is None:
+                    lines.append(f"  - {_markdown_text(label)} usage: unknown")
+                else:
+                    lines.append(
+                        f"  - {_markdown_text(label)} usage: "
+                        f"{_human_label(finding.usage_label.value)} "
+                        f"({_human_label(finding.basis.value)}, "
+                        f"{_human_label(finding.confidence.value)} confidence)"
+                    )
+            lines.append(
+                f"  - Relation basis: {_human_label(relation.basis.value)}; "
+                f"{_human_label(relation.confidence.value)} confidence"
+            )
+            for limitation in relation.limitations:
+                lines.append(f"  - Limitation: {_markdown_text(limitation)}")
+    else:
+        lines.append("- No explicit role-aware relationships were available.")
+
+    lines.extend(["", "## Guarded recommendations", ""])
+    if audit.recommendations:
+        for recommendation in audit.recommendations:
+            subjects = [
+                software_by_id[subject_id].display_name
+                if subject_id in software_by_id
+                else subject_id
+                for subject_id in recommendation.subject_ids
+            ]
+            lines.append(
+                f"- **{', '.join(map(_markdown_text, subjects))}** — "
+                f"{_human_label(recommendation.action.value).capitalize()}"
+            )
+            lines.append(f"  - {_markdown_text(recommendation.statement)}")
+            lines.append(
+                f"  - Basis: {_human_label(recommendation.basis.value)}; "
+                f"{_human_label(recommendation.confidence.value)} confidence; "
+                f"learning value: {_human_label(recommendation.learning_value.value)}"
+            )
+            for prerequisite in recommendation.prerequisites:
+                lines.append(f"  - Prerequisite: {_markdown_text(prerequisite)}")
+            for limitation in recommendation.limitations:
+                lines.append(f"  - Limitation: {_markdown_text(limitation)}")
+    else:
+        lines.append("- No guarded recommendation was available.")
+    lines.append("- No cleanup action is authorized by these recommendations.")
+
     lines.extend(["", "## Collection limitations", ""])
     limitation_lines = [
         f"- {_markdown_text(status.collector)}: {_markdown_text(limitation)}"
