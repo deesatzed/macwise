@@ -303,6 +303,25 @@ def test_missing_action_identity_is_retained_without_action_and_blocked() -> Non
     )
 
 
+def test_system_path_is_protected_even_if_collected_boolean_is_false() -> None:
+    app = software(
+        "application:system-defense",
+        "System Defense",
+        install_path="/System/Applications/System Defense.app",
+        protected=False,
+    )
+
+    result = add(None, audit(app), app.id)
+
+    assert result.plan.candidates[0].protected is True
+    assert result.plan.actions == ()
+    assert result.plan.eligibility is PlanEligibility.BLOCKED
+    assert any(
+        item.kind is PreflightKind.PROTECTION and item.outcome is PreflightOutcome.BLOCK
+        for item in result.plan.checks
+    )
+
+
 def test_duplicate_add_is_idempotent_and_new_subject_appends_immutable_revision() -> None:
     first = software(
         "application:first",

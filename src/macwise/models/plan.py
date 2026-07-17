@@ -167,6 +167,9 @@ class PlanDocument(BaseModel):
         action_ids = [action.id for action in self.actions]
         if len(action_ids) != len(set(action_ids)):
             raise ValueError("Plan actions must have unique IDs")
+        action_subject_ids = [action.subject_id for action in self.actions]
+        if len(action_subject_ids) != len(set(action_subject_ids)):
+            raise ValueError("A plan may contain only one action per subject")
         if any(action.subject_id not in known_subjects for action in self.actions):
             raise ValueError("Plan action references an unknown subject")
 
@@ -182,8 +185,11 @@ class PlanDocument(BaseModel):
         rollback_ids = [item.id for item in self.rollback]
         if len(rollback_ids) != len(set(rollback_ids)):
             raise ValueError("Rollback blueprints must have unique IDs")
-        if {item.action_id for item in self.rollback} != set(action_ids):
-            raise ValueError("Every action requires exactly one matching rollback blueprints entry")
+        rollback_action_ids = [item.action_id for item in self.rollback]
+        if len(rollback_action_ids) != len(set(rollback_action_ids)) or set(
+            rollback_action_ids
+        ) != set(action_ids):
+            raise ValueError("Actions and rollback blueprints require a one-to-one mapping")
 
         has_blocker = any(check.outcome is PreflightOutcome.BLOCK for check in self.checks)
         if has_blocker and self.eligibility is not PlanEligibility.BLOCKED:

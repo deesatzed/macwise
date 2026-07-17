@@ -182,6 +182,44 @@ def test_future_database_schema_refuses_without_mutation(tmp_path: Path) -> None
         assert connection.execute("PRAGMA user_version").fetchone() == (2,)
 
 
+def test_reading_existing_zero_version_database_does_not_initialize_or_mutate_it(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "empty.db"
+    database.touch()
+    store = PlanStore(database)
+
+    assert store.active() is None
+    assert database.read_bytes() == b""
+
+
+def test_reading_unknown_zero_version_schema_refuses_without_mutation(tmp_path: Path) -> None:
+    database = tmp_path / "unknown.db"
+    with sqlite3.connect(database) as connection:
+        connection.execute("CREATE TABLE unrelated (value TEXT NOT NULL)")
+    before = database.read_bytes()
+
+    with pytest.raises(PlanStoreError, match="schema is not supported"):
+        PlanStore(database).active()
+
+    assert database.read_bytes() == before
+
+
+def test_competing_initial_plan_cannot_replace_active_pointer(tmp_path: Path) -> None:
+    database = tmp_path / "macwise.db"
+    store = PlanStore(database)
+    first = plan(1)
+    competing = plan(1).model_copy(update={"plan_id": "plan:competing"})
+    store.append(first)
+
+    with pytest.raises(PlanStoreError, match="active plan changed"):
+        store.append(competing)
+
+    assert store.active() == first
+    with sqlite3.connect(database) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM plan_revisions").fetchone() == (1,)
+
+
 def test_transaction_failure_preserves_prior_active_revision(tmp_path: Path) -> None:
     database = tmp_path / "macwise.db"
     store = PlanStore(database)
@@ -218,3 +256,18 @@ def test_symlink_database_and_non_directory_parent_refuse(tmp_path: Path) -> Non
     not_a_directory.write_text("not a directory", encoding="utf-8")
     with pytest.raises(PlanStoreError, match="directory"):
         PlanStore(not_a_directory / "macwise.db").append(plan())
+
+
+def test_nested_existing_ancestor_symlink_cannot_redirect_state_write(tmp_path: Path) -> None:
+    injected_root = tmp_path / "injected"
+    outside_root = tmp_path / "outside"
+    injected_root.mkdir()
+    outside_root.mkdir()
+    link = injected_root / "linked"
+    link.symlink_to(outside_root, target_is_directory=True)
+    database = link / "nested" / "macwise.db"
+
+    with pytest.raises(PlanStoreError, match="symbolic link"):
+        PlanStore(database).append(plan())
+
+    assert not (outside_root / "nested").exists()

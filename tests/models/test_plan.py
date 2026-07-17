@@ -124,6 +124,36 @@ def test_plan_document_requires_consistent_eligibility_and_references() -> None:
         PlanDocument.model_validate({**document().model_dump(), "rollback": ()})
 
 
+def test_plan_document_requires_one_action_per_subject_and_one_rollback_per_action() -> None:
+    base = document()
+    duplicate_rollback = rollback().model_copy(update={"id": "rollback:duplicate"})
+    with pytest.raises(ValidationError, match="one-to-one"):
+        PlanDocument.model_validate(
+            {**base.model_dump(), "rollback": (rollback(), duplicate_rollback)}
+        )
+
+    second_action = action().model_copy(
+        update={
+            "id": "action:duplicate-subject",
+            "destination_path": "/Users/example/.Trash/Example.app.macwise-second",
+        }
+    )
+    second_rollback = rollback().model_copy(
+        update={
+            "id": "rollback:second-action",
+            "action_id": second_action.id,
+        }
+    )
+    with pytest.raises(ValidationError, match="one action per subject"):
+        PlanDocument.model_validate(
+            {
+                **base.model_dump(),
+                "actions": (action(), second_action),
+                "rollback": (rollback(), second_rollback),
+            }
+        )
+
+
 @pytest.mark.parametrize(
     ("kind", "values"),
     (

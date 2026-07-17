@@ -44,6 +44,8 @@
 | Adjudicate independent MW-200 review | Done | Codex | Three recommendations were Accepted and Resolved: ambiguity visibility, explicit actual-use comparison, and neutral-pair learning guidance. No critical finding remained. |
 | Run MW-200 acceptance | Done | Codex | `docs/phase-3-acceptance.md` records a local PASS from 142 tests on Python 3.12/3.13, quality/build/privacy/skill/clean-wheel gates, independent review, and aggregate-only real scans. |
 | Design MW-300 cleanup planning | Done | Codex | Append-only SQLite revisions, typed non-executable intent, blocked-candidate review, preflight, and rollback-blueprint boundaries are saved under `docs/plans/`; D-024/D-025 record the choices. |
+| Build MW-300 cleanup planning | Done | Codex | Immutable plan models, pure preview construction, append-only SQLite revisions, persistent CLI review, hostile-input defenses, and zero-host-mutation tests pass the 186-test gate. |
+| Adjudicate independent MW-300 review | Done | Codex | Four recommendations were Accepted and Resolved test-first: read-only zero-version display, ancestor-symlink rejection, optimistic active-plan concurrency, and one-to-one action/rollback integrity. No critical finding remained. |
 | Complete Phases 4–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -56,7 +58,7 @@ Phase 4 persistent cleanup planning and exact previews while every mutation and 
 
 ## Next Actions
 
-1. Design and plan MW-300 persistent cleanup plans, exact action previews, dependency/backup/ambiguity/protection/data/rollback preflight, and zero-mutation proof.
+1. Run MW-300 local acceptance across Python 3.12/3.13, build/privacy/skill/clean-wheel checks, and an aggregate-only real planner smoke; record the verdict in `docs/phase-4-acceptance.md`.
 2. Re-run hosted Linux/macOS CI once a Git remote/runner is authorized and available; do not treat the workflow definition as a run result.
 3. Keep public Homebrew/release proof deferred until tap/artifact authority exists.
 
@@ -127,3 +129,6 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-17 MW-200 acceptance: 142 tests passed on Python 3.12.11 and 3.13.13; Ruff/Pyright/build/privacy/skill/workflow/clean-wheel gates passed; scoped stub and skipped-test scans were clean.
 - 2026-07-17 MW-200 real smoke: an aggregate-only schema-4 audit produced 325 distinct software records, 25 catalog assessments, 6 relations, 21 guarded recommendations, exact safe headings, JSON round-trip, and 3 complete/4 partial collector states in 19.18 seconds. No names, paths, or inventory were saved.
 - 2026-07-17 MW-200 claim validation: PASS for the local read-only Phase 3 scope; overall product, hosted CI, publication, and Phases 4–7 remain open in `docs/phase-3-acceptance.md`.
+- 2026-07-18 MW-300 TDD: immutable plan invariants, deterministic preview construction, integrity-checked append-only storage, persistent CLI review, hostile input handling, and zero-mutation boundaries each failed for their intended missing behavior before focused and full suites passed.
+- 2026-07-18 MW-300 independent review: four important findings were Accepted and Resolved test-first—read-only display no longer initializes version-0 stores, every existing path ancestor is checked for symlinks, stale competing writers cannot replace the active pointer, and action/rollback mappings are one-to-one. No critical finding remained.
+- 2026-07-18 MW-300 review-fix gate: 186 tests passed; focused model/planner/persistence tests reported 28 passed and the final persistence suite reported 11 passed; Ruff format/lint, Pyright, and `git diff --check` passed repository-wide.

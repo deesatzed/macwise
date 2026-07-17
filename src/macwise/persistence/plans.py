@@ -52,9 +52,16 @@ class PlanStore:
     """Read and append complete immutable plan revisions."""
 
     def __init__(self, path: Path | None = None) -> None:
-        self.path = path if path is not None else default_plan_database()
+        selected = path if path is not None else default_plan_database()
+        self.path = selected.expanduser().absolute()
+
+    def _reject_symlink_ancestors(self) -> None:
+        for ancestor in (self.path.parent, *self.path.parent.parents):
+            if ancestor.is_symlink():
+                raise PlanStoreError("The planning state path contains a symbolic link ancestor.")
 
     def _validate_path(self, *, create_parent: bool) -> None:
+        self._reject_symlink_ancestors()
         if self.path.is_symlink():
             raise PlanStoreError("The planning database cannot be a symbolic link.")
         if self.path.exists() and not self.path.is_file():
@@ -73,23 +80,52 @@ class PlanStore:
                 ) from error
             if parent.is_symlink() or not parent.is_dir():
                 raise PlanStoreError("The planning state directory is unsafe.")
+            self._reject_symlink_ancestors()
 
-    def _connect(self) -> sqlite3.Connection:
-        connection = sqlite3.connect(self.path, timeout=1.0)
+    def _connect(self, *, read_only: bool = False) -> sqlite3.Connection:
+        target: str | Path = self.path
+        if read_only:
+            target = f"{self.path.as_uri()}?mode=ro"
+        connection = sqlite3.connect(target, timeout=1.0, uri=read_only)
         connection.execute("PRAGMA foreign_keys = ON")
         connection.execute("PRAGMA busy_timeout = 1000")
         return connection
 
     @staticmethod
-    def _ensure_schema(connection: sqlite3.Connection) -> None:
+    def _schema_version(connection: sqlite3.Connection) -> int:
         row = connection.execute("PRAGMA user_version").fetchone()
-        version = int(row[0]) if row is not None else 0
+        return int(row[0]) if row is not None else 0
+
+    @staticmethod
+    def _table_names(connection: sqlite3.Connection) -> set[str]:
+        return {
+            str(row[0])
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall()
+        }
+
+    @classmethod
+    def _require_known_schema(cls, connection: sqlite3.Connection, version: int) -> None:
+        if version > _SCHEMA_VERSION:
+            raise PlanStoreError("The planning database was created by a newer MacWise schema.")
+        if version != _SCHEMA_VERSION:
+            raise PlanStoreError("The planning database schema is not supported.")
+        tables = cls._table_names(connection)
+        if not {"plan_revisions", "active_plan"} <= tables:
+            raise PlanStoreError("The planning database schema is invalid.")
+
+    @classmethod
+    def _ensure_schema(cls, connection: sqlite3.Connection) -> None:
+        version = cls._schema_version(connection)
         if version > _SCHEMA_VERSION:
             raise PlanStoreError("The planning database was created by a newer MacWise schema.")
         if version == 0:
             connection.executescript(_SCHEMA)
             connection.execute(f"PRAGMA user_version = {_SCHEMA_VERSION}")
             connection.commit()
+            return
+        cls._require_known_schema(connection, version)
 
     def active(self) -> PlanDocument | None:
         """Return the active immutable revision, verifying integrity and schema."""
@@ -97,8 +133,13 @@ class PlanStore:
         if not self.path.exists():
             return None
         try:
-            with self._connect() as connection:
-                self._ensure_schema(connection)
+            with self._connect(read_only=True) as connection:
+                version = self._schema_version(connection)
+                if version == 0:
+                    if self._table_names(connection):
+                        raise PlanStoreError("The planning database schema is not supported.")
+                    return None
+                self._require_known_schema(connection, version)
                 row = connection.execute(
                     """
                     SELECT revisions.document_json, revisions.document_sha256
@@ -144,12 +185,13 @@ class PlanStore:
             active = connection.execute(
                 "SELECT plan_id, revision FROM active_plan WHERE singleton_id = 1"
             ).fetchone()
-            if active is not None and str(active[0]) == plan.plan_id:
-                expected_revision = int(active[1]) + 1
-                if plan.revision != expected_revision:
-                    raise PlanStoreError("The plan revision does not follow the active revision.")
-            elif plan.revision != 1:
-                raise PlanStoreError("A new active plan must begin at revision 1.")
+            if plan.revision == 1:
+                if active is not None:
+                    raise PlanStoreError(
+                        "The active plan changed before this initial revision could be saved."
+                    )
+            elif active != (plan.plan_id, plan.revision - 1):
+                raise PlanStoreError("The active plan changed before this revision could be saved.")
 
             connection.execute(
                 """

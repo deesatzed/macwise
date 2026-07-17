@@ -1,5 +1,6 @@
 """Pure Phase 4 cleanup-plan preview and preflight analysis."""
 
+import os
 import re
 import unicodedata
 from collections.abc import Callable, Sequence
@@ -89,7 +90,7 @@ def _candidate(audit: AuditDocument, record: SoftwareRecord) -> PlanCandidate:
         homebrew_token=_homebrew_token(record),
         install_source=record.install_source,
         install_role=record.install_role,
-        protected=record.protected,
+        protected=record.protected or _system_application_path(record.install_path),
         reverse_dependencies=record.reverse_dependencies,
         project_references=record.project_references,
         usage_label=_usage_label(audit, record.id),
@@ -100,6 +101,14 @@ def _candidate(audit: AuditDocument, record: SoftwareRecord) -> PlanCandidate:
             sorted(item.id for item in audit.startup if record.id in item.owner_software_ids)
         ),
     )
+
+
+def _system_application_path(value: str | None) -> bool:
+    if value is None:
+        return False
+    absolute = Path(os.path.abspath(value))
+    system = Path("/System")
+    return absolute == system or system in absolute.parents
 
 
 def _valid_application_path(value: str | None) -> bool:
