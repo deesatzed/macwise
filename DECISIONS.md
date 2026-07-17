@@ -40,6 +40,13 @@ This file records durable architecture, UX, safety, privacy, dependency, and rel
 | D-020 | 2026-07-17 | Data Model | Emit schema version 3 with raw startup/path/backup facts separate from basis-tagged findings, while migrating v1/v2 documents in memory. | Inventory facts must remain inspectable and reusable even when analysis policy changes; explicit claim basis prevents inference from masquerading as observation. | Add inferred fields directly to software records; keep schema 2 and hide findings in prose. | Accepted |
 | D-021 | 2026-07-17 | Privacy and Performance | Measure related data only in bounded identifier/name-derived Library locations, without following directory symlinks or scanning the whole home directory. | The product needs useful size/recency evidence without turning an audit into an invasive or unbounded content crawl. | Full-home scan; Spotlight-only paths; omit related data. | Accepted |
 
+## MW-200 Decisions
+
+| ID | Date | Category | Decision | Rationale | Alternatives Considered | Status |
+|---|---|---|---|---|---|---|
+| D-022 | 2026-07-17 | Analysis | Use a versioned bundled role catalog with exact qualified matches and explicit pair relations; never assign overlap categories from fuzzy name/description similarity. | Deterministic offline relationships are testable and unknown-safe, while similarity would falsely label related tools as duplicates. | Fuzzy heuristics; live research/AI classification. | Accepted |
+| D-023 | 2026-07-17 | Safety and UX | Limit Phase 3 recommendations to keep, learn, keep-together, review-consolidation, or no-recommendation; none authorizes removal or startup changes. | Phase 3 lacks the dependency, backup, ambiguity, protection, data, rollback, and approval preflight owned by Phases 4–5. | Recommend removal directly from overlap/usage; defer all recommendation language. | Accepted |
+
 ## Initial Default Decisions
 
 - MIT license unless a later legal decision selects Apache-2.0.

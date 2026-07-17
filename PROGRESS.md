@@ -11,6 +11,7 @@
 - Python 3.12 is available for development or can be installed without changing product scope.
 - Phase 1 may use sanitized command fixtures on non-macOS CI while macOS runners exercise bounded integration smoke tests.
 - GitHub repository creation, package publication, Homebrew tap changes, and production release require explicit authority/credentials at the relevant phase; local preparation does not.
+- The approved Phase 3 goal authorizes a versioned exact-match role catalog and guarded read-only recommendations; unknown relationships remain unknown, and removal authorization stays deferred to planning/execution phases.
 
 ## Task Tracker
 
