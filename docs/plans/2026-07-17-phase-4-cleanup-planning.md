@@ -421,7 +421,7 @@ uv run ruff check src tests
 uv run ruff format --check src tests
 uv run pyright
 uv build
-uv run --with pyyaml python /Users/o2satz/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/macwise
+uv run --with pyyaml python "$CODEX_HOME/skills/.system/skill-creator/scripts/quick_validate.py" skills/macwise
 ruby -e 'require "yaml"; YAML.load_file(".github/workflows/ci.yml")'
 uv run pytest -q tests/repository
 git diff --check
