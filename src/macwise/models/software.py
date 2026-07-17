@@ -6,6 +6,7 @@ from hashlib import sha256
 from pydantic import BaseModel, ConfigDict, Field
 
 from macwise.models.evidence import Evidence
+from macwise.models.storage import StorageLocation
 
 
 class EntityType(StrEnum):
@@ -32,8 +33,11 @@ class SoftwareRecord(BaseModel):
     entity_type: EntityType
     name: str = Field(min_length=1)
     display_name: str = Field(min_length=1)
+    identifier: str | None = None
     version: str | None = None
     install_path: str | None = None
     install_source: str | None = None
+    size_bytes: int | None = Field(default=None, ge=0)
+    storage_location: StorageLocation = StorageLocation.UNKNOWN
     protected: bool = False
     evidence: tuple[Evidence, ...] = ()

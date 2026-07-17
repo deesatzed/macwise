@@ -8,7 +8,7 @@ Tasks are ordered. Start the first `ready` task, preserve the full goal, and upd
 | MW-001 | 0/1 | Create installable Python package and tested no-argument guided CLI | done | 2 CLI tests, lint/types/build, and isolated Python 3.12 wheel install smoke passed |
 | MW-002 | 1 | Implement versioned evidence/audit models and provenance | done | 6 model tests prove immutable provenance, schema round trip, and absent-evidence language invariant |
 | MW-003 | 1 | Implement safe bounded read-command adapter | done | 6 tests prove fixed executables, inert args/no shell, bounded env/time/output, and structured failures |
-| MW-004 | 1 | Inventory applications from approved roots | pending | Synthetic plist fixtures and read-only macOS smoke |
+| MW-004 | 1 | Inventory applications from approved roots | done | 6 synthetic bundle tests cover metadata/size/location, partial failures, recursion, no execution, and no symlink following |
 | MW-005 | 1 | Inventory Homebrew formulae/casks with explicit/dependency distinction | pending | JSON fixture tests and dependency-candidate regression |
 | MW-006 | 1 | Inventory internal/external drives | pending | Diskutil plist fixtures and volume classification tests |
 | MW-007 | 1 | Produce versioned JSON and Markdown audit reports | pending | Golden/snapshot tests and schema round trip |

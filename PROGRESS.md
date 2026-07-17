@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-8% complete – The first Phase 1 execution batch is implemented: installable guided CLI, versioned evidence/audit models, and a bounded read-command security boundary. MacWise can now represent truthful partial evidence and safely invoke only fixed inventory programs without a shell. Host collectors, analysis, cleanup, Codex, and public release remain open.
+11% complete – MacWise now has its first real host collector in addition to the guided CLI, versioned evidence models, and bounded command boundary. Application inventory recursively scans only approved roots, reads plist/filesystem metadata without launching apps or following symlinks, records bundle size and volume location, and degrades per-item failures to limitations. Homebrew, drives, analysis, cleanup, Codex, and public release remain open.
 
 ## Current Assumptions
 
@@ -24,6 +24,7 @@
 | Build Phase 1 foundation and guided CLI slice | Done | Codex | MW-001 verified test-first, including isolated Python 3.12 wheel install. |
 | Build versioned evidence and audit models | Done | Codex | MW-002 verified test-first; schema version 1 round-trips provenance. |
 | Build bounded read-command adapter | Done | Codex | MW-003 verified test-first; fixed programs, no shell, time/output/environment bounds, typed failures. |
+| Build application inventory | Done | Codex | MW-004 verified test-first with synthetic bundles, malformed metadata, nested roots, and no-execution/symlink tests. |
 | Complete Phases 2–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
 
 ## Decision Links
@@ -36,9 +37,9 @@ Phase 1 read-only evidence foundation: versioned models and the bounded command 
 
 ## Next Actions
 
-1. Commit the verified MW-003 command-adapter slice.
-2. Review the first execution batch at the checkpoint.
-3. Begin MW-004 application inventory in the next batch.
+1. Commit the verified MW-004 application collector.
+2. Implement MW-005 Homebrew inventory and explicit/dependency distinction test-first.
+3. Implement MW-006 drive inventory and path-to-volume resolution test-first.
 4. Continue through the Phase 1 plan without collapsing later phases.
 
 ## Blockers
@@ -62,3 +63,6 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-17 MW-002 GREEN: the model suite reported 6 passed; the full suite reported 8 passed, Ruff passed, and Pyright reported 0 errors.
 - 2026-07-17 MW-003 RED: `uv run pytest tests/system/test_commands.py -q` failed collection because `macwise.system` did not exist.
 - 2026-07-17 MW-003 GREEN: 6 command-adapter tests passed; the full suite reported 14 passed, Ruff passed, and Pyright reported 0 errors.
+- 2026-07-17 MW-004 RED: application collector tests failed collection because `macwise.collectors` did not exist.
+- 2026-07-17 MW-004 scope RED: nested-subfolder regression failed with zero collected records before recursive, app-boundary-pruned traversal was added.
+- 2026-07-17 MW-004 GREEN: 6 application tests passed; the full suite reported 20 passed, Ruff formatting/lint passed, and Pyright reported 0 errors.
