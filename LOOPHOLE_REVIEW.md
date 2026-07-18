@@ -2,95 +2,76 @@
 
 ## Strategy Under Review
 
-Fingerprint-approved Phase 5 execution using fresh revalidation, dedicated allowlisted
-Trash/Homebrew/startup adapters, append-only execution-manifest revisions, verification,
-and separately approved undo.
+Phase 6 native Codex plugin, personal-marketplace setup, and eight strictly read-only
+STDIO MCP tools described by D-031 and the approved design/implementation plan.
 
 ## Confidence Estimate Before Review
 
 | Area | Confidence | Reason |
 |---|---:|---|
-| Approval and replay | 82% | Plan digests bind consent, but cross-database races and old plans need explicit treatment. |
-| Filesystem safety | 76% | Same-filesystem rename is narrow, but path checks alone leave TOCTOU windows. |
-| Homebrew safety | 72% | Exact argv is strong, but cask uninstall behavior and interrupted commands can have wider effects. |
-| Startup reversibility | 68% | Scope is narrow, but re-enabling a changed plist could execute changed content. |
-| Crash recovery | 78% | Pre-action manifest revisions expose interruption, but recovery classification needs exact rules. |
-| UX and scope truth | 86% | Public workflow is clear; warnings, partial runs, and schema migration need visible recovery. |
+| Read-only tool boundary | 82% | The design excludes mutation, but imports, plan access, or generic dispatch could accidentally reopen it. |
+| MCP protocol/package | 78% | Official v1 SDK and plugin formats are current, but entry-point/PATH/version details need explicit proof. |
+| Setup filesystem safety | 68% | Personal plugin and marketplace writes can collide with user-owned content or fail between replacements. |
+| Privacy/prompt safety | 80% | Existing invariants are strong, but tool output creates a new model-facing boundary. |
+| UX and distribution | 74% | One command is simple, but desktop process environments may not resolve `macwise`. |
 
 ## Loopholes Found
 
 | Loophole | Severity | Why It Matters | Fix |
 |---|---|---|---|
-| A plan can change between approval/revalidation and mutation because plans and executions use separate databases. | Critical | Consent could apply to a revision other than the one rendered. | Add one advisory state lock acquired by plan append, apply, and undo; re-read and compare plan ID/revision/digest after acquiring it and before every action. |
-| A 12-character digest is unnecessarily short for the only visible consent binding. | Important | Local collision risk is small but avoidable. | Use 16 hexadecimal characters and compare the full digest internally. |
-| Applying a schema-1 plan created before the execution contract can bypass schema-2 target/order guarantees. | Important | Compatibility could silently weaken new safety invariants. | Keep schema 1 readable but refuse apply; require a freshly collected schema-2 preview. |
-| Check-then-rename path validation can race symlink or inode replacement. | Critical | A validated app path could be replaced before mutation. | Open trusted source/Trash parent directory descriptors, capture device/inode and bundle identity, and use descriptor-relative `os.rename`; revalidate immediately before it. |
-| A persisted Trash destination could point outside Trash. | Critical | Typed persisted text is still attacker-controlled state. | Reconstruct the destination from plan/action IDs and the canonical Trash root; require exact equality with the preview and never execute the persisted path directly. |
-| `brew uninstall --cask` may run cask uninstall artifacts or privileged behavior beyond an app move. | Important | It can exceed the preserve-related-data and no-privilege expectations. | Query fresh cask JSON and block casks with uninstall/zap/pkg/privileged artifacts; never use `--zap`, `--force`, or autoremove. |
-| Exit status alone can misclassify an interrupted Homebrew or launchctl action. | Important | Partial side effects could be called success or safe undo. | Verify with fresh read evidence; unresolved/contradictory state becomes interrupted/manual-recovery and blocks further apply. |
-| Re-enabling a LaunchAgent whose plist changed after apply can execute new content. | Critical | Undo could launch attacker-controlled or unrelated code. | Capture the exact plist SHA-256, label, owner, path, and prior state; refuse undo if any changed. Never load a system or ambiguous plist. |
-| Multiple actions for one candidate can run in unsafe order. | Important | Uninstall before service/agent disable can destroy recovery context. | Schema 2 records and validates a deterministic phase/order: startup disable before removal, reverse order for undo. |
-| A manifest write failure after mutation leaves only an in-progress record. | Important | The next command cannot trust whether the action occurred. | Treat in-progress as interrupted; inspect exact before/after state without mutating, append a recovery classification when conclusive, otherwise require manual recovery. |
-| Automatic cleanup of successful earlier actions after a later failure would be an unapproved second mutation. | Important | “Safety rollback” can itself cause harm and Homebrew restoration is best effort. | Keep stop-on-first-failure and require separately fingerprint-approved undo. |
-| Concurrent apply/undo or plan-add processes can interleave. | Critical | State and host actions could diverge from both manifests. | Hold the advisory state lock for the full apply/undo critical section and reject a second writer quickly with recovery guidance. |
-| A test could accidentally call a live mutator. | Critical | Local acceptance must never uninstall or disable real software. | Production mutators require explicit injected boundaries; tests monkeypatch/spies reject live subprocess/real Trash paths, and acceptance runs only synthetic roots/fake runners. |
+| A plain `command: macwise` depends on the Codex desktop process PATH. | High | pipx/Homebrew executables may work in a shell but be invisible to the desktop app. | During setup, personalize the installed `.mcp.json` with the resolved absolute current Python executable and `-m macwise codex serve`; validate the executable and test paths containing spaces. |
+| `~/plugins/macwise` may already be user-owned or supplied by another marketplace. | Critical | Blind replacement could destroy unrelated work or hijack a same-name plugin. | Require a MacWise ownership marker plus matching manifest/repository for upgrades; refuse any unowned existing directory or foreign same-name marketplace source. |
+| Replacing plugin and marketplace files is not one atomic transaction, and `codex plugin add` changes Codex-owned cache/config. | High | A crash could leave mismatched source/entry/cache state. | Stage and fsync both trees, keep bounded backups, replace in a documented order, verify with `codex plugin add --json`, and on failure restore sources then reinstall the prior owned version; fresh failed installs remove only the just-created selector. Persist no silent success claim if compensation fails. |
+| PEP 440 `0.1.0a0` is not strict SemVer. | Medium | Plugin validation or cache behavior may reject or misread the Python package version. | Use a deterministic mapping (`0.1.0a0` to `0.1.0-alpha.0`) and test alignment rather than copying the string verbatim. |
+| An active-plan preview could open/create or mutate planning state indirectly. | Critical | A read-only Codex tool must not create databases, revisions, approvals, or locks. | Build removal previews only in memory from the current audit and pure planning functions; never instantiate `PlanStore`, `ExecutionStore`, approval, revalidation, or execution services. |
+| Re-running a full audit for every tool is slow and can produce internally inconsistent answers. | Medium | A conversation could compare different snapshots and repeatedly invoke expensive collectors. | Keep one process-local, lock-protected audit snapshot; `audit_mac(refresh=true)` refreshes explicitly, and all other tools read that snapshot. Never persist the cache. |
+| `audit_mac` or list results can exceed model/tool limits and leak more local detail than needed. | High | Unbounded path-rich output harms privacy, reliability, and protocol framing. | Return bounded summaries, require pagination for lists, omit raw evidence blobs by default, include explicit truncation/continuation facts, and cap serialized tool results before returning. |
+| Read-only MCP annotations are hints, not enforcement. | Critical | A client may ignore annotations. | Enforce the boundary in code, imports, schemas, and tests; annotations are defense-in-depth only. Reject generic dispatch and mutation-domain dependencies with AST/import tests. |
+| FastMCP exceptions or logging can corrupt STDIO stdout. | High | One stray print can make every tool unusable. | Run protocol output alone on stdout, direct bounded diagnostics to stderr, convert expected domain failures to typed results, and verify a real subprocess session. |
+| Prompt-shaped metadata can migrate from structured evidence into server/skill instructions. | High | A hostile app name could influence Codex behavior. | Keep server instructions static, neutralize human-facing controls, label all returned host values as evidence data, and run every hostile fixture through every tool family. |
+| Setup tests could accidentally resolve the real home or Codex executable. | Critical | Tests might alter the operator's live installation. | Require explicit isolated home/payload/runner injection in every setup test, add a sentinel test that fails on the actual home, and never execute the default setup assembler in acceptance. |
+| Official MCP v2 is approaching stable and may break v1 APIs. | Medium | An unconstrained install could change behavior after release. | Pin `mcp>=1.27,<2`, lock it, and treat v2 migration as a separate reviewed decision. |
 
 ## Revised Strategy
 
-- Introduce a shared advisory state lock used by plan append, apply, and undo.
-- Centralize full canonical plan digest computation; display a 16-character approval
-  fingerprint while comparing the full digest internally.
-- Emit schema-2 plans for Phase 5 and refuse apply of schema-1 plans with a safe rebuild
-  command; retain read-only history compatibility.
-- Reconstruct every operation from typed kind plus canonical current roots, then compare
-  it with the preview. For Trash, use directory-descriptor-relative rename and captured
-  device/inode/bundle identity.
-- Add action ordering invariants and reverse-order undo.
-- Restrict cask execution to fresh metadata without privileged/uninstall/zap/pkg
-  artifacts; never use force, zap, cleanup, or autoremove.
-- Hash LaunchAgent plist content and refuse undo or bootstrap if it changed.
-- Classify pre-action journal records left in progress through read-only recovery probes;
-  ambiguous results remain interrupted and block further mutation.
-- Keep all live mutators unavailable to tests and local acceptance through injected
-  roots/runners plus explicit mutation spies.
+Keep D-031, with five mandatory refinements: an owned personal-plugin directory,
+personalized absolute Python MCP launch command, in-memory lock-protected audit snapshot,
+pure nonpersistent removal previews, and compensating setup rollback with truthful partial
+failure. Tool annotations remain descriptive; code/import tests enforce read-only behavior.
 
 ## Confidence Estimate After Fixes
 
-High enough to proceed with staged implementation: 88% overall. Trash rises to 91%,
-approval/replay to 92%, manifests/crash handling to 88%, Homebrew to 83%, and startup to
-80%. Homebrew and launchctl remain the least certain because external tool behavior can
-change and local acceptance intentionally does not mutate live state.
+| Area | Confidence | Reason |
+|---|---:|---|
+| Read-only tool boundary | 93% | Pure projections, forbidden dependency tests, no state stores, and real protocol tests directly cover authority. |
+| MCP protocol/package | 90% | Stable v1 pin, absolute runtime command, official validators, wheel and STDIO client proof cover the main drift points. |
+| Setup filesystem safety | 88% | Ownership refusal, descriptor and ancestor checks, atomic staging, backups, and compensation reduce destructive failure modes. |
+| Privacy/prompt safety | 91% | Bounded projections plus existing hostile fixtures and static instructions cover the new boundary. |
+| UX and distribution | 88% | Personal marketplace discovery and an absolute runtime path avoid bespoke config and PATH assumptions. |
 
 ## Remaining Uncertainty
 
-- Homebrew cask metadata shapes may evolve; unknown shapes must block rather than pass.
-- Launchctl domain/state behavior differs across macOS versions; unsupported or
-  inconclusive output must refuse.
-- Exact rollback of historical Homebrew versions is not generally guaranteed.
-- Permission failures in `/Applications` cannot be solved without elevation, which is
-  outside scope.
-- A crash during an external command can leave ambiguous side effects that require human
-  recovery; MacWise must report that truth rather than guess.
+- A fake-Codex clean-home test cannot prove every internal cache/config behavior of future
+  Codex builds.
+- Crash consistency across multiple filesystem replacements cannot be perfectly atomic;
+  setup must detect and repair owned interrupted state on rerun.
+- Live installation into the operator's personal Codex host remains prohibited during
+  local implementation and must not be claimed as verified.
+- Hosted Codex/web plugin behavior is out of scope; Phase 6 proves the local Codex host.
 
 ## Proceed / Do Not Proceed Decision
 
-**PROCEED** with the revised staged strategy. Do not enable an adapter or claim Phase 5
-complete until its revalidation, journal-before-mutation, verification, interrupted-state,
-and undo tests pass. No real installed-software action is authorized.
+Proceed with the revised strategy. Confidence is high enough for test-first local
+implementation, provided every critical mitigation becomes a failing test before code.
 
 ## Required Verification
 
-- Cross-process state-lock and stale-digest race tests.
-- Schema-1 apply refusal and schema-2 ordering/migration tests.
-- Descriptor-relative same-filesystem rename tests covering inode replacement, symlink
-  ancestors, occupied destinations, cross-device refusal, verification, and reverse
-  rename.
-- Exact Homebrew argv/environment tests plus cask-artifact blockers and interrupted
-  verification states.
-- LaunchAgent plist-digest, owner/domain, changed-content, disable/verify/undo tests.
-- Manifest corruption, future schema, concurrent writer, crash-before/after action, replay,
-  partial failure, reverse-order undo, and idempotency tests.
-- CLI TTY/non-TTY approval, warning disclosure, recovery guidance, and hostile display
+- AST/import and runtime sentinels prove no integration tool reaches mutation services or
+  state stores.
+- All eight tools pass schema, pagination, result-size, partial-evidence, and hostile-data
   tests.
-- Full Python 3.12/3.13 and packaging gates plus only synthetic manual-app and fake-runner
-  action demos.
+- Official SDK client completes initialize/list/call against installed-wheel STDIO.
+- Setup refuses unowned/conflicting paths and proves fresh/idempotent/upgrade/rollback/
+  interrupted-repair flows in isolated homes.
+- Plugin and both skill copies pass official validators.
+- Python 3.12/3.13, Ruff, format, Pyright, build, privacy, and independent review gates pass.

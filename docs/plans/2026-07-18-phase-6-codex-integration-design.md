@@ -33,15 +33,18 @@ The Python distribution contains a versioned plugin payload with:
 `macwise setup codex` will:
 
 1. verify macOS, the installed MacWise payload, and a compatible `codex` executable;
-2. materialize the exact packaged plugin at the standard personal plugin location,
-   `~/plugins/macwise`, using symlink-safe, atomic filesystem operations;
+2. materialize the exact packaged plugin plus a MacWise ownership marker at the standard
+   personal plugin location, `~/plugins/macwise`, using symlink-safe, atomic filesystem
+   operations while refusing any existing unowned directory;
 3. atomically add or update only MacWise's entry in the automatically discovered
    personal marketplace at `~/.agents/plugins/marketplace.json`, preserving its name,
    display metadata, entry order, and every unrelated plugin;
-4. install or update MacWise with `codex plugin add macwise@<marketplace-name>`;
-5. verify that Codex reports the plugin as installed and give one plain-language next
+4. personalize the installed `.mcp.json` with the resolved absolute current Python
+   executable and `-m macwise codex serve`, avoiding desktop-process PATH assumptions;
+5. install or update MacWise with `codex plugin add macwise@<marketplace-name> --json`;
+6. verify that Codex reports the plugin as installed and give one plain-language next
    step: start a new Codex session and type `$macwise`;
-6. remain idempotent for the same version and preserve the previously working plugin if
+7. remain idempotent for the same version and preserve the previously working plugin if
    any step fails.
 
 Setup receives explicit authority only to change MacWise-owned payload files and the
@@ -65,14 +68,16 @@ The local server exposes the names required by `GOAL.md`:
 - `inspect_backups`
 - `get_removal_preview`
 
-Every input and output has a strict versioned Pydantic schema. The server calls MacWise
-application services directly rather than accepting command text or dispatching through
-the shell. Tool results distinguish observations, inferences, user statements, unknowns,
+Every input and output has a strict versioned Pydantic schema. The server keeps one
+lock-protected in-memory audit snapshot per process so a conversation is internally
+consistent; only `audit_mac(refresh=true)` refreshes it, and it is never persisted. The
+server calls MacWise application services directly rather than accepting command text or
+dispatching through the shell. Tool results distinguish observations, inferences, user statements, unknowns,
 limitations, provenance, and collection timestamps. Requests and results are bounded,
 stable-order, and safe to serialize over JSON-RPC.
 
-`get_removal_preview` is a pure read-only projection. It may inspect an existing active
-plan or construct an in-memory preview from fresh evidence, but it cannot persist a plan,
+`get_removal_preview` is a pure read-only projection constructed in memory from the
+current audit. It cannot open a plan/execution store, persist a plan,
 approve it, apply it, undo it, or mint mutation authority.
 
 The server advertises all tools as read-only and supplies server instructions stating,

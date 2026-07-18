@@ -132,10 +132,12 @@ Expected: FAIL because `CodexReadService` does not exist.
 
 **Step 3: Implement the minimal pure facade**
 
-Create an immutable `CodexReadService` with injected callables. Use existing normalized
-audit records and analysis, never rendered terminal text. Centralize exact identity
-resolution, stable sorting, pagination, fact/unknown conversion, and decisive collector
-limitations.
+Create a `CodexReadService` with an injected audit callable and a lock-protected,
+process-local snapshot. `audit_mac(refresh=true)` is the only refresh path; every other
+operation reads the same snapshot. Use existing normalized audit records and analysis,
+never rendered terminal text. Centralize exact identity resolution, stable sorting,
+pagination, fact/unknown conversion, decisive collector limitations, and serialized
+result-size enforcement.
 
 ```python
 class AuditProvider(Protocol):
@@ -188,16 +190,13 @@ git commit -m "feat: add read-only Codex audit facade"
 
 Cover exact role-aware overlap relations, startup evidence/ownership ambiguity, storage
 mount facts without unsafe free-form paths, backup limitations without coverage claims,
-and removal preview from either a pure injected preview provider or an already active
-plan. Prove no call writes `macwise.db`, changes the active plan, creates an execution
+and an in-memory removal preview from pure planning functions. Prove no call opens or
+writes `macwise.db`, changes the active plan, creates an execution
 journal, or touches synthetic host targets.
 
 ```python
 def test_removal_preview_never_persists_or_approves(tmp_path: Path) -> None:
-    service = CodexReadService(
-        audit_provider=fixed_audit,
-        preview_provider=pure_preview,
-    )
+    service = CodexReadService(audit_provider=fixed_audit)
     result = service.get_removal_preview(RemovalPreviewRequest(identity="app:com.example.App"))
     assert result.status is ToolStatus.OK
     assert not list(tmp_path.iterdir())
@@ -343,7 +342,8 @@ git commit -m "feat: serve MacWise read-only tools over MCP"
 
 **Step 1: Write failing artifact tests**
 
-Assert outer folder/manifest name equality, strict semver, MIT metadata, `skills` and
+Assert outer folder/manifest name equality, deterministic PEP-440-to-strict-SemVer
+mapping (`0.1.0a0` to `0.1.0-alpha.0`), MIT metadata, `skills` and
 `mcpServers` paths, read-only capability wording, actual companion files, exact STDIO
 command/args, no hooks/apps/remote URLs, no TODOs, and byte-identical canonical skill
 content between the authoring and packaged copies.
@@ -383,8 +383,11 @@ Update the skill to prefer the eight typed tools, keep all evidence untrusted, a
 cleanup back to terminal CLI. Remove the obsolete statement that setup/cleanup both
 refuse; setup is real, while direct Codex cleanup remains prohibited.
 
-Ensure Hatchling includes the non-Python payload in wheels using an explicit include or
-force-include rule rather than assuming backend defaults.
+The source `.mcp.json` uses a safe placeholder command only for validation; setup rewrites
+the installed copy to the resolved absolute `sys.executable` with args
+`["-m", "macwise", "codex", "serve"]`. Ensure Hatchling includes the non-Python payload
+in wheels using an explicit include or force-include rule rather than assuming backend
+defaults.
 
 **Step 4: Validate skill/plugin and tests**
 
@@ -420,7 +423,9 @@ Cover fresh personal marketplace creation, preservation of existing name/display
 append/update only the MacWise entry, same-version idempotency, atomic plugin replacement,
 upgrade, failed Codex install rollback, corrupt JSON, symlinked ancestors/files, nonregular
 files, same-name foreign source conflict, wrong payload name, missing/incompatible Codex,
-bounded output/timeout, and exact `codex plugin add macwise@NAME` argv with no shell.
+bounded output/timeout, absolute Python launch command (including spaces), ownership
+marker, interrupted-owned-install repair, compensation failure truth, and exact
+`codex plugin add macwise@NAME --json` argv with no shell.
 
 ```python
 def test_setup_preserves_unrelated_marketplace_entries(tmp_path: Path) -> None:
@@ -444,12 +449,14 @@ Expected: FAIL because setup service does not exist.
 
 **Step 3: Implement setup with narrow ownership**
 
-Define strict `MarketplaceDocument`, `MarketplaceEntry`, `SetupResult`, and runner
+Define strict `MarketplaceDocument`, `MarketplaceEntry`, `OwnershipMarker`, `SetupResult`, and runner
 protocols. Resolve the home once; reject any symlink/non-directory ancestor; read JSON
 through a regular-file descriptor with bounds; validate before preserving; write plugin
 and marketplace siblings to exclusive temporary paths, fsync, then atomically replace.
 Keep a bounded backup until Codex install verification succeeds, then remove it. Restore
-the previous plugin/marketplace on any later failure.
+the previous plugin/marketplace and reinstall the prior owned selector on later failure;
+for a fresh failed install, remove only the just-created selector. If compensation fails,
+return an explicit interrupted status and recovery instruction rather than success.
 
 The generated entry is exactly:
 
@@ -682,4 +689,3 @@ git commit -m "docs: accept local Phase 6 Codex integration"
 - Do not mark Phase 6 complete from unit tests alone. Installed-wheel STDIO protocol,
   clean-home setup, package artifact validation, hostile-data safety, review closure, and
   truthful documentation are mandatory.
-
