@@ -910,6 +910,12 @@ def review_duplicates() -> None:
     typer.echo("This review is read-only and does not authorize removal or other changes.")
 
 
+@app.command("overlap", help=HELP["overlap"])
+def overlap() -> None:
+    """Run the direct alias for the role-aware overlap review."""
+    review_duplicates()
+
+
 @review_app.command("largest", help=HELP["review_largest"])
 def review_largest(
     all_items: Annotated[

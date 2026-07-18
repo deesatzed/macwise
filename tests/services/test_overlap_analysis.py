@@ -54,6 +54,7 @@ def formula(
     name: str,
     *,
     executables: tuple[str, ...] = (),
+    install_path: str | None = None,
 ) -> SoftwareRecord:
     return SoftwareRecord(
         id=subject_id,
@@ -61,6 +62,7 @@ def formula(
         name=name,
         display_name=name,
         executables=executables,
+        install_path=install_path,
     )
 
 
@@ -147,6 +149,26 @@ def test_identity_rules_require_strong_evidence_and_distinct_installations() -> 
         OverlapCategory.SAME_PRODUCT_INSTALLED_TWICE
     ]
     assert same_product.relations[0].basis is ClaimBasis.INFERRED
+
+
+def test_versioned_formulae_in_one_catalog_family_are_not_duplicate_installs() -> None:
+    python_312 = formula(
+        "formula:python-312",
+        "python@3.12",
+        install_path="/opt/homebrew/Cellar/python@3.12/3.12.11",
+    )
+    python_313 = formula(
+        "formula:python-313",
+        "python@3.13",
+        install_path="/opt/homebrew/Cellar/python@3.13/3.13.5",
+    )
+
+    result = analyze_overlaps((python_312, python_313), usage_findings=())
+
+    assert all(
+        relation.category is not OverlapCategory.SAME_PRODUCT_INSTALLED_TWICE
+        for relation in result.relations
+    )
 
 
 def test_fuzzy_or_unknown_identity_produces_no_catalog_conclusion() -> None:

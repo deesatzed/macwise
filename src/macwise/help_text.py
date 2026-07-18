@@ -92,6 +92,13 @@ HELP: dict[str, str] = {
         ("macwise review duplicates", "macwise compare Docker Podman"),
         ("Run macwise compare NAME NAME.", "Run macwise scan."),
     ),
+    "overlap": _help(
+        "Finds role-aware overlap candidates without assuming every candidate is a duplicate.",
+        "you want the direct command that matches Find overlapping apps in the guided menu.",
+        READ_ONLY,
+        ("macwise overlap", "macwise compare Docker Podman"),
+        ("Run macwise compare NAME NAME.", "Run macwise explain NAME."),
+    ),
     "review_largest": _help(
         "Lists the largest measured application bundles and says when related data is still unknown.",
         "you want to find measured software space without overstating reclaimable storage.",

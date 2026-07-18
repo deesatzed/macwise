@@ -118,8 +118,20 @@ def _identity_relation(
             "Matching collected content digests do not authorize removal of either path.",
         )
     else:
+        left_identities = {
+            value.strip().casefold()
+            for value in (left.name, left.display_name, left.identifier)
+            if value and value.strip()
+        }
+        right_identities = {
+            value.strip().casefold()
+            for value in (right.name, right.display_name, right.identifier)
+            if value and value.strip()
+        }
+        if not left_identities & right_identities:
+            return None
         category = OverlapCategory.SAME_PRODUCT_INSTALLED_TWICE
-        statement = "Two install paths match the same exact catalog product identity."
+        statement = "Two install paths match the same exact installed product identity."
         basis = ClaimBasis.INFERRED
         confidence = Reliability.MEDIUM
         limitations = (

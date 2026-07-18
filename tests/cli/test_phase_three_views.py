@@ -252,6 +252,18 @@ def test_review_duplicates_groups_overlap_without_calling_every_pair_duplicate(
     assert "Role-aware overlap analysis is not available" not in result.stdout
 
 
+def test_overlap_is_a_discoverable_alias_for_duplicate_review(
+    phase_three_cli: AuditDocument,
+) -> None:
+    alias = RUNNER.invoke(cli.app, ["overlap"])
+    nested = RUNNER.invoke(cli.app, ["review", "duplicates"])
+    root_help = RUNNER.invoke(cli.app, ["--help"])
+
+    assert alias.exit_code == 0, alias.stdout
+    assert alias.stdout == nested.stdout
+    assert "overlap" in root_help.stdout
+
+
 def test_explain_adds_catalog_roles_learning_value_and_related_overlap(
     phase_three_cli: AuditDocument,
 ) -> None:
