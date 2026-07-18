@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-75% complete – MacWise now has a locally accepted Phase 4 cleanup-planning slice: immutable typed previews, all ten preflight categories, rollback blueprints, integrity-checked append-only SQLite state, exact CLI review, and zero host mutation. MW-300 passed its Python 3.12/3.13, independent-review, quality, build, privacy, skill, clean-wheel, hostile, and real-Mac gates. MW-011 remains PARTIAL because no hosted/Linux runner or Git remote exists; Phases 5–7 and public release remain open.
+Phase 5 is locally accepted: MacWise now has exact approval, fresh locked revalidation, allowlisted reversible actions, crash-visible journals, bounded recovery classification, post-action verification, and separately approved undo. MW-400 passed Python 3.12/3.13, independent-review, quality, build, privacy, skill, and clean-wheel synthetic/fake-mutator gates. This does not prove live installed-app, Homebrew, or launchctl behavior. MW-011 remains PARTIAL because no hosted/Linux runner or Git remote exists; Phases 6–7 and public release remain open.
 
 ## Current Assumptions
 
@@ -56,7 +56,9 @@
 | Build MW-400 Trash execution slice | Done | Codex | A closed descriptor-relative adapter uses exclusive no-replace same-filesystem renames for approved roots, verifies device/inode identity, and reverses exactly; the coordinator locks, journals before mutation, verifies, records failure, rejects replay, and separately approves undo. |
 | Build MW-400 command execution slice | Done | Codex | Closed fixed-path Homebrew and current-user launchctl adapters accept only structured safe identities, use bounded shell-free fake-runner-tested invocations, require fresh before/after observations, preserve startup/removal and reverse undo ordering, and journal verification or undo failure before stopping. |
 | Build MW-400 approval and recovery CLI | Done | Codex | `apply` and `undo` render review surfaces, require exact interactive or explicit fingerprints, collect fresh evidence, expose durable failure states and recovery guidance, and use injected fake execution services in tests; default assembly uses the shared journal lock and closed adapters without elevation. |
-| Complete Phases 5–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audit. |
+| Harden and accept MW-400 reversible cleanup | Done | Codex | Independent review findings were adjudicated and resolved except the explicitly rejected full-digest display change; 292 tests and all local artifact gates pass. `docs/phase-5-acceptance.md` records proof and limitations. |
+| Build MW-500 Codex integration | Ready | Codex | Bundle/setup/typed read-only integration work is next; mutation authority does not expand. |
+| Complete Phases 6–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audits. |
 
 ## Decision Links
 
@@ -64,11 +66,11 @@
 
 ## Current Milestone
 
-Phase 5 approval-gated reversible apply, action-time verification, manifests, and undo while external hosted-CI/public-release gates remain explicitly open.
+Phase 6 bundled Codex skill, one-command setup, and typed read-only local integration while live mutation, hosted-CI, and publication gates remain explicitly open.
 
 ## Next Actions
 
-1. Execute MW-400 Task 8: adversarial execution hardening, independent skeptical review, claim validation, and Phase 5 acceptance gates.
+1. Design and plan MW-500 typed read-only Codex integration without granting the AI layer direct mutation authority.
 2. Re-run hosted Linux/macOS CI once a Git remote/runner is authorized and available; do not treat the workflow definition as a run result.
 3. Keep public Homebrew/release proof deferred until tap/artifact authority exists.
 
@@ -160,3 +162,9 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-18 MW-400 Task 6 gate: 248 tests passed; Ruff format/lint, Pyright, and `git diff --check` passed repository-wide. Every Homebrew and launchctl mutation used an injected recording fake; no real Homebrew package, service, LaunchAgent, installed app, or user Trash was touched.
 - 2026-07-18 MW-400 Task 7 RED/GREEN: approval CLI tests first failed on missing injection seams and the Phase 4 refusal commands; exact non-TTY and interactive apply approval, separate undo approval, no-plan and stale-plan refusal, durable failure-state rendering, guided undo recovery, launchctl read-state probing, and updated help then passed with fake execution services only.
 - 2026-07-18 MW-400 Task 7 gate: 256 tests passed; Ruff format/lint, Pyright, build, `git diff --check`, and manual `apply --help` / `undo --help` rendering passed. No real mutating adapter was invoked and no installed software, startup state, real Trash, or Homebrew state changed.
+- 2026-07-18 MW-400 independent review adjudication: Accepted and Resolved—partial/interrupted recovery, collector-complete Homebrew absence, action-specific collector completeness, locked revalidation plus per-action active-digest reload, canonical-only launchctl not-found handling, doctor recovery visibility, bounded streaming command capture, bundle metadata identity, regular-file lock validation, post-command partial observation, and historical undo selection. Rejected—the request to display the complete digest in approval phrases, because D-026 intentionally defines a 16-character consent fingerprint while the full active digest is separately checked internally; its theoretical 64-bit prefix collision limit is documented rather than misrepresented.
+- 2026-07-18 MW-400 hardening RED/GREEN: regressions first exposed unavailable evidence, post-hoc output bounds, same-inode bundle changes, FIFO locks, stranded older runs, partial command state, and interrupted apply/undo recovery. Focused fixes now preserve unknowns, cap retained subprocess output during drain, bind Trash identity to descriptor-read Info.plist metadata, reject non-regular locks, query recoverable history, observe command failures, and classify interrupted command/Trash state before approved undo.
+- 2026-07-18 MW-400 second review adjudication: Accepted and Resolved—unobserved post-mutation failures remain interrupted and later classifiable; never-attempted tail actions are explicit `NOT_APPLIED`; LaunchAgent and Homebrew-service prior state must be authoritative; LaunchAgent inverse commands use fresh-state deltas; absent collector status refuses; lock contention is bounded; doctor exposes historical undo; unreadable application identity becomes unknown. Accepted and Resolved from final re-review—typed unknown decisive fields never become recoverable after-state, undo independently rejects non-authoritative after-state, `NOT_APPLIED` has strict truth invariants, and ambiguous inverse failures remain interrupted. The final re-review reported no remaining Critical or Important findings.
+- 2026-07-18 MW-400 local gate: 292 tests passed on Python 3.12.11 and 3.13.13; repository-wide Ruff format/lint, Pyright, build, privacy, skill, workflow YAML, scoped marker/skip, and `git diff --check` gates passed. Coverage measured 89% across the full suite.
+- 2026-07-18 MW-400 clean-wheel smoke: a fresh Python 3.12 wheel environment rendered root/apply/undo help, then 43 installed-wheel tests passed synthetic Trash move/restore, fixed fake mutation runners, execution coordination, partial recovery, and interrupted apply/undo recovery. No real application, real Trash, Homebrew state, or launchctl state was changed.
+- 2026-07-18 MW-400 claim validation: PASS for local Phase 5 reversible-cleanup scope only. Live permissions/behavior, hosted CI, public artifacts, Codex integration, and production safety remain unproven.

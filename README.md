@@ -4,7 +4,7 @@
 
 MacWise helps ordinary Mac users understand installed applications, Homebrew software, and storage before deciding what deserves attention. It gathers deterministic local evidence first, distinguishes user-selected Homebrew tools from dependencies, and labels missing evidence instead of turning it into a confident claim.
 
-MacWise is currently a pre-alpha inventory, explain/review, and non-executing cleanup-planning tool. It reports cautious usage findings, startup ownership, bounded related-data measurements, Time Machine facts, and exact-catalog role-aware overlaps without claiming complete history, backup coverage, or interchangeability. Cleanup previews can be saved as local immutable planning state; reversible apply/undo and one-command Codex setup are still under development.
+MacWise is currently a pre-alpha inventory, explain/review, cleanup-planning, and locally verified reversible-cleanup tool. It reports cautious usage findings, startup ownership, bounded related-data measurements, Time Machine facts, and exact-catalog role-aware overlaps without claiming complete history, backup coverage, or interchangeability. Cleanup previews can be saved as immutable local state and applied only after fresh revalidation plus an exact approval fingerprint; one-command Codex setup and public release are still under development.
 
 ## Terminal example
 
@@ -22,7 +22,8 @@ What would you like to do?
 6. See what uses the most space
 7. Ask what an app does
 8. Create a safe cleanup plan
-9. Help
+9. Review undo recovery
+10. Help
 ```
 
 Every guided choice also has a direct command for repeatable use.
@@ -87,8 +88,10 @@ MacWise refuses to replace an existing report unless you review the path and add
 - Overlap categories come from exact qualified catalog identities and explicit relations, never fuzzy name similarity.
 - Phase 3 guidance can recommend keep, learn, keep-together, cautious consolidation review, or no recommendation; it does not authorize removal.
 - `plan add` and `plan show` write or read only local immutable preview state; they do not change installed software or user data.
-- Current `apply`, `undo`, and `setup codex` surfaces refuse safely rather than simulate unfinished capabilities.
-- A future cleanup action must have an exact reviewed plan, action-time approval, verification, a rollback manifest, and an undo path where technically possible.
+- `apply` requires a schema-2 reviewed plan, fresh evidence, an exact fingerprint phrase, a pre-mutation journal, and verified after-state; it never elevates privileges or deletes related user data.
+- `undo` requires separate exact approval and verifies reverse-order restoration. Trash restoration is exact; Homebrew reinstall is best-effort and may not restore the captured version.
+- Only standard application roots, exact safe Homebrew formulae/casks, running Homebrew services, and current-user LaunchAgents are supported. System/privileged targets and arbitrary commands remain blocked.
+- `setup codex` still refuses safely rather than simulating unfinished integration.
 
 See [Privacy](docs/privacy.md), [Threat model](docs/threat-model.md), and [Security policy](SECURITY.md).
 
@@ -145,6 +148,13 @@ macwise backups
 macwise plan add "Example App"
 macwise plan show
 
+# Revalidate, review the exact phrase, then explicitly approve
+macwise apply
+macwise apply --approve 'APPLY FINGERPRINT'
+
+# Review reverse actions and use a separate approval phrase
+macwise undo
+
 # Diagnose collector availability
 macwise doctor
 ```
@@ -153,7 +163,7 @@ Every command supports `--help`, including nested commands such as `macwise revi
 
 ## Current scope and roadmap
 
-Phases 1–4 cover guided use, the complete public command hierarchy, application/Homebrew/storage inventory, evidence provenance, partial-failure reporting, schema-4 JSON/Markdown output, cautious usage findings, startup ownership, bounded related data, backup limitations, exact-match role intelligence, and persistent immutable cleanup previews with ten-category preflight and rollback blueprints. `GOAL.md` remains the full product contract for approval-gated reversible cleanup, Codex integration, and public release. See the [Phase 4 acceptance audit](docs/phase-4-acceptance.md) for current proof and limitations.
+Phases 1–5 cover guided use, the public command hierarchy, evidence-rich inventory, cautious usage and backup findings, exact-match role intelligence, immutable cleanup previews, approval-gated allowlisted execution, append-only recovery manifests, fresh verification, and undo. Phase 5 local acceptance is synthetic/fake-mutator evidence, not permission to test real installed software without explicit authority. `GOAL.md` remains the full contract for Codex integration and public release. See the phase acceptance audits under `docs/` for proof and limitations.
 
 ## Development
 

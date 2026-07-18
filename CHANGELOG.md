@@ -30,10 +30,15 @@ MacWise follows Semantic Versioning. The project is pre-alpha; unreleased behavi
 - Ten-category evidence-linked planning preflight covering identity, protection, dependencies, usage, overlap, related data, backup, startup, rollback, and staleness.
 - Integrity-checked append-only SQLite plan revisions with read-only display, optimistic concurrency, corruption refusal, and symlink-ancestor protection.
 - Persistent `plan add` and `plan show` CLI workflows with exact-name resolution, visibly blocked unsafe candidates, rollback blueprints, and zero host mutation.
+- Schema-version-2 cleanup plans with deterministic multi-action ordering and opt-in supported user startup changes.
+- Exact plan/manifest approval fingerprints, fresh policy/identity revalidation, and a shared symlink-safe state lock.
+- Integrity-checked append-only execution manifests with crash-visible action states, verification evidence, partial-failure blocking, and separately approved reverse-order undo.
+- Exclusive same-filesystem Trash move/restore for standard application roots with device/inode verification and no replacement.
+- Fixed-path, shell-free Homebrew formula/cask/service and current-user LaunchAgent adapters with structured identity validation, bounded fake-runner-tested execution, unchanged-plist hashing, and fresh after-state verification.
+- Review-first `apply` and `undo` CLI workflows with exact interactive/non-interactive approval, durable recovery-state guidance, no elevation, preserved related data, and explicit best-effort Homebrew undo limits.
 
 ### Not yet available
 
-- Approval-gated apply, action-time verification, and undo.
 - One-command Codex setup and typed local integration.
 - Published pipx package, Homebrew tap, and signed release artifacts.
 

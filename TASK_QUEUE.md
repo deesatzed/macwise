@@ -19,6 +19,6 @@ Tasks are ordered. Start the first `ready` task, preserve the full goal, and upd
 | MW-100 | 2 | Explain/review with usage, startup, related data, and backups | done | Local PASS: Python 3.12/3.13 118-test gates, build/privacy/skill/clean-wheel proof, and aggregate-only real smokes in `docs/phase-2-acceptance.md` |
 | MW-200 | 3 | Role-aware overlap and learning-value intelligence | done | Local PASS: Python 3.12/3.13 142-test gates, independent review closure, build/privacy/skill/clean-wheel proof, and aggregate-only real smoke in `docs/phase-3-acceptance.md` |
 | MW-300 | 4 | Persistent cleanup plan and exact previews, no actions | done | Local PASS: Python 3.12/3.13 186-test gates, independent review closure, build/privacy/skill/clean-wheel proof, and aggregate-only real planner smoke in `docs/phase-4-acceptance.md` |
-| MW-400 | 5 | Approval-gated reversible apply/verify/undo | ready | Isolated filesystem/Homebrew adapter tests and manual safe demo |
-| MW-500 | 6 | Bundled Codex skill, setup, and typed read-only integration | pending | Clean-home integration tests and `$macwise` workflow proof |
+| MW-400 | 5 | Approval-gated reversible apply/verify/undo | done | Local PASS: Python 3.12/3.13 292-test gates, independent review closure, build/privacy/skill/clean-wheel proof, synthetic Trash actions, fake command mutators, and crash recovery in `docs/phase-5-acceptance.md` |
+| MW-500 | 6 | Bundled Codex skill, setup, and typed read-only integration | ready | Clean-home integration tests and `$macwise` workflow proof |
 | MW-600 | 7 | Public docs, privacy/security review, packaging, CI, Homebrew, release candidate | pending | Clean installs, CI, release artifacts, public acceptance audit |
