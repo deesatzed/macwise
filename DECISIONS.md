@@ -69,6 +69,7 @@ This file records durable architecture, UX, safety, privacy, dependency, and rel
 | ID | Date | Category | Decision | Rationale | Alternatives Considered | Status |
 |---|---|---|---|---|---|---|
 | D-031 | 2026-07-18 | Codex Integration | Package the `$macwise` skill and eight strictly read-only local tools as a native Codex plugin backed by an official STDIO MCP server; keep every mutation and approval operation outside the tool surface. | Current Codex supports plugins as the distribution unit for skills plus MCP configuration and supports local STDIO servers; this meets one-command setup and typed-tool requirements without granting model-driven mutation authority. | Direct skill copy plus shared TOML editing; skill-only CLI invocation; remote MCP service. | Accepted |
+| D-032 | 2026-07-18 | Codex Setup | Require capability preflight and exact installed selector/version verification; authorize replacement only when ownership marker and manifest identities match; repair only complete marker-owned transaction trees. | Setup must not trust exit zero, arbitrary JSON, or a marker alone, and recovery must not delete ambiguous user state. | Trust any JSON object; marker-only ownership; delete all setup-shaped remnants. | Accepted |
 
 ## Initial Default Decisions
 

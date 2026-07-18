@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import subprocess
 from pathlib import Path
@@ -54,7 +55,7 @@ def test_built_wheel_contains_valid_plugin_and_serves_stdio(tmp_path: Path) -> N
     help_result = run_checked([str(executable), "setup", "codex", "--help"], env=environment)
     assert "$macwise" in help_result.stdout
 
-    async def list_installed_tools() -> set[str]:
+    async def exercise_installed_server() -> set[str]:
         stderr_path = tmp_path / "installed-server.stderr"
         parameters = StdioServerParameters(
             command=str(executable),
@@ -68,8 +69,16 @@ def test_built_wheel_contains_valid_plugin_and_serves_stdio(tmp_path: Path) -> N
             ):
                 await session.initialize()
                 tools = await session.list_tools()
+                result = await session.call_tool(
+                    "audit_mac", {"request": {"schema_version": 1, "refresh": False}}
+                )
+                assert result.isError is False
+                assert result.content
+                payload = json.loads(result.content[0].text)  # type: ignore[union-attr]
+                assert payload["operation"] == "audit_mac"
+                assert payload["status"] in {"ok", "partial"}
             stderr.seek(0)
             assert "traceback" not in stderr.read().casefold()
         return {tool.name for tool in tools.tools}
 
-    assert asyncio.run(list_installed_tools()) == {operation.value for operation in Operation}
+    assert asyncio.run(exercise_installed_server()) == {operation.value for operation in Operation}

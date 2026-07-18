@@ -200,7 +200,7 @@ HELP: dict[str, str] = {
     "setup_codex": _help(
         "Installs or updates the bundled read-only MacWise Codex experience for this user.",
         "you want to type $macwise inside Codex and review local audit evidence conversationally.",
-        "Setup changes only MacWise-owned plugin files and its personal plugin entry; Codex tools cannot apply or undo cleanup.",
+        "Setup changes MacWise-owned plugin files and its personal plugin entry, then asks Codex to add or update that registration; rollback may restore or remove it. Codex tools cannot apply or undo cleanup.",
         ("macwise setup codex", "macwise doctor"),
         (
             "Start a new Codex session and type $macwise.",

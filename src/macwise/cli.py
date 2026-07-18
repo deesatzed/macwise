@@ -1552,6 +1552,9 @@ def setup_codex() -> None:
         typer.echo(safe_display_text(result.message))
         if result.recovery:
             typer.echo(safe_display_text(result.recovery))
+        typer.echo(
+            "No changes were made.\n\nNext:\n  review the recovery message, then retry setup"
+        )
         raise typer.Exit(2)
     typer.echo("Start a new Codex session, then type $macwise.")
 

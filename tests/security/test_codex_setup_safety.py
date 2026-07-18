@@ -11,6 +11,12 @@ class NeverRunner:
     def run(self, arguments: tuple[str, ...]) -> CodexCommandResult:
         raise AssertionError(f"Codex must not run: {arguments}")
 
+    def preflight(self) -> CodexCommandResult:
+        raise AssertionError("Codex must not run")
+
+    def verify_installed(self, selector: str, version: str) -> CodexCommandResult:
+        raise AssertionError(f"Codex must not verify: {selector} {version}")
+
 
 def test_setup_refuses_symlinked_plugin_ancestor(tmp_path: Path) -> None:
     home = tmp_path / "home"

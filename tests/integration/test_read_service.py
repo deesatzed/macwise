@@ -205,6 +205,21 @@ def test_inspect_storage_returns_volume_facts_without_content_scanning(
     assert not result.errors
 
 
+def test_inspect_storage_preserves_missing_software_size_as_unknown(
+    sample_audit: AuditDocument,
+) -> None:
+    software = sample_audit.software[0].model_copy(update={"size_bytes": None})
+    audit = sample_audit.model_copy(update={"software": (software,)})
+
+    result = CodexReadService(audit_provider=lambda: audit).inspect_storage(
+        InspectStorageRequest(identity=software.id)
+    )
+
+    assert result.status is ToolStatus.PARTIAL
+    assert any(unknown.topic == "software_size_bytes" for unknown in result.unknowns)
+    assert not any(fact.topic == "software_size_bytes" for fact in result.facts)
+
+
 def test_inspect_backups_never_converts_configuration_into_coverage(
     sample_audit: AuditDocument,
 ) -> None:

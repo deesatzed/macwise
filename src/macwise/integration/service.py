@@ -425,6 +425,7 @@ class CodexReadService:
         audit = self._snapshot()
         selected: SoftwareRecord | None = None
         facts: list[Fact] = []
+        unknowns: list[Unknown] = []
         if request.identity is not None:
             resolved = _resolve_identity(audit.software, request.identity)
             if isinstance(resolved, ToolError):
@@ -436,27 +437,28 @@ class CodexReadService:
                     errors=(resolved,),
                 )
             selected = resolved
-            facts.extend(
-                (
-                    Fact(
-                        subject_id=_bounded(resolved.id, 256),
-                        topic="software_storage_location",
-                        value=resolved.storage_location.value,
-                    ),
+            facts.append(
+                Fact(
+                    subject_id=_bounded(resolved.id, 256),
+                    topic="software_storage_location",
+                    value=resolved.storage_location.value,
+                )
+            )
+            if resolved.size_bytes is None:
+                unknowns.append(
+                    Unknown(
+                        topic="software_size_bytes",
+                        reason="The audit did not report a size for this software item.",
+                    )
+                )
+            else:
+                facts.append(
                     Fact(
                         subject_id=_bounded(resolved.id, 256),
                         topic="software_size_bytes",
                         value=str(resolved.size_bytes),
                     )
-                    if resolved.size_bytes is not None
-                    else Fact(
-                        subject_id=_bounded(resolved.id, 256),
-                        topic="software_size_bytes",
-                        value="unknown",
-                        basis="unknown",
-                    ),
                 )
-            )
         else:
             for volume in audit.volumes[:100]:
                 facts.extend(
@@ -476,11 +478,12 @@ class CodexReadService:
         limitations = _collector_limitations(audit)
         return ToolResult(
             operation=Operation.INSPECT_STORAGE,
-            status=_result_status(limitations=limitations, unknowns=()),
+            status=_result_status(limitations=limitations, unknowns=unknowns),
             audit_id=_bounded(audit.audit_id, 256),
             collected_at=audit.collected_at,
             facts=tuple(facts),
             software=(_summary(selected),) if selected is not None else (),
+            unknowns=tuple(unknowns),
             limitations=limitations,
             truncated=request.identity is None and len(audit.volumes) > 100,
         )

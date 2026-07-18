@@ -1,4 +1,5 @@
 import json
+import shutil
 import subprocess
 import sys
 from collections import deque
@@ -25,6 +26,13 @@ class FakeCodexRunner:
     def run(self, arguments: tuple[str, ...]) -> CodexCommandResult:
         self.calls.append(arguments)
         return self.results.popleft()
+
+    def preflight(self) -> CodexCommandResult:
+        return CodexCommandResult(ok=True, stdout='{"compatible":true}')
+
+    def verify_installed(self, selector: str, version: str) -> CodexCommandResult:
+        del selector, version
+        return CodexCommandResult(ok=True, stdout='{"verified":true}')
 
 
 def make_home(tmp_path: Path) -> Path:
@@ -220,6 +228,42 @@ def test_fresh_failed_codex_install_compensates_files_and_selector(tmp_path: Pat
     ]
 
 
+def test_fresh_compensation_runs_while_selector_source_still_exists(tmp_path: Path) -> None:
+    home = make_home(tmp_path)
+
+    class ObservingRunner:
+        calls = 0
+        source_existed_during_remove = False
+
+        def run(self, arguments: tuple[str, ...]) -> CodexCommandResult:
+            self.calls += 1
+            if self.calls == 1:
+                return CodexCommandResult(ok=False, stderr="install failed")
+            self.source_existed_during_remove = (home / "plugins" / "macwise").is_dir() and (
+                home / ".agents" / "plugins" / "marketplace.json"
+            ).is_file()
+            return CodexCommandResult(ok=True, stdout='{"removed":true}')
+
+        def preflight(self) -> CodexCommandResult:
+            return CodexCommandResult(ok=True)
+
+        def verify_installed(self, selector: str, version: str) -> CodexCommandResult:
+            del selector, version
+            raise AssertionError("A failed add must not be verified")
+
+    runner = ObservingRunner()
+    result = CodexSetupService(
+        home=home,
+        payload=PAYLOAD,
+        python_executable=Path(sys.executable),
+        runner=runner,
+    ).install()
+
+    assert result.status is SetupStatus.REFUSED
+    assert runner.source_existed_during_remove is True
+    assert not (home / "plugins" / "macwise").exists()
+
+
 def test_failed_compensation_is_reported_as_interrupted(tmp_path: Path) -> None:
     home = make_home(tmp_path)
     runner = FakeCodexRunner(
@@ -255,6 +299,129 @@ def test_setup_rejects_unverifiable_codex_success_output(tmp_path: Path) -> None
     assert result.status is SetupStatus.REFUSED
     assert "verify" in result.message.casefold()
     assert not (home / "plugins" / "macwise").exists()
+
+
+def test_setup_rejects_semantically_negative_codex_json(tmp_path: Path) -> None:
+    home = make_home(tmp_path)
+    runner = FakeCodexRunner(
+        CodexCommandResult(ok=True, stdout='{"error":"not installed"}'),
+        CodexCommandResult(ok=True, stdout='{"removed":true}'),
+    )
+
+    result = CodexSetupService(
+        home=home,
+        payload=PAYLOAD,
+        python_executable=Path(sys.executable),
+        runner=runner,
+    ).install()
+
+    assert result.status is SetupStatus.REFUSED
+    assert not (home / "plugins" / "macwise").exists()
+
+
+def test_incompatible_codex_is_refused_before_filesystem_mutation(tmp_path: Path) -> None:
+    home = make_home(tmp_path)
+
+    class IncompatibleRunner(FakeCodexRunner):
+        def preflight(self) -> CodexCommandResult:
+            return CodexCommandResult(ok=False, stderr="plugin commands unavailable")
+
+    result = CodexSetupService(
+        home=home,
+        payload=PAYLOAD,
+        python_executable=Path(sys.executable),
+        runner=IncompatibleRunner(),
+    ).install()
+
+    assert result.status is SetupStatus.REFUSED
+    assert not (home / "plugins").exists()
+    assert not (home / ".agents").exists()
+
+
+def test_owned_marker_cannot_authorize_a_foreign_existing_manifest(tmp_path: Path) -> None:
+    home = make_home(tmp_path)
+    initial_runner = FakeCodexRunner()
+    service = CodexSetupService(
+        home=home,
+        payload=PAYLOAD,
+        python_executable=Path(sys.executable),
+        runner=initial_runner,
+    )
+    assert service.install().status is SetupStatus.INSTALLED
+    manifest_path = home / "plugins" / "macwise" / ".codex-plugin" / "plugin.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["repository"] = "https://example.invalid/foreign"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    runner = FakeCodexRunner()
+
+    result = CodexSetupService(
+        home=home,
+        payload=PAYLOAD,
+        python_executable=Path(sys.executable),
+        runner=runner,
+    ).install()
+
+    assert result.status is SetupStatus.REFUSED
+    assert "owned" in result.message.casefold()
+    assert json.loads(manifest_path.read_text(encoding="utf-8"))["repository"].endswith("foreign")
+    assert runner.calls == []
+
+
+def test_rerun_restores_owned_backup_left_by_interruption(tmp_path: Path) -> None:
+    home = make_home(tmp_path)
+    assert (
+        CodexSetupService(
+            home=home,
+            payload=PAYLOAD,
+            python_executable=Path(sys.executable),
+            runner=FakeCodexRunner(),
+        )
+        .install()
+        .status
+        is SetupStatus.INSTALLED
+    )
+    plugin = home / "plugins" / "macwise"
+    backup = plugin.parent / ".macwise-backup-crash"
+    plugin.replace(backup)
+
+    result = CodexSetupService(
+        home=home,
+        payload=PAYLOAD,
+        python_executable=Path(sys.executable),
+        runner=FakeCodexRunner(),
+    ).install()
+
+    assert result.status is SetupStatus.ALREADY_CURRENT
+    assert plugin.is_dir()
+    assert not backup.exists()
+
+
+def test_rerun_discards_complete_owned_stage_left_by_interruption(tmp_path: Path) -> None:
+    home = make_home(tmp_path)
+    assert (
+        CodexSetupService(
+            home=home,
+            payload=PAYLOAD,
+            python_executable=Path(sys.executable),
+            runner=FakeCodexRunner(),
+        )
+        .install()
+        .status
+        is SetupStatus.INSTALLED
+    )
+    plugin = home / "plugins" / "macwise"
+    stage = plugin.parent / ".macwise-stage-crash"
+    shutil.copytree(plugin, stage)
+
+    result = CodexSetupService(
+        home=home,
+        payload=PAYLOAD,
+        python_executable=Path(sys.executable),
+        runner=FakeCodexRunner(),
+    ).install()
+
+    assert result.status is SetupStatus.ALREADY_CURRENT
+    assert not stage.exists()
 
 
 def test_subprocess_runner_uses_fixed_executable_safe_env_and_no_shell(tmp_path: Path) -> None:
@@ -319,6 +486,81 @@ def test_subprocess_runner_rejects_every_non_setup_command(tmp_path: Path) -> No
 
     assert result.ok is False
     assert "allowlisted" in result.stderr.casefold()
+
+
+def test_subprocess_runner_preflights_required_codex_features(tmp_path: Path) -> None:
+    executable = tmp_path / "codex"
+    executable.write_text("synthetic", encoding="utf-8")
+    executable.chmod(0o700)
+    calls: list[tuple[str, ...]] = []
+
+    def fake_process(
+        args: Sequence[str],
+        *,
+        shell: bool,
+        check: bool,
+        capture_output: bool,
+        timeout: float,
+        env: Mapping[str, str],
+    ) -> subprocess.CompletedProcess[bytes]:
+        del shell, check, capture_output, timeout, env
+        arguments = tuple(args)
+        calls.append(arguments)
+        stdout = b"codex-cli 0.144.5" if arguments[-1] == "--version" else b"--json"
+        return subprocess.CompletedProcess(args, 0, stdout=stdout, stderr=b"")
+
+    runner = SubprocessCodexRunner(
+        executable=executable,
+        home=tmp_path,
+        process_runner=fake_process,
+    )
+
+    assert runner.preflight().ok is True
+    assert [call[1:] for call in calls] == [
+        ("--version",),
+        ("plugin", "add", "--help"),
+        ("plugin", "remove", "--help"),
+    ]
+
+
+def test_subprocess_runner_verifies_exact_installed_selector_and_version(
+    tmp_path: Path,
+) -> None:
+    executable = tmp_path / "codex"
+    executable.write_text("synthetic", encoding="utf-8")
+    executable.chmod(0o700)
+
+    def fake_process(
+        args: Sequence[str],
+        *,
+        shell: bool,
+        check: bool,
+        capture_output: bool,
+        timeout: float,
+        env: Mapping[str, str],
+    ) -> subprocess.CompletedProcess[bytes]:
+        del shell, check, capture_output, timeout, env
+        document = {
+            "installed": [
+                {
+                    "pluginId": "macwise@personal",
+                    "version": "0.1.0",
+                    "installed": True,
+                }
+            ]
+        }
+        return subprocess.CompletedProcess(
+            args, 0, stdout=json.dumps(document).encode(), stderr=b""
+        )
+
+    runner = SubprocessCodexRunner(
+        executable=executable,
+        home=tmp_path,
+        process_runner=fake_process,
+    )
+
+    assert runner.verify_installed("macwise@personal", "0.1.0").ok is True
+    assert runner.verify_installed("macwise@personal", "9.9.9").ok is False
 
 
 def test_subprocess_runner_rejects_truncated_codex_output(tmp_path: Path) -> None:

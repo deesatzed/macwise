@@ -359,7 +359,7 @@ Expected: FAIL because the payload does not exist.
 Run the provided generator once, without a repo marketplace:
 
 ```bash
-python3 /Users/o2satz/.codex/skills/.system/plugin-creator/scripts/create_basic_plugin.py \
+python3 $HOME/.codex/skills/.system/plugin-creator/scripts/create_basic_plugin.py \
   macwise --path src/macwise/codex_payload --with-skills --with-mcp
 ```
 
@@ -395,9 +395,9 @@ Run:
 
 ```bash
 uv run pytest tests/repository/test_codex_plugin.py -q
-python3 /Users/o2satz/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py src/macwise/codex_payload/macwise
-python3 /Users/o2satz/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/macwise
-python3 /Users/o2satz/.codex/skills/.system/skill-creator/scripts/quick_validate.py src/macwise/codex_payload/macwise/skills/macwise
+python3 $HOME/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py src/macwise/codex_payload/macwise
+python3 $HOME/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/macwise
+python3 $HOME/.codex/skills/.system/skill-creator/scripts/quick_validate.py src/macwise/codex_payload/macwise/skills/macwise
 ```
 
 Expected: all PASS.
@@ -649,8 +649,8 @@ uv run ruff check .
 uv run ruff format --check .
 uv run pyright
 rm -rf dist && uv build
-python3 /Users/o2satz/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py src/macwise/codex_payload/macwise
-python3 /Users/o2satz/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/macwise
+python3 $HOME/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py src/macwise/codex_payload/macwise
+python3 $HOME/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/macwise
 ```
 
 Re-sync the existing Python 3.12/3.13 environments after the lockfile change before

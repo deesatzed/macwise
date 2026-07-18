@@ -58,28 +58,27 @@ Phase 5 is locally accepted: MacWise now has exact approval, fresh locked revali
 | Build MW-400 approval and recovery CLI | Done | Codex | `apply` and `undo` render review surfaces, require exact interactive or explicit fingerprints, collect fresh evidence, expose durable failure states and recovery guidance, and use injected fake execution services in tests; default assembly uses the shared journal lock and closed adapters without elevation. |
 | Harden and accept MW-400 reversible cleanup | Done | Codex | Independent review findings were adjudicated and resolved except the explicitly rejected full-digest display change; 292 tests and all local artifact gates pass. `docs/phase-5-acceptance.md` records proof and limitations. |
 | Design MW-500 Codex integration | Done | Codex | Approved native plugin plus strictly read-only STDIO MCP design is saved under `docs/plans/`; D-031 pins the protocol and preserves the standalone mutation boundary. |
-| Build MW-500 Codex integration | Ready | Codex | Bundle/setup/typed read-only integration implementation is next; mutation authority does not expand. |
-| Complete Phases 6–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audits. |
+| Build MW-500 Codex integration | Done | Codex | Eight typed read-only tools, native plugin/skill payload, one-command setup, bounded STDIO server, clean-wheel call proof, and review hardening pass 361 tests on Python 3.12/3.13. |
+| Complete Phase 7 | Pending | Codex | MW-600 release engineering and public acceptance remain; external publication requires explicit authority. |
 
 ## Decision Links
 
-- D-001 through D-031 are in `DECISIONS.md`.
+- D-001 through D-032 are in `DECISIONS.md`.
 
 ## Current Milestone
 
-Phase 6 bundled Codex skill, one-command setup, and typed read-only local integration while live mutation, hosted-CI, and publication gates remain explicitly open.
+Phase 7 release engineering, documentation, distribution artifacts, and final acceptance while hosted-CI and external publication gates remain explicitly open.
 
 ## Next Actions
 
-1. Implement the approved MW-500 typed contracts and read-only application facade test-first.
-2. Bundle the `$macwise` plugin and safe personal-marketplace setup, then prove STDIO MCP and conversational review.
-3. Run Phase 6 review, clean-install, and acceptance gates before beginning MW-600.
+1. Design and plan MW-600 release engineering against the public distribution contract.
+2. Build and verify release, Homebrew, documentation, demo, and security artifacts locally.
+3. Run final requirement-by-requirement acceptance without publishing externally absent authority.
 4. Re-run hosted Linux/macOS CI once a Git remote/runner is authorized and available; do not treat the workflow definition as a run result.
-5. Keep public Homebrew/release proof deferred until tap/artifact authority exists.
 
 ## Blockers
 
-No blocker for local implementation. MW-011 hosted Linux/macOS CI is externally blocked by the absence of a Git remote/runner; local container CLIs have no running engine or VM.
+No blocker for local Phase 7 implementation. Hosted CI and external publication remain authority/infrastructure gates.
 
 ## Questions for User
 

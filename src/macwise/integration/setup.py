@@ -58,6 +58,10 @@ class CodexRunner(Protocol):
 
     def run(self, arguments: tuple[str, ...]) -> CodexCommandResult: ...
 
+    def preflight(self) -> CodexCommandResult: ...
+
+    def verify_installed(self, selector: str, version: str) -> CodexCommandResult: ...
+
 
 def _bounded_codex_process_runner(
     args: Sequence[str],
@@ -194,6 +198,79 @@ class SubprocessCodexRunner:
             stderr=stderr,
         )
 
+    def preflight(self) -> CodexCommandResult:
+        """Verify required plugin commands without changing Codex state."""
+        checks = (("--version",), ("plugin", "add", "--help"), ("plugin", "remove", "--help"))
+        for arguments in checks:
+            result = self._run_read_only(arguments)
+            if not result.ok:
+                return result
+            if arguments == ("--version",) and not result.stdout.startswith("codex-cli "):
+                return CodexCommandResult(
+                    ok=False, stderr="Codex returned an unsupported version result."
+                )
+            if arguments != ("--version",) and "--json" not in result.stdout:
+                return CodexCommandResult(
+                    ok=False, stderr="Codex lacks required plugin JSON support."
+                )
+        return CodexCommandResult(ok=True, stdout='{"compatible":true}')
+
+    def verify_installed(self, selector: str, version: str) -> CodexCommandResult:
+        """Query Codex and require the expected MacWise selector and version."""
+        if _CODEX_SELECTOR.fullmatch(selector) is None:
+            return CodexCommandResult(ok=False, stderr="That Codex selector is invalid.")
+        result = self._run_read_only(("plugin", "list", "--json"))
+        if not result.ok:
+            return result
+        try:
+            raw_document: object = json.loads(result.stdout)
+            if not isinstance(raw_document, dict):
+                raise TypeError
+            document = cast(dict[str, object], raw_document)
+            installed = document["installed"]
+        except (json.JSONDecodeError, KeyError, TypeError):
+            return CodexCommandResult(ok=False, stderr="Codex returned an invalid plugin list.")
+        entries = cast(list[object], installed) if isinstance(installed, list) else []
+        matches: list[dict[str, object]] = []
+        for raw_item in entries:
+            if not isinstance(raw_item, dict):
+                continue
+            item = cast(dict[str, object], raw_item)
+            if (
+                item.get("pluginId") == selector
+                and item.get("version") == version
+                and item.get("installed") is True
+            ):
+                matches.append(item)
+        return CodexCommandResult(
+            ok=len(matches) == 1, stdout='{"verified":true}' if matches else ""
+        )
+
+    def _run_read_only(self, arguments: tuple[str, ...]) -> CodexCommandResult:
+        try:
+            completed = self._runner(
+                (str(self.executable), *arguments),
+                shell=False,
+                check=False,
+                capture_output=True,
+                timeout=self._timeout,
+                env=self._environment,
+            )
+        except (FileNotFoundError, OSError, subprocess.TimeoutExpired) as error:
+            return CodexCommandResult(
+                ok=False, stderr=f"Codex setup could not run: {type(error).__name__}."
+            )
+        if (
+            len(completed.stdout) > _CODEX_OUTPUT_LIMIT
+            or len(completed.stderr) > _CODEX_OUTPUT_LIMIT
+        ):
+            return CodexCommandResult(ok=False, stderr="Codex output limit exceeded.")
+        return CodexCommandResult(
+            ok=completed.returncode == 0,
+            stdout=completed.stdout.decode("utf-8", errors="replace"),
+            stderr=completed.stderr.decode("utf-8", errors="replace"),
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class SetupResult:
@@ -316,9 +393,24 @@ def _payload_metadata(payload: Path) -> tuple[str, str]:
 def _load_marker(plugin: Path) -> OwnershipMarker:
     marker_path = plugin / ".macwise-owned.json"
     try:
-        return OwnershipMarker.model_validate_json(
+        marker = OwnershipMarker.model_validate_json(
             _read_regular_bytes(marker_path, limit=64 * 1024, label="MacWise ownership marker")
         )
+        manifest = _json_object(
+            _read_regular_bytes(
+                plugin / ".codex-plugin" / "plugin.json",
+                limit=256 * 1024,
+                label="installed plugin manifest",
+            ),
+            label="installed plugin manifest",
+        )
+        if (
+            manifest.get("name") != marker.plugin_name
+            or manifest.get("version") != marker.plugin_version
+            or manifest.get("repository") != marker.repository
+        ):
+            raise SetupError("The installed plugin manifest does not match its ownership marker.")
+        return marker
     except (SetupError, ValidationError, ValueError) as error:
         raise SetupError(
             "The existing MacWise plugin is not safely owned by this installer."
@@ -372,6 +464,29 @@ def _with_macwise_entry(document: dict[str, object]) -> dict[str, object]:
     return result
 
 
+def _recover_owned_transaction(plugins_parent: Path, plugin: Path) -> None:
+    """Restore a prior owned plugin and discard complete owned staging trees."""
+    backups = sorted(plugins_parent.glob(".macwise-backup-*"))
+    stages = sorted(plugins_parent.glob(".macwise-stage-*"))
+    if len(backups) > 1:
+        raise SetupError("Multiple interrupted MacWise setup backups require manual review.")
+    for path in (*backups, *stages):
+        if path.is_symlink() or not path.is_dir():
+            raise SetupError("Interrupted MacWise setup state is unsafe.")
+        _load_marker(path)
+    try:
+        if backups:
+            backup = backups[0]
+            if plugin.exists() or plugin.is_symlink():
+                _load_marker(plugin)
+                shutil.rmtree(plugin)
+            os.replace(backup, plugin)
+        for stage in stages:
+            shutil.rmtree(stage)
+    except OSError as error:
+        raise SetupError("MacWise could not recover its interrupted setup state.") from error
+
+
 def _atomic_write(path: Path, data: bytes) -> None:
     temporary = path.parent / f".{path.name}.macwise-{uuid4().hex}.tmp"
     descriptor: int | None = None
@@ -397,14 +512,17 @@ def _json_bytes(value: Mapping[str, object] | BaseModel) -> bytes:
     return (json.dumps(document, ensure_ascii=False, indent=2, sort_keys=True) + "\n").encode()
 
 
-def _verified_codex_result(result: CodexCommandResult) -> bool:
+def _verified_codex_result(result: CodexCommandResult, *, action: str) -> bool:
     if not result.ok:
         return False
     try:
-        document = json.loads(result.stdout)
+        raw_document: object = json.loads(result.stdout)
     except json.JSONDecodeError:
         return False
-    return isinstance(document, dict) and len(cast(dict[object, object], document)) > 0
+    if not isinstance(raw_document, dict):
+        return False
+    document = cast(dict[str, object], raw_document)
+    return document.get(action) is True
 
 
 class CodexSetupService:
@@ -438,10 +556,14 @@ class CodexSetupService:
             raise SetupError("The current MacWise Python runtime is not executable.")
         payload_digest, plugin_version = _payload_metadata(self.payload)
 
+        if not self.runner.preflight().ok:
+            raise SetupError("The installed Codex does not support the required plugin commands.")
+
         plugins_parent = _ensure_managed_parent(self.home, ("plugins",))
         marketplace_parent = _ensure_managed_parent(self.home, (".agents", "plugins"))
         plugin = plugins_parent / "macwise"
         marketplace_path = marketplace_parent / "marketplace.json"
+        _recover_owned_transaction(plugins_parent, plugin)
         if plugin.is_symlink() or (plugin.exists() and not plugin.is_dir()):
             raise SetupError("The personal MacWise plugin path is unsafe.")
 
@@ -498,21 +620,36 @@ class CodexSetupService:
 
         selector = f"macwise@{marketplace_name}"
         installed = self.runner.run(("plugin", "add", selector, "--json"))
-        if not _verified_codex_result(installed):
-            restored = self._restore_files(
-                plugin=plugin,
-                backup=backup,
-                stage=stage,
-                had_plugin=had_plugin,
-                replaced_plugin=True,
-                marketplace_path=marketplace_path,
-                original_marketplace=original_marketplace,
-                wrote_marketplace=True,
-            )
-            compensation = self.runner.run(
-                ("plugin", "add" if had_plugin else "remove", selector, "--json")
-            )
-            if not restored or not _verified_codex_result(compensation):
+        verified_install = _verified_codex_result(installed, action="installed")
+        if verified_install:
+            verified_install = self.runner.verify_installed(selector, plugin_version).ok
+        if not verified_install:
+            if had_plugin:
+                restored = self._restore_files(
+                    plugin=plugin,
+                    backup=backup,
+                    stage=stage,
+                    had_plugin=True,
+                    replaced_plugin=True,
+                    marketplace_path=marketplace_path,
+                    original_marketplace=original_marketplace,
+                    wrote_marketplace=True,
+                )
+                compensation = self.runner.run(("plugin", "add", selector, "--json"))
+            else:
+                compensation = self.runner.run(("plugin", "remove", selector, "--json"))
+                restored = self._restore_files(
+                    plugin=plugin,
+                    backup=backup,
+                    stage=stage,
+                    had_plugin=False,
+                    replaced_plugin=True,
+                    marketplace_path=marketplace_path,
+                    original_marketplace=original_marketplace,
+                    wrote_marketplace=True,
+                )
+            action = "installed" if had_plugin else "removed"
+            if not restored or not _verified_codex_result(compensation, action=action):
                 return SetupResult(
                     status=SetupStatus.INTERRUPTED,
                     message="MacWise setup failed and recovery could not be fully verified.",
