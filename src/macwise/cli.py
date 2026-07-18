@@ -986,7 +986,11 @@ def review_unknown(
         typer.Option("--all", help="Show every item whose purpose is unknown."),
     ] = False,
 ) -> None:
-    unknown = tuple(item for item in _audit().software if not item.description)
+    audit = _audit()
+    assessed_ids = {item.subject_id for item in audit.catalog_assessments if item.roles}
+    unknown = tuple(
+        item for item in audit.software if not item.description and item.id not in assessed_ids
+    )
     typer.echo("Items with an unknown purpose\n")
     visible = unknown if all_items else unknown[:_DEFAULT_RESULT_LIMIT]
     _list_records(visible)
@@ -1003,14 +1007,22 @@ def explain(
 ) -> None:
     audit = _audit()
     record = _resolve_record(audit, name)
+    assessment = next(
+        (item for item in audit.catalog_assessments if item.subject_id == record.id),
+        None,
+    )
     typer.echo(f"{safe_display_text(record.display_name)}\n")
     typer.echo("Verified facts")
     typer.echo(f"- Type: {_human_label(record.entity_type.value)}")
     typer.echo(f"- Version: {safe_display_text(record.version or 'unknown')}")
     typer.echo(f"- Installed by: {safe_display_text(record.install_source or 'unknown')}")
-    typer.echo(
-        f"- Purpose: {safe_display_text(record.description or 'unknown in the local catalog')}"
-    )
+    if record.description:
+        purpose = record.description
+    elif assessment is not None and assessment.roles:
+        purpose = f"{', '.join(assessment.roles)} (bundled catalog)"
+    else:
+        purpose = "unknown in the local catalog"
+    typer.echo(f"- Purpose: {safe_display_text(purpose)}")
     if record.dependencies:
         typer.echo(f"- Depends on: {', '.join(map(safe_display_text, record.dependencies))}")
     if record.reverse_dependencies:
@@ -1064,10 +1076,6 @@ def explain(
     _echo_findings(verified)
     typer.echo("\nInferred findings")
     _echo_findings(inferred)
-    assessment = next(
-        (item for item in audit.catalog_assessments if item.subject_id == record.id),
-        None,
-    )
     if assessment is not None:
         typer.echo(f"- Catalog roles: {', '.join(map(safe_display_text, assessment.roles))}")
         if assessment.unique_capabilities:

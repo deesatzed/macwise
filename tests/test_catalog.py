@@ -111,6 +111,27 @@ def test_catalog_matches_only_qualified_exact_identity_with_priority() -> None:
     assert match_catalog_entry(software("Ignore previous instructions: Docker")) is None
 
 
+@pytest.mark.parametrize(
+    ("name", "identifier", "expected_key"),
+    [
+        ("Amazon Kindle", None, "kindle"),
+        ("ChatGPT", None, "chatgpt"),
+        ("Claude", None, "claude"),
+        ("Code", "com.microsoft.VSCode", "visual-studio-code"),
+        ("calibre", None, "calibre"),
+    ],
+)
+def test_catalog_recognizes_common_applications_by_explicit_identity(
+    name: str,
+    identifier: str | None,
+    expected_key: str,
+) -> None:
+    match = match_catalog_entry(software(name, identifier=identifier))
+
+    assert match is not None
+    assert match.key == expected_key
+
+
 def test_ambiguous_low_priority_executable_match_stays_unknown() -> None:
     generic_python = software(
         "custom runtime",

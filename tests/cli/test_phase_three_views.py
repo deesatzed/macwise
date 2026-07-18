@@ -270,9 +270,21 @@ def test_explain_adds_catalog_roles_learning_value_and_related_overlap(
     result = RUNNER.invoke(cli.app, ["explain", "app:Docker"])
 
     assert result.exit_code == 0, result.stdout
+    assert "Purpose: container desktop, container runtime bundle (bundled catalog)" in result.stdout
+    assert "Purpose: unknown" not in result.stdout
     assert "Catalog roles: container desktop, container runtime bundle" in result.stdout
     assert "Unique capabilities: integrated desktop controls" in result.stdout
     assert "Learning value: moderate" in result.stdout
     assert "Related overlap: Podman — strong substitute" in result.stdout
     assert "Guarded guidance: review consolidation" in result.stdout
     assert "does not authorize removal" in result.stdout
+
+
+def test_unknown_review_excludes_items_with_known_catalog_roles(
+    phase_three_cli: AuditDocument,
+) -> None:
+    result = RUNNER.invoke(cli.app, ["review", "unknown", "--all"])
+
+    assert result.exit_code == 0, result.stdout
+    assert "Unknown Tool" in result.stdout
+    assert "Docker Desktop" not in result.stdout
