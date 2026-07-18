@@ -1,31 +1,89 @@
-# Synthetic demo
+# Sanitized walkthrough
 
-This transcript uses fictional software and intentionally contains no real host paths or
-inventory. Exact wording can vary with available evidence.
+This transcript uses fictional products and paths. It demonstrates the shape of verified
+MacWise output without publishing a real person's software inventory. Exact wording varies with
+the evidence available on each Mac.
+
+## Check collection health
 
 ```text
-$ macwise explain "SketchNote"
-SketchNote
+$ macwise doctor
+MacWise doctor
 
-Verified
-- Installed as an application.
-- Stored on internal storage.
-- No reliable last-use timestamp was available.
+Operating system: Darwin 27.0.0
+Python: 3.13.4
+Homebrew: available
+Execution recovery journal: no active run
+Collectors are read-only. Run macwise scan for a complete collection check.
+```
 
-Inferred
-- Its observed role is Markdown editing.
+The operating-system and Python values are examples, not minimum or preferred versions.
 
-Unknown
-- Missing last-use evidence does not mean the app was never used.
+## Review storage without APFS noise
 
-$ macwise compare "SketchNote" "WriteForge"
-Relationship: partial overlap
-- Both can edit Markdown.
-- WriteForge has a verified publishing workflow not established for SketchNote.
-- Recommendation: review both; no removal is authorized.
+```text
+$ macwise storage
+Storage volumes
 
+- Macintosh HD: internal, 156 GiB free, /
+- Project Drive: external, 1.5 TiB free, /Volumes/Project Drive
+- Backup Drive: external, 77 GiB free, /Volumes/Backup Drive
+
+Showing 3 user-relevant mounted volumes. Use --all for support and unmounted volumes.
+This command is read-only. MacWise did not change this Mac.
+```
+
+## Understand one application
+
+```text
+$ macwise explain Harbor
+Harbor
+
+Verified facts
+- Type: application
+- Installed size: 2.3 GiB
+- Usage: recently used (medium confidence)
+
+Inferred findings
+- Catalog roles: container desktop, container runtime bundle
+- Related overlap: Dockyard — strong substitute
+
+Unknowns and limitations
+- Backup coverage: not verified
+
+Guarded guidance: keep
+- Current use or dependency evidence supports keeping this item.
+```
+
+“Recently used” is limited evidence, not a permanent requirement assessment.
+
+## Compare overlap without declaring a winner
+
+```text
+$ macwise compare Harbor Dockyard
+Role-aware comparison
+
+Actual-use comparison: Harbor has stronger observed use evidence than Dockyard.
+
+Harbor and Dockyard
+Relationship: strong substitute
+Shared capabilities: containers, images
+Harbor unique: integrated desktop controls
+Dockyard unique: daemonless container workflow
+
+Guarded guidance
+- Keep: current use evidence supports keeping Harbor.
+- Learn: Dockyard may teach an alternative container workflow.
+- No recommendation: available evidence does not justify consolidation.
+```
+
+Overlap starts a review; it does not authorize removal.
+
+## Preview before any cleanup
+
+```text
 $ macwise plan add "SketchNote"
-Plan saved. No installed software or user data changed.
+Added SketchNote to cleanup plan revision 1. No installed software or user data changed.
 
 $ macwise plan show
 Candidate: SketchNote
@@ -35,5 +93,8 @@ Approval: not granted
 Rollback: restore the exact bundle if the destination remains safe
 ```
 
-The real CLI shows provenance, limitations, fingerprints, and recovery detail appropriate
-to the current audit. See [Getting started](getting-started.md).
+Apply performs fresh revalidation and requires an exact approval phrase. Undo has a separate
+approval. This walkthrough intentionally stops before either mutating command.
+
+Return to [Getting started](getting-started.md), the [launch page](index.html), or the
+[repository README](../README.md).

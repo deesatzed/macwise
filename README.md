@@ -2,15 +2,17 @@
 
 ## What MacWise does
 
-MacWise helps ordinary Mac users understand installed applications, Homebrew software,
-startup items, storage, backups, and overlapping tools before changing anything. It
-separates verified facts, cautious inferences, user-confirmed context, and unknowns.
+MacWise helps you understand the software on your Mac before you decide whether to keep,
+learn, disable, or remove anything. It reviews applications, Homebrew software, startup items,
+storage, backups, and overlapping tools while clearly separating facts from guesses.
 
-`1.0.0rc1` is a locally verified release candidate. Audit and review are read-only.
-Cleanup requires an immutable reviewed plan, fresh revalidation, an exact approval
-fingerprint, a crash-visible journal, verification, and separately approved undo. This
-is not a promise that every Mac, permission configuration, or package manager edge case
-has been proven.
+`1.0.0rc1` is a release candidate. Local quality gates, clean-clone installation, a real
+read-only macOS 27 walkthrough, and hosted CI pass. MacWise is not yet published to PyPI and no
+GitHub Release has been created, so the public one-command installation shown below is the
+after-publication path—not a claim that it works from the registry today.
+
+See the [MacWise launch page](docs/index.html) for a visual overview or go directly to
+[Getting started](docs/getting-started.md).
 
 ## Terminal example
 
@@ -32,78 +34,118 @@ What would you like to do?
 10. Help
 ```
 
-Every choice also has a deterministic command. See the [synthetic walkthrough](docs/demo.md).
+Every menu choice has a deterministic command. Inventories are concise by default and tell you
+when `--all` is available. See the [sanitized walkthrough](docs/demo.md).
 
 ## Installation
 
-The intended primary public command is:
+After publication, the primary installation command will be:
 
 ```bash
 uv tool install macwise
-```
-
-Then open MacWise:
-
-```bash
 macwise
 ```
 
-If you already use pipx, it remains a supported alternative:
+If you already use pipx, this will remain a supported alternative after publication:
 
 ```bash
 pipx install macwise
 ```
 
-The package is **not yet published**. Homebrew distribution is deferred to a later
-milestone so it cannot drift from the first release. To evaluate this exact candidate from a
+The package is **not yet published to PyPI**. To evaluate this exact candidate today, use a
 trusted checkout:
 
 ```bash
+git clone https://github.com/deesatzed/macwise.git
+cd macwise
 uv sync --locked --all-groups
+uv run macwise doctor
 uv run macwise
 ```
 
-See [Getting started](docs/getting-started.md). Removing the CLI does not remove audit
-files or local plan/recovery state you explicitly created.
+Homebrew distribution is deferred to a later milestone so it cannot drift from the first
+release. Removing the CLI does not remove reports or local plan/recovery state you explicitly
+created.
 
 ## Guided usage
 
-Run `macwise` with no arguments. It prompts in an interactive terminal and prints the
-same menu without blocking in automation. A first read-only review can be:
+Start with a read-only health check and scan:
 
 ```bash
+macwise doctor
 macwise scan
-macwise explain "Example App"
-macwise review unused
-macwise overlap
 ```
 
-Save a report only when you choose a path:
+Then ask focused questions instead of reading hundreds of lines:
+
+```bash
+macwise review largest
+macwise startup
+macwise overlap
+macwise explain Docker
+macwise compare Docker podman
+macwise backups
+```
+
+A typical useful result tells you what MacWise observed, how strong that evidence is, what it
+could not establish, and a guarded next step. For example:
+
+```text
+Actual-use comparison: Harbor has stronger observed use evidence than Dockyard.
+
+Relationship: strong substitute
+Shared capabilities: containers, images
+Harbor unique: integrated desktop controls
+Dockyard unique: daemonless container workflow
+```
+
+The names above are fictional. MacWise does not remove either item because two tools overlap.
+
+Save a report only when you explicitly choose a path:
 
 ```bash
 macwise scan --format json --output audit.json
 macwise scan --format markdown --output audit.md
 ```
 
-Existing reports are not replaced unless you add `--force`.
+Existing reports are not replaced unless you add `--force`. Reports can contain private paths
+and software inventories, so review them before sharing.
+
+### How MacWise knows
+
+MacWise reads local macOS metadata and approved system-command output. It can examine application
+bundles, Homebrew's installed-package data, launch items, mounted volumes, Spotlight usage
+metadata, and Time Machine facts. It does not search the web during an ordinary scan.
+
+Results are labeled:
+
+- **Verified:** directly observed local evidence.
+- **Inferred:** a cautious conclusion supported by multiple facts.
+- **User-confirmed:** context you explicitly supplied.
+- **Unknown:** evidence is absent or ambiguous—not proof of non-use or safety.
+
+The built-in catalog supplies general roles and overlap knowledge for recognized software. It is
+versioned with the app rather than silently updated online. A shared updateable knowledge database
+is planned for a later phase and is not part of this release candidate.
 
 ## Safety promises
 
-- Scan, explain, review, compare, storage, startup, backups, and doctor do not mutate host state.
-- Discovered metadata is untrusted data, never shell or AI instructions.
-- Missing last-use evidence never means “never used”; configured backup never means verified coverage.
-- Homebrew dependencies are not ordinary delete candidates; unknown/protected targets remain blocked.
-- Planning changes only immutable local preview state, not installed software.
-- Apply supports only closed manual-app, Homebrew, and current-user startup actions; no arbitrary command, elevation, force, zap, related-data deletion, or system daemon action exists.
-- Apply and undo require separate exact consent and verify observed state; Homebrew reinstall is explicitly best-effort.
-- Codex exposes only eight bounded read-only tools and cannot approve, apply, undo, or persist cleanup state.
+- Scan, explain, review, compare, storage, startup, backups, and doctor are read-only.
+- Discovered metadata is untrusted data, never a shell command or AI instruction.
+- Missing last-use evidence never means “never used”; a configured backup never proves coverage.
+- Homebrew dependencies are not ordinary delete candidates; unknown and protected targets block.
+- Planning creates an immutable preview and changes no installed software.
+- Apply supports a closed set of manual-app, Homebrew, and current-user startup actions—no
+  arbitrary commands, elevation, force, zap, related-data deletion, or system-daemon actions.
+- Apply and undo require separate exact approvals, fresh revalidation, and observed verification.
+- Codex exposes bounded read-only tools and cannot approve, apply, undo, or persist cleanup state.
 
 Read [Privacy](docs/privacy.md), the [Threat model](docs/threat-model.md), and the
 [Security policy](SECURITY.md) before using cleanup features.
 
 ## Codex setup
 
-Install the optional local experience for the current user:
+Install the optional local integration for the current user:
 
 ```bash
 macwise setup codex
@@ -115,39 +157,43 @@ Start a new Codex session and type:
 $macwise Explain which installed AI tools overlap and which ones appear active.
 ```
 
-Setup validates Codex compatibility and installs a bundled native plugin backed by a
-local read-only server. It needs no MacWise account or AI-provider key. The standalone
-CLI remains fully usable without Codex.
+Setup installs the bundled local plugin and read-only server. It needs no MacWise account or
+AI-provider key. The standalone CLI remains fully usable without Codex.
 
 ## Common examples
 
 ```bash
 macwise review apps
 macwise review brew
+macwise review unknown
+macwise review largest
 macwise storage
 macwise scan --format json
-macwise explain "Example App"
-macwise compare "Docker Desktop" "Podman"
+macwise explain Docker
+macwise compare Docker podman
 macwise startup
 macwise backups
-macwise plan add "Example App"
+macwise plan add SketchNote
 macwise plan show
 macwise apply
 macwise undo
 macwise doctor
 ```
 
-Use `--help` on every root or nested command.
-
-Long inventories show a concise default view. Add `--all` only when you want every
-Homebrew item, startup item, unknown item, measured application, backup-path observation,
-or mounted macOS support volume—for example, `macwise review brew --all`.
+Use `--help` on every root or nested command. Add `--all` only when you need every Homebrew item,
+startup item, unknown-purpose item, measured application, backup-path observation, or mounted
+macOS support volume.
 
 ## Release status
 
-Phases 1–6 have local acceptance audits under `docs/`. Phase 7 is preparing public
-artifacts and install paths. Hosted CI, PyPI, and GitHub Release are not claimed
-until those systems run successfully. See the [release checklist](docs/release-checklist.md).
+Phases 1–6 are complete against their recorded local acceptance evidence. Phase 7 has a locally
+and hosted-CI-verified `1.0.0rc1` candidate. Hosted CI passes across the repository's supported
+matrix; PyPI trusted-publisher configuration, the authorized release tag/workflow, the GitHub
+prerelease, and a clean public UV installation remain external release gates.
+
+No release tag has been created. Homebrew publishing and the shared online knowledge database are
+later milestones, not hidden launch dependencies. See the [Phase 7 acceptance audit](docs/phase-7-acceptance.md)
+and [release checklist](docs/release-checklist.md).
 
 ## Development
 

@@ -12,8 +12,15 @@ macwise
 If `uv` is not installed, follow the official installation instructions at
 <https://docs.astral.sh/uv/getting-started/installation/>. Existing pipx users may use
 `pipx install macwise` instead. Homebrew distribution is deferred to a later milestone.
-Until `1.0.0rc1` is published, evaluate a trusted candidate checkout with
-`uv sync --locked --all-groups`, then `uv run macwise`.
+Until `1.0.0rc1` is published, evaluate a trusted candidate checkout:
+
+```zsh
+git clone https://github.com/deesatzed/macwise.git
+cd macwise
+uv sync --locked --all-groups
+uv run macwise doctor
+uv run macwise
+```
 
 MacWise starts with a numbered menu. Choosing a read-only review never requires cleanup
 permission. Start with Scan this Mac, then ask about one unfamiliar item.
@@ -37,7 +44,15 @@ value stays visible.
 Long inventories are summarized by default. When the summary says more records exist,
 use the exact suggested `--all` command to inspect the complete detail.
 
-## 4. Plan before applying
+## 4. Understand where knowledge comes from
+
+MacWise scans local application metadata and bounded output from macOS, Homebrew,
+Spotlight, and Time Machine tools. It does not perform a live web search during a normal
+scan. General purposes and overlap roles come from the catalog shipped with this version.
+This makes results reproducible, but an unrecognized or newly changed product can remain
+unknown until the catalog is updated.
+
+## 5. Plan before applying
 
 `macwise plan add NAME` creates an immutable preview. `macwise plan show` displays every
 proposed action, blocker, rollback step, and limitation without changing installed
@@ -47,7 +62,7 @@ Only continue to `macwise apply` after reading the exact preview and approval ph
 Apply re-collects evidence and refuses changed state. `macwise undo` uses a separate
 approval and verifies reverse actions. Related user data is never included.
 
-## 5. Optional Codex conversation
+## 6. Optional Codex conversation
 
 Run `macwise setup codex`, restart Codex, and type `$macwise`. The plugin can review
 bounded local facts and pure removal previews, but cannot apply or undo anything. Return

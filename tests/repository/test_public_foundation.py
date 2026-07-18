@@ -5,9 +5,25 @@ import subprocess
 import tarfile
 import tomllib
 import zipfile
+from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 ROOT = Path(__file__).parents[2]
+
+
+class LocalLinkParser(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.links: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag not in {"a", "link"}:
+            return
+        attribute = "href"
+        for name, value in attrs:
+            if name == attribute and value:
+                self.links.append(value)
 
 
 def public_candidate_files() -> tuple[Path, ...]:
@@ -35,6 +51,8 @@ def test_required_public_repository_files_exist() -> None:
         "docs/threat-model.md",
         "docs/getting-started.md",
         "docs/demo.md",
+        "docs/index.html",
+        "docs/assets/macwise.css",
         "docs/release-checklist.md",
         "skills/macwise/SKILL.md",
         "skills/macwise/agents/openai.yaml",
@@ -75,6 +93,58 @@ def test_readme_starts_with_the_required_novice_sections_in_order() -> None:
     assert "setup codex` still refuses" not in readme
     assert "not enabled in the current" not in readme
     assert "1.0.0rc1" in readme
+    assert "hosted ci passes" in readme.lower()
+    assert "not yet published to pypi" in readme.lower()
+    assert "docs/index.html" in readme
+    assert "how macwise knows" in readme.lower()
+
+
+def test_landing_page_has_launch_content_without_remote_assets_or_scripts() -> None:
+    page = (ROOT / "docs" / "index.html").read_text(encoding="utf-8")
+
+    for required in (
+        "Understand what is installed on your Mac",
+        "uv tool install macwise",
+        "Read-only by default",
+        "How MacWise knows",
+        "1.0.0rc1",
+        "Hosted CI passes",
+    ):
+        assert required in page
+    assert '<meta name="viewport"' in page
+    assert "<main" in page
+    assert "<script" not in page.lower()
+    assert "http://" not in page
+    parser = LocalLinkParser()
+    parser.feed(page)
+    assert not any(urlparse(link).scheme in {"http", "https"} for link in parser.links)
+
+
+def test_public_entry_points_have_no_broken_local_links() -> None:
+    markdown_files = (ROOT / "README.md", ROOT / "docs" / "getting-started.md")
+    html_file = ROOT / "docs" / "index.html"
+    links: list[tuple[Path, str]] = []
+
+    markdown_link_pattern = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+    for source in markdown_files:
+        for target in markdown_link_pattern.findall(source.read_text(encoding="utf-8")):
+            links.append((source, target))
+
+    parser = LocalLinkParser()
+    parser.feed(html_file.read_text(encoding="utf-8"))
+    links.extend((html_file, target) for target in parser.links)
+
+    missing: list[str] = []
+    for source, target in links:
+        parsed = urlparse(target)
+        if parsed.scheme or parsed.netloc or target.startswith(("#", "mailto:")):
+            continue
+        path = unquote(parsed.path)
+        resolved = (source.parent / path).resolve()
+        if not resolved.exists():
+            missing.append(f"{source.relative_to(ROOT)} -> {target}")
+
+    assert not missing, f"Broken local public links: {missing}"
 
 
 def test_packaging_metadata_points_to_public_docs_and_mit_license() -> None:

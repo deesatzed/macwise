@@ -202,3 +202,15 @@ None required for local implementation. PyPI account configuration is required i
 - 2026-07-18 corrected-UX local gate: 389 tests passed in 34.18s before the final same-name/largest refinements; the affected CLI/overlap/catalog suites then passed 27 and 21 focused tests respectively. Ruff format/lint, Pyright, repository contracts, wheel/sdist build, and `git diff --check` passed after the final corrections.
 - 2026-07-18 autonomous final-clone proof: three successive GitHub clones were used because the walkthrough itself exposed and corrected two additional presentation defects. The final isolated UV-tool clone matched code commit `274343b`, installed 38 packages under Python 3.12.11, and reported MacWise `1.0.0rc1`. A real read-only schema-4 audit contained 325 software records, 28 startup records, 28 volumes, 325 findings, 6 overlap relations, and 26 guarded recommendations. Homebrew, backups, and storage collectors were complete; application, overlap, startup, and usage collectors remained explicitly partial with recorded limitations.
 - 2026-07-18 corrected real-Mac results: `macwise storage` showed only the three user-relevant mounted volumes by default and agreed with `df` at collection precision (about 156 GiB, 1.5 TiB, and 77 GiB free). Backups foregrounded the independently verified 18-day-old timestamp and stale warning; Homebrew and startup defaults showed 20 of 256 and 20 of 28 with exact `--all` recovery; unknown-purpose output fell to 53 and excluded explicitly cataloged common apps; overlap removed the false Python pair and disambiguated two ChatGPT paths; largest showed readable sizes and 20 of 69 applications. No cleanup/apply/undo command ran.
+- 2026-07-18 launch-doc RED/GREEN: repository contracts failed on the absent landing-page assets,
+  stale hosted-CI wording, and unchecked links before passing with a rewritten novice README,
+  expanded sanitized walkthrough, explicit knowledge-source limits, and a framework-free static
+  site with no scripts, remote assets, trackers, or real inventory.
+- 2026-07-18 launch-page visual check: headless Chrome rendered the page at 1440x1200 and 390x844.
+  The first mobile render exposed horizontal clipping from intrinsic terminal/header width; a CSS
+  correction constrained grid children and hid narrow navigation, and the second render passed
+  visual inspection without clipping. Production GitHub Pages publication was not enabled.
+- 2026-07-18 launch-doc local gate: 392 tests passed in 39.60s; Ruff format/lint, Pyright,
+  wheel/sdist build, workflow YAML parsing, documentation links, repository privacy contracts,
+  and `git diff --check` passed. Scoped TODO/FIXME/HACK/XXX/NotImplemented and skipped/xfail
+  scans found no launch-blocking implementation gap. Public PyPI/GitHub release proof remains open.

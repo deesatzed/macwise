@@ -6,6 +6,10 @@ MacWise follows Semantic Versioning. Release candidates may still change while p
 
 ### Added
 
+- Responsive static launch page with sanitized storage, explanation, overlap, safety, and
+  installation examples.
+- Truth-oriented documentation contracts for required launch assets, release-status language,
+  local links, and remote-asset-free rendering.
 - Guided no-argument CLI and complete public command hierarchy.
 - Contract-tested help for root and nested commands.
 - Read-only application, Homebrew, and storage collectors.
@@ -36,6 +40,12 @@ MacWise follows Semantic Versioning. Release candidates may still change while p
 - Exclusive same-filesystem Trash move/restore for standard application roots with device/inode verification and no replacement.
 - Fixed-path, shell-free Homebrew formula/cask/service and current-user LaunchAgent adapters with structured identity validation, bounded fake-runner-tested execution, unchanged-plist hashing, and fresh after-state verification.
 - Review-first `apply` and `undo` CLI workflows with exact interactive/non-interactive approval, durable recovery-state guidance, no elevation, preserved related data, and explicit best-effort Homebrew undo limits.
+
+### Changed
+
+- Reworked the README, getting-started guide, and demo around a novice first-run journey,
+  explicit evidence sources, bounded output, and the difference between a verified candidate
+  and a published release.
 
 ## [1.0.0rc1] - 2026-07-18
 

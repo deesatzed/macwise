@@ -29,6 +29,12 @@ pipx as an alternative, and defers Homebrew distribution to a later milestone.
   checks artifacts, publishes checksums, and creates a GitHub prerelease only after PyPI.
 - The manual public smoke now installs through isolated `uv tool` state and verifies
   PyPI/GitHub artifact and checksum identity.
+- The README and framework-free landing page explain the candidate honestly, use sanitized
+  examples, distinguish trusted-checkout evaluation from after-publication installation, and
+  expose local-link/privacy contracts. Desktop and 390-pixel mobile Chrome renders were inspected
+  locally without remote assets or scripts.
+- Hosted run `29646278423` passed all nine jobs after the final real-Mac UX corrections. A new
+  hosted run is still required for the final documentation commit before release.
 
 ## Claim validation
 
@@ -42,3 +48,6 @@ release workflow, and clean public UV-tool installation.
 The public GitHub repository now exists. The PyPI project remains absent until the
 trusted publisher first publishes. The absent Homebrew tap is intentional deferred
 scope rather than a release blocker.
+
+The shared updateable knowledge database is also deferred to a later phase. `1.0.0rc1` performs
+ordinary scans from local evidence and uses only its versioned bundled role catalog.

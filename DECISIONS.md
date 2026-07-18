@@ -22,6 +22,7 @@ This file records durable architecture, UX, safety, privacy, dependency, and rel
 | D-012 | 2026-07-17 | Ship the initial `macwise` skill as a focused read-only, CLI-backed workflow while keeping `macwise setup codex` disabled. | The skill is already useful for evidence-shaped review, but enabling setup before typed integration and clean-install tests would misrepresent Phase 6 readiness. | Accepted |
 | D-013 | 2026-07-17 | Pin CI actions to resolved commits and test the lockfile on Linux and macOS with Python 3.12 and 3.13. | Public CI is a supply-chain and compatibility boundary; commit pins reduce tag drift and the matrix covers both parser portability and the product platform. | Accepted |
 | D-036 | 2026-07-18 | Default human-facing inventory views to bounded decision-oriented summaries, with explicit `--all` detail; treat current APFS container free space as the mounted-volume fallback and keep exact evidence in structured audits. | A real clean-clone walkthrough on macOS 27 found correct collection buried by hundreds of lines, misleading zero-byte APFS output, inconsistent overlap terminology, and catalog-purpose contradictions. | Accepted |
+| D-037 | 2026-07-18 | Keep the launch site as a framework-free static page under `docs/`, with sanitized examples and no remote assets, trackers, or live data. | The public launch surface should remain reviewable with the Python repository, work locally and on GitHub Pages, and avoid a second application stack or unsupported knowledge claims. | Accepted |
 
 ## MW-009 Decisions
 
