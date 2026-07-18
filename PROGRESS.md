@@ -68,11 +68,11 @@ Phases 1-6 are locally accepted. The public repository exists and hosted run `29
 
 ## Current Milestone
 
-UV-first `1.0.0rc1` candidate UX correction is under final clean-clone verification; public publication and public UV-tool proof remain explicitly gated.
+UV-first `1.0.0rc1` candidate UX correction and autonomous clean-clone verification are complete; public publication and public UV-tool proof remain explicitly gated.
 
 ## Next Actions
 
-1. Complete the autonomous corrected-UX clean-clone run-through and exact-head CI.
+1. Confirm exact-head hosted CI for the corrected UX commit.
 2. Configure the GitHub `pypi` environment and PyPI pending trusted publisher.
 3. Run the exact RC release workflow, then verify public UV-tool installation.
 4. Update acceptance from external evidence; never infer those results from local structure.
@@ -198,3 +198,7 @@ None required for local implementation. PyPI account configuration is required i
 - 2026-07-18 clean-clone proof: `/tmp/macwise-cleanclone.pv260p/repo` cloned commit `632eb587c34265cf2adb5543fa401ecbdd9cb72a`, matched `origin/main`, and was clean. `uv build` produced `1.0.0rc1` wheel/sdist; isolated `UV_TOOL_DIR`/`UV_TOOL_BIN_DIR` installation under Python 3.12 installed 38 packages and the `macwise` executable without touching global UV tool state.
 - 2026-07-18 novice command proof from the clean clone: installed `macwise --version`, root help, no-argument guided menu, scan help, Codex setup help, and Homebrew review help all exited 0. A real read-only schema-4 scan completed with 325 software records (69 applications, 27 casks, 229 formulae), 28 startup records, 28 volumes, 325 findings, 6 overlaps, and 21 guarded recommendations; no inventory was committed.
 - 2026-07-18 real Homebrew proof from the clean clone: the Homebrew collector completed with 256 records and zero limitations, and `macwise review brew` exited 0 with a 745-line local report redirected to temporary private output. `macwise doctor` also exited 0. Names, paths, and inventory remain only under the temporary clone root.
+- 2026-07-18 corrected-UX TDD: regressions reproduced APFS `FreeSpace=0` despite positive `APFSContainerFree`, unbounded Homebrew/startup/unknown/largest/backup output, raw byte sizes, missing direct overlap command, false Python-version duplicate classification, catalog-purpose contradictions, same-name overlap ambiguity, and Homebrew records leaking into the application-largest view. Each regression failed before its minimal correction passed.
+- 2026-07-18 corrected-UX local gate: 389 tests passed in 34.18s before the final same-name/largest refinements; the affected CLI/overlap/catalog suites then passed 27 and 21 focused tests respectively. Ruff format/lint, Pyright, repository contracts, wheel/sdist build, and `git diff --check` passed after the final corrections.
+- 2026-07-18 autonomous final-clone proof: three successive GitHub clones were used because the walkthrough itself exposed and corrected two additional presentation defects. The final isolated UV-tool clone matched code commit `274343b`, installed 38 packages under Python 3.12.11, and reported MacWise `1.0.0rc1`. A real read-only schema-4 audit contained 325 software records, 28 startup records, 28 volumes, 325 findings, 6 overlap relations, and 26 guarded recommendations. Homebrew, backups, and storage collectors were complete; application, overlap, startup, and usage collectors remained explicitly partial with recorded limitations.
+- 2026-07-18 corrected real-Mac results: `macwise storage` showed only the three user-relevant mounted volumes by default and agreed with `df` at collection precision (about 156 GiB, 1.5 TiB, and 77 GiB free). Backups foregrounded the independently verified 18-day-old timestamp and stale warning; Homebrew and startup defaults showed 20 of 256 and 20 of 28 with exact `--all` recovery; unknown-purpose output fell to 53 and excluded explicitly cataloged common apps; overlap removed the false Python pair and disambiguated two ChatGPT paths; largest showed readable sizes and 20 of 69 applications. No cleanup/apply/undo command ran.
