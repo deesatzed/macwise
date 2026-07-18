@@ -1,5 +1,6 @@
 import shutil
 import sqlite3
+from contextlib import closing
 import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
@@ -125,7 +126,7 @@ def test_sql_and_terminal_shaped_values_remain_inert_and_cannot_forge_output(
     assert "\x1b" not in result.stdout
     assert "\u202e" not in result.stdout
     assert "\n## Forged plan section" not in result.stdout
-    with sqlite3.connect(store.path) as connection:
+    with closing(sqlite3.connect(store.path)) as connection, connection:
         tables = {
             row[0]
             for row in connection.execute(

@@ -1,5 +1,6 @@
 import hashlib
 import sqlite3
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -120,7 +121,7 @@ def test_execution_store_is_read_only_until_first_locked_append_and_round_trips(
     assert store.active() == run()
     document_json = canonical_execution_json(run())
     assert execution_digest(run()) == hashlib.sha256(document_json.encode()).hexdigest()
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         assert connection.execute("PRAGMA user_version").fetchone() == (1,)
         stored_json, stored_digest = connection.execute(
             "SELECT document_json, document_sha256 FROM execution_revisions"
@@ -178,7 +179,7 @@ def test_execution_store_rejects_corruption_and_future_schema_without_mutation(
     store = ExecutionStore(database, lock_path=lock_path)
     with StateLock(lock_path) as held:
         store.append(run(), state_lock=held)
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         connection.execute(
             "UPDATE execution_revisions SET document_json = ?",
             ('{"tampered":true}',),
@@ -187,7 +188,7 @@ def test_execution_store_rejects_corruption_and_future_schema_without_mutation(
         store.active()
 
     future = tmp_path / "future.db"
-    with sqlite3.connect(future) as connection:
+    with closing(sqlite3.connect(future)) as connection, connection:
         connection.execute("PRAGMA user_version = 2")
     before = future.read_bytes()
     with pytest.raises(ExecutionStoreError, match="newer MacWise schema"):
@@ -332,7 +333,7 @@ def test_historical_resume_rechecks_prior_revision_integrity(tmp_path: Path) -> 
                 state_lock=held,
             )
 
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         document = connection.execute(
             "SELECT document_json FROM execution_revisions WHERE run_id = ? AND manifest_revision = 3",
             ("run:a",),

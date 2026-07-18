@@ -1,6 +1,7 @@
 import hashlib
 import json
 import sqlite3
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -103,7 +104,7 @@ def test_construction_is_read_only_and_first_append_creates_versioned_store(
     store.append(plan())
 
     assert database.is_file()
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         version = connection.execute("PRAGMA user_version").fetchone()
         tables = {
             row[0]
@@ -125,7 +126,7 @@ def test_append_and_active_round_trip_canonical_json_with_integrity_digest(
     store.append(expected)
 
     assert store.active() == expected
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         document_json, digest = connection.execute(
             "SELECT document_json, document_sha256 FROM plan_revisions"
         ).fetchone()
@@ -147,7 +148,7 @@ def test_revisions_are_append_only_and_only_active_pointer_advances(tmp_path: Pa
     store.append(plan(2))
 
     assert store.active() == plan(2)
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         revisions = connection.execute(
             "SELECT revision FROM plan_revisions ORDER BY revision"
         ).fetchall()
@@ -167,7 +168,7 @@ def test_tampered_digest_and_malformed_document_fail_closed(tmp_path: Path) -> N
     store = PlanStore(database)
     store.append(plan())
 
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         connection.execute(
             "UPDATE plan_revisions SET document_json = ?",
             ('{"schema_version":1}',),
@@ -177,7 +178,7 @@ def test_tampered_digest_and_malformed_document_fail_closed(tmp_path: Path) -> N
         store.active()
 
     malformed = '{"schema_version":1}'
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         connection.execute(
             "UPDATE plan_revisions SET document_json = ?, document_sha256 = ?",
             (malformed, hashlib.sha256(malformed.encode()).hexdigest()),
@@ -189,13 +190,13 @@ def test_tampered_digest_and_malformed_document_fail_closed(tmp_path: Path) -> N
 
 def test_future_database_schema_refuses_without_mutation(tmp_path: Path) -> None:
     database = tmp_path / "future.db"
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         connection.execute("PRAGMA user_version = 2")
 
     store = PlanStore(database)
     with pytest.raises(PlanStoreError, match="newer"):
         store.active()
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         assert connection.execute("PRAGMA user_version").fetchone() == (2,)
 
 
@@ -212,7 +213,7 @@ def test_reading_existing_zero_version_database_does_not_initialize_or_mutate_it
 
 def test_reading_unknown_zero_version_schema_refuses_without_mutation(tmp_path: Path) -> None:
     database = tmp_path / "unknown.db"
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         connection.execute("CREATE TABLE unrelated (value TEXT NOT NULL)")
     before = database.read_bytes()
 
@@ -233,7 +234,7 @@ def test_competing_initial_plan_cannot_replace_active_pointer(tmp_path: Path) ->
         store.append(competing)
 
     assert store.active() == first
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         assert connection.execute("SELECT COUNT(*) FROM plan_revisions").fetchone() == (1,)
 
 
@@ -256,7 +257,7 @@ def test_transaction_failure_preserves_prior_active_revision(tmp_path: Path) -> 
     database = tmp_path / "macwise.db"
     store = PlanStore(database)
     store.append(plan(1))
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         connection.execute(
             """
             CREATE TRIGGER reject_active_update
@@ -271,7 +272,7 @@ def test_transaction_failure_preserves_prior_active_revision(tmp_path: Path) -> 
         store.append(plan(2))
 
     assert store.active() == plan(1)
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         assert connection.execute("SELECT COUNT(*) FROM plan_revisions").fetchone() == (1,)
 
 

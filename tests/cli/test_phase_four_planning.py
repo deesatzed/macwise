@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -207,7 +208,7 @@ def test_store_errors_fail_closed_with_recovery_message(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     database = tmp_path / "future.db"
-    with sqlite3.connect(database) as connection:
+    with closing(sqlite3.connect(database)) as connection, connection:
         connection.execute("PRAGMA user_version = 2")
     monkeypatch.setattr(cli, "_plan_store_factory", lambda: PlanStore(database))
 

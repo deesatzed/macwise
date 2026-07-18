@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -140,7 +141,7 @@ def test_execution_service_journals_before_move_verifies_and_undoes_synthetic_bu
     assert destination.is_dir()
     assert not source.exists()
     assert execution_store.active() == applied
-    with sqlite3.connect(execution_store.path) as connection:
+    with closing(sqlite3.connect(execution_store.path)) as connection, connection:
         assert connection.execute("SELECT COUNT(*) FROM execution_revisions").fetchone() == (3,)
 
     with pytest.raises(ExecutionServiceError, match="already executed"):
@@ -148,7 +149,7 @@ def test_execution_service_journals_before_move_verifies_and_undoes_synthetic_bu
             prepared,
             approval=apply_approval_phrase(prepared.plan_digest),
         )
-    with sqlite3.connect(execution_store.path) as connection:
+    with closing(sqlite3.connect(execution_store.path)) as connection, connection:
         assert connection.execute("SELECT COUNT(*) FROM execution_revisions").fetchone() == (3,)
 
     class RestoreThenLoseEvidence:
@@ -175,7 +176,7 @@ def test_execution_service_journals_before_move_verifies_and_undoes_synthetic_bu
     assert undone.state is ExecutionState.UNDONE
     assert source.is_dir()
     assert not destination.exists()
-    with sqlite3.connect(execution_store.path) as connection:
+    with closing(sqlite3.connect(execution_store.path)) as connection, connection:
         assert connection.execute("SELECT COUNT(*) FROM execution_revisions").fetchone() == (6,)
 
 
@@ -329,5 +330,5 @@ def test_execution_service_records_failure_after_in_progress_before_stopping(
     assert active.actions[0].state is ActionState.IN_PROGRESS
     assert active.actions[0].verification.value == "unknown"
     assert source.is_dir()
-    with sqlite3.connect(execution_store.path) as connection:
+    with closing(sqlite3.connect(execution_store.path)) as connection, connection:
         assert connection.execute("SELECT COUNT(*) FROM execution_revisions").fetchone() == (3,)
