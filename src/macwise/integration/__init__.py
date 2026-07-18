@@ -17,9 +17,11 @@ from macwise.integration.models import (
     ToolStatus,
     Unknown,
 )
+from macwise.integration.service import CodexReadService
 
 __all__ = [
     "AuditMacRequest",
+    "CodexReadService",
     "Fact",
     "FindOverlapsRequest",
     "InspectBackupsRequest",
