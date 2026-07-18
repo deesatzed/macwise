@@ -249,8 +249,13 @@ def test_backups_reports_facts_and_explicitly_refuses_coverage(
     assert "Configured: yes" in result.stdout
     assert "Available destination: System" in result.stdout
     assert "2026-07-16T23:15:00+00:00" in result.stdout
-    assert "not excluded" in result.stdout
-    assert "does not prove coverage" in result.stdout
+    assert "1 related paths were checked" in result.stdout
+    assert "macwise backups --all" in result.stdout
     assert "A timestamp does not prove path-level recoverability." in result.stdout
     assert "Backup coverage: Not verified." in result.stdout
     assert "No changes were made" not in result.stdout
+
+    detailed = RUNNER.invoke(cli.app, ["backups", "--all"])
+    assert detailed.exit_code == 0, detailed.stdout
+    assert "not excluded" in detailed.stdout
+    assert "does not prove coverage" in detailed.stdout

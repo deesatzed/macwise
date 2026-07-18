@@ -135,6 +135,8 @@ app.add_typer(codex_app, name="codex", hidden=True)
 
 _service_factory: Callable[[], AuditService] = AuditService
 _plan_store_factory: Callable[[], PlanStore] = PlanStore
+_now: Callable[[], datetime] = lambda: datetime.now(UTC)
+_DEFAULT_RESULT_LIMIT = 20
 
 
 class CLICodexSetupService(Protocol):
@@ -543,6 +545,12 @@ def _bytes(value: int | None) -> str:
     return f"{int(amount)} {unit}" if unit == "bytes" else f"{amount:.1f} {unit}"
 
 
+def _echo_hidden_count(*, total: int, shown: int, command: str) -> None:
+    hidden = total - shown
+    if hidden > 0:
+        typer.echo(f"\nShowing {shown} of {total}. Run {command} to see all {total}.")
+
+
 def _finding_summary(finding: Finding) -> str:
     if finding.topic is FindingTopic.USAGE and finding.usage_label is not None:
         topic = f"Usage: {_human_label(finding.usage_label.value)}"
@@ -845,14 +853,25 @@ def review_apps() -> None:
 
 
 @review_app.command("brew", help=HELP["review_brew"])
-def review_brew() -> None:
+def review_brew(
+    all_items: Annotated[
+        bool,
+        typer.Option("--all", help="Show the complete Homebrew inventory."),
+    ] = False,
+) -> None:
     records = tuple(
         item
         for item in _audit().software
         if item.entity_type in {EntityType.HOMEBREW_FORMULA, EntityType.HOMEBREW_CASK}
     )
     typer.echo("Homebrew software\n")
-    _list_records(records)
+    visible = records if all_items else records[:_DEFAULT_RESULT_LIMIT]
+    _list_records(visible)
+    _echo_hidden_count(
+        total=len(records),
+        shown=len(visible),
+        command="macwise review brew --all",
+    )
     typer.echo("\nDependencies are not presented as independently selected applications.")
 
 
@@ -892,20 +911,31 @@ def review_duplicates() -> None:
 
 
 @review_app.command("largest", help=HELP["review_largest"])
-def review_largest() -> None:
+def review_largest(
+    all_items: Annotated[
+        bool,
+        typer.Option("--all", help="Show every measured application bundle."),
+    ] = False,
+) -> None:
     measured = sorted(
         (item for item in _audit().software if item.size_bytes is not None),
         key=lambda item: item.size_bytes or 0,
         reverse=True,
     )
     typer.echo("Largest measured application bundles\n")
-    for record in measured:
+    visible = measured if all_items else measured[:_DEFAULT_RESULT_LIMIT]
+    for record in visible:
         typer.echo(
-            f"- {safe_display_text(record.display_name)}: {record.size_bytes} bytes "
+            f"- {safe_display_text(record.display_name)}: {_bytes(record.size_bytes)} "
             f"({record.storage_location.value})"
         )
     if not measured:
         typer.echo("No application bundle sizes were collected.")
+    _echo_hidden_count(
+        total=len(measured),
+        shown=len(visible),
+        command="macwise review largest --all",
+    )
     typer.echo("\nRelated data is not included, so this is not a reclaimable-space estimate.")
 
 
@@ -944,10 +974,21 @@ def review_unused() -> None:
 
 
 @review_app.command("unknown", help=HELP["review_unknown"])
-def review_unknown() -> None:
+def review_unknown(
+    all_items: Annotated[
+        bool,
+        typer.Option("--all", help="Show every item whose purpose is unknown."),
+    ] = False,
+) -> None:
     unknown = tuple(item for item in _audit().software if not item.description)
     typer.echo("Items with an unknown purpose\n")
-    _list_records(unknown)
+    visible = unknown if all_items else unknown[:_DEFAULT_RESULT_LIMIT]
+    _list_records(visible)
+    _echo_hidden_count(
+        total=len(unknown),
+        shown=len(visible),
+        command="macwise review unknown --all",
+    )
 
 
 @app.command(help=HELP["explain"])
@@ -1160,7 +1201,12 @@ def compare(
 
 
 @app.command(help=HELP["startup"])
-def startup() -> None:
+def startup(
+    all_items: Annotated[
+        bool,
+        typer.Option("--all", help="Show every collected startup and background item."),
+    ] = False,
+) -> None:
     audit = _audit()
     records = {record.id: record for record in audit.software}
     typer.echo("Startup and background items\n")
@@ -1170,7 +1216,8 @@ def startup() -> None:
     )
     if not startup_items:
         typer.echo("No startup or background records were collected.")
-    for item in startup_items:
+    visible = startup_items if all_items else startup_items[:_DEFAULT_RESULT_LIMIT]
+    for item in visible:
         owners = [
             safe_display_text(records[owner_id].display_name)
             for owner_id in item.owner_software_ids
@@ -1182,6 +1229,11 @@ def startup() -> None:
         typer.echo(f"  Running: {_tri_state(item.running)}")
         if item.source_path:
             typer.echo(f"  Source: {safe_display_text(item.source_path)}")
+    _echo_hidden_count(
+        total=len(startup_items),
+        shown=len(visible),
+        command="macwise startup --all",
+    )
     typer.echo("This command is read-only. MacWise did not change this Mac.")
 
 
@@ -1208,7 +1260,12 @@ def storage() -> None:
 
 
 @app.command(help=HELP["backups"])
-def backups() -> None:
+def backups(
+    all_items: Annotated[
+        bool,
+        typer.Option("--all", help="Also show every related-path exclusion observation."),
+    ] = False,
+) -> None:
     audit = _audit()
     backup = audit.backup
     volumes = {volume.id: volume for volume in audit.volumes}
@@ -1226,20 +1283,35 @@ def backups() -> None:
                 typer.echo(f"Available destination: {safe_display_text(label)}")
         else:
             typer.echo("Available destination: none observed")
-        latest = backup.last_backup_at.isoformat() if backup.last_backup_at else "unknown"
-        typer.echo(f"Last verifiable backup: {latest}")
-
-    typer.echo("\nRelated-path exclusion observations")
-    if not audit.path_evidence:
-        typer.echo("- No related paths were measured.")
-    for item in sorted(audit.path_evidence, key=lambda value: (value.path.casefold(), value.id)):
-        if item.backup_excluded is True:
-            state = "excluded from Time Machine"
-        elif item.backup_excluded is False:
-            state = "not excluded from Time Machine"
+        if backup.last_backup_at is None:
+            typer.echo("Last verifiable backup: unknown")
         else:
-            state = "Time Machine exclusion unknown"
-        typer.echo(f"- {safe_display_text(item.path)}: {state}; this does not prove coverage.")
+            age_days = max(0, (_now().date() - backup.last_backup_at.date()).days)
+            age = "today" if age_days == 0 else f"{age_days} days ago"
+            typer.echo(f"Last verifiable backup: {backup.last_backup_at.isoformat()} ({age})")
+            if age_days > 7:
+                typer.echo("Attention: This backup evidence may be stale (more than 7 days old).")
+
+    if all_items:
+        typer.echo("\nRelated-path exclusion observations")
+        if not audit.path_evidence:
+            typer.echo("- No related paths were measured.")
+        for item in sorted(
+            audit.path_evidence,
+            key=lambda value: (value.path.casefold(), value.id),
+        ):
+            if item.backup_excluded is True:
+                state = "excluded from Time Machine"
+            elif item.backup_excluded is False:
+                state = "not excluded from Time Machine"
+            else:
+                state = "Time Machine exclusion unknown"
+            typer.echo(f"- {safe_display_text(item.path)}: {state}; this does not prove coverage.")
+    elif audit.path_evidence:
+        typer.echo(
+            f"\n{len(audit.path_evidence)} related paths were checked. "
+            "Run macwise backups --all to review each observation."
+        )
     if backup is not None:
         for limitation in backup.limitations:
             typer.echo(f"Limitation: {safe_display_text(limitation)}")

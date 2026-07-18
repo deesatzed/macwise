@@ -75,7 +75,7 @@ HELP: dict[str, str] = {
         "Lists Homebrew formulae and casks while separating selected tools from dependencies.",
         "you want to understand command-line software without treating libraries as chosen apps.",
         READ_ONLY,
-        ("macwise review brew", "macwise explain formula:openssl@3"),
+        ("macwise review brew", "macwise review brew --all", "macwise explain formula:openssl@3"),
         ("Run macwise startup.", "Run macwise explain NAME."),
     ),
     "review_startup": _help(
@@ -96,7 +96,7 @@ HELP: dict[str, str] = {
         "Lists the largest measured application bundles and says when related data is still unknown.",
         "you want to find measured software space without overstating reclaimable storage.",
         READ_ONLY,
-        ("macwise review largest", "macwise storage"),
+        ("macwise review largest", "macwise review largest --all", "macwise storage"),
         ("Run macwise explain NAME.", "Run macwise plan."),
     ),
     "review_unused": _help(
@@ -110,7 +110,7 @@ HELP: dict[str, str] = {
         "Lists installed records whose purpose or other important metadata is still unknown.",
         "you want to focus research on ambiguous software rather than search for everything.",
         READ_ONLY,
-        ("macwise review unknown", "macwise explain NAME"),
+        ("macwise review unknown", "macwise review unknown --all", "macwise explain NAME"),
         ("Run macwise explain NAME.", "Run macwise scan --format markdown."),
     ),
     "explain": _help(
@@ -131,7 +131,7 @@ HELP: dict[str, str] = {
         "Shows collected launch and Homebrew startup items, conservative owners, and enabled/running unknowns.",
         "you want a cautious view of software that may run in the background.",
         READ_ONLY,
-        ("macwise startup", "macwise review startup"),
+        ("macwise startup", "macwise startup --all", "macwise review startup"),
         ("Run macwise explain NAME.", "Run macwise scan."),
     ),
     "storage": _help(
@@ -145,7 +145,7 @@ HELP: dict[str, str] = {
         "Reports only backup facts MacWise can verify and refuses to equate configuration with coverage.",
         "you want to understand backup limitations before planning cleanup.",
         READ_ONLY,
-        ("macwise backups", "macwise plan"),
+        ("macwise backups", "macwise backups --all", "macwise plan"),
         ("Run macwise storage.", "Run macwise plan after backup evidence is available."),
     ),
     "plan": _help(
