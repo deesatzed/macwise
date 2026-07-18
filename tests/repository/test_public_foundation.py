@@ -32,6 +32,9 @@ def test_required_public_repository_files_exist() -> None:
         "pyproject.toml",
         "docs/privacy.md",
         "docs/threat-model.md",
+        "docs/getting-started.md",
+        "docs/demo.md",
+        "docs/release-checklist.md",
         "skills/macwise/SKILL.md",
         "skills/macwise/agents/openai.yaml",
         ".github/workflows/ci.yml",
@@ -64,6 +67,9 @@ def test_readme_starts_with_the_required_novice_sections_in_order() -> None:
     assert "macwise review apps" in readme
     assert "macwise scan --format json" in readme
     assert "not yet published" in readme.lower()
+    assert "setup codex` still refuses" not in readme
+    assert "not enabled in the current" not in readme
+    assert "1.0.0rc1" in readme
 
 
 def test_packaging_metadata_points_to_public_docs_and_mit_license() -> None:

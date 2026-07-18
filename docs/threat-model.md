@@ -127,7 +127,16 @@ applied, or ambiguous. It reverses only unchanged/applied states; ambiguous stat
 durably interrupted. Recovery history can reach an older still-applied run after a newer
 run has already been fully undone.
 
-## Remaining write-boundary requirements
+## Release supply chain
+
+The release candidate is built from locked dependencies and inspected artifacts. Release
+automation must run only for an exact matching RC tag, pin third-party actions, request
+least privilege, and use PyPI OIDC trusted publishing rather than a long-lived token.
+The Homebrew candidate must lock every source/resource hash and must not resolve package
+dependencies from the network during installation. Local workflow/formula validation is
+not evidence that hosted publication succeeded.
+
+## Remaining public-release requirements
 
 Before public release, MacWise must continue to prove:
 
@@ -139,7 +148,7 @@ Before public release, MacWise must continue to prove:
 - independent review closure and privacy-safe public artifacts,
 - hosted CI and release-platform behavior without relabeling local evidence.
 
-## Out of scope through Phase 6
+## Out of scope for the release candidate
 
 MacWise does not claim malware detection, vulnerability scanning, complete backup
 verification, complete usage history, arbitrary application uninstallation, privileged

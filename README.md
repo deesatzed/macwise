@@ -2,9 +2,15 @@
 
 ## What MacWise does
 
-MacWise helps ordinary Mac users understand installed applications, Homebrew software, and storage before deciding what deserves attention. It gathers deterministic local evidence first, distinguishes user-selected Homebrew tools from dependencies, and labels missing evidence instead of turning it into a confident claim.
+MacWise helps ordinary Mac users understand installed applications, Homebrew software,
+startup items, storage, backups, and overlapping tools before changing anything. It
+separates verified facts, cautious inferences, user-confirmed context, and unknowns.
 
-MacWise is currently a pre-alpha inventory, explain/review, cleanup-planning, and locally verified reversible-cleanup tool. It reports cautious usage findings, startup ownership, bounded related-data measurements, Time Machine facts, and exact-catalog role-aware overlaps without claiming complete history, backup coverage, or interchangeability. Cleanup previews can be saved as immutable local state and applied only after fresh revalidation plus an exact approval fingerprint; one-command Codex setup and public release are still under development.
+`1.0.0rc1` is a locally verified release candidate. Audit and review are read-only.
+Cleanup requires an immutable reviewed plan, fresh revalidation, an exact approval
+fingerprint, a crash-visible journal, verification, and separately approved undo. This
+is not a promise that every Mac, permission configuration, or package manager edge case
+has been proven.
 
 ## Terminal example
 
@@ -26,148 +32,111 @@ What would you like to do?
 10. Help
 ```
 
-Every guided choice also has a direct command for repeatable use.
+Every choice also has a deterministic command. See the [synthetic walkthrough](docs/demo.md).
 
 ## Installation
 
 The intended public commands are:
 
 ```bash
+pipx install macwise
+# or
 brew install deesatzed/tap/macwise
 ```
 
-or:
-
-```bash
-pipx install macwise
-```
-
-The package and Homebrew tap are **not yet published**. Until the release phase is complete, contributors can run the verified source checkout with:
+The package and tap are **not yet published**. To evaluate this exact candidate from a
+trusted checkout:
 
 ```bash
 uv sync --locked --all-groups
 uv run macwise
 ```
 
-To remove a future public installation:
-
-```bash
-brew uninstall macwise
-# or
-pipx uninstall macwise
-```
-
-Removing the CLI will not remove audit files that you explicitly saved.
+See [Getting started](docs/getting-started.md). Removing the CLI does not remove audit
+files or local plan/recovery state you explicitly created.
 
 ## Guided usage
 
-Run `macwise` with no arguments. In an interactive terminal it asks for a choice; in scripts and non-interactive environments it prints the choices and exits without blocking.
-
-Create a fresh terminal report:
+Run `macwise` with no arguments. It prompts in an interactive terminal and prints the
+same menu without blocking in automation. A first read-only review can be:
 
 ```bash
 macwise scan
+macwise explain "Example App"
+macwise review unused
+macwise review duplicates
 ```
 
-Save structured output only when you explicitly choose a destination:
+Save a report only when you choose a path:
 
 ```bash
 macwise scan --format json --output audit.json
 macwise scan --format markdown --output audit.md
 ```
 
-MacWise refuses to replace an existing report unless you review the path and add `--force`.
+Existing reports are not replaced unless you add `--force`.
 
 ## Safety promises
 
-- Scan and review commands do not uninstall, disable, unload, launch, or otherwise change installed software.
-- Discovered names, paths, and metadata are treated as untrusted data and are never executed as shell commands.
-- Homebrew libraries are identified as dependencies rather than presented as ordinary selected applications.
-- Missing last-use information means “no reliable evidence,” never “never used.”
-- Backup configuration is not described as verified path coverage.
-- Overlap categories come from exact qualified catalog identities and explicit relations, never fuzzy name similarity.
-- Phase 3 guidance can recommend keep, learn, keep-together, cautious consolidation review, or no recommendation; it does not authorize removal.
-- `plan add` and `plan show` write or read only local immutable preview state; they do not change installed software or user data.
-- `apply` requires a schema-2 reviewed plan, fresh evidence, an exact fingerprint phrase, a pre-mutation journal, and verified after-state; it never elevates privileges or deletes related user data.
-- `undo` requires separate exact approval and verifies reverse-order restoration. Trash restoration is exact; Homebrew reinstall is best-effort and may not restore the captured version.
-- Only standard application roots, exact safe Homebrew formulae/casks, running Homebrew services, and current-user LaunchAgents are supported. System/privileged targets and arbitrary commands remain blocked.
-- `setup codex` still refuses safely rather than simulating unfinished integration.
+- Scan, explain, review, compare, storage, startup, backups, and doctor do not mutate host state.
+- Discovered metadata is untrusted data, never shell or AI instructions.
+- Missing last-use evidence never means “never used”; configured backup never means verified coverage.
+- Homebrew dependencies are not ordinary delete candidates; unknown/protected targets remain blocked.
+- Planning changes only immutable local preview state, not installed software.
+- Apply supports only closed manual-app, Homebrew, and current-user startup actions; no arbitrary command, elevation, force, zap, related-data deletion, or system daemon action exists.
+- Apply and undo require separate exact consent and verify observed state; Homebrew reinstall is explicitly best-effort.
+- Codex exposes only eight bounded read-only tools and cannot approve, apply, undo, or persist cleanup state.
 
-See [Privacy](docs/privacy.md), [Threat model](docs/threat-model.md), and [Security policy](SECURITY.md).
+Read [Privacy](docs/privacy.md), the [Threat model](docs/threat-model.md), and the
+[Security policy](SECURITY.md) before using cleanup features.
 
 ## Codex setup
 
-The target setup command is:
+Install the optional local experience for the current user:
 
 ```bash
 macwise setup codex
 ```
 
-It is not enabled in the current pre-alpha build. The repository includes an initial read-only `skills/macwise/` workflow for development, but setup will continue to refuse until the bundled skill, local typed interface, clean installation, and integration tests pass.
-
-Once Phase 6 is complete, Codex users will be able to type:
+Start a new Codex session and type:
 
 ```text
 $macwise Explain which installed AI tools overlap and which ones appear active.
 ```
 
-The standalone CLI does not require Codex or an AI key.
+Setup validates Codex compatibility and installs a bundled native plugin backed by a
+local read-only server. It needs no MacWise account or AI-provider key. The standalone
+CLI remains fully usable without Codex.
 
 ## Common examples
 
 ```bash
-# Review installed application bundles
 macwise review apps
-
-# Keep Homebrew dependencies distinct from selected tools
 macwise review brew
-
-# Inspect internal and external volumes
 macwise storage
-
-# Produce machine-readable evidence
 macwise scan --format json
-
-# Show cautious identity facts for one item
 macwise explain "Example App"
-
-# Review only evidence-supported possibly-unused items
-macwise review unused
-
-# Compare exact catalog roles, observed-use evidence, and unique value
 macwise compare "Docker Desktop" "Podman"
-
-# Review role-aware overlap groups without calling every pair a duplicate
-macwise review duplicates
-
-# Inspect startup ownership and backup limitations
 macwise startup
 macwise backups
-
-# Save and review an exact non-executing cleanup preview
 macwise plan add "Example App"
 macwise plan show
-
-# Revalidate, review the exact phrase, then explicitly approve
 macwise apply
-macwise apply --approve 'APPLY FINGERPRINT'
-
-# Review reverse actions and use a separate approval phrase
 macwise undo
-
-# Diagnose collector availability
 macwise doctor
 ```
 
-Every command supports `--help`, including nested commands such as `macwise review apps --help`.
+Use `--help` on every root or nested command.
 
-## Current scope and roadmap
+## Release status
 
-Phases 1–5 cover guided use, the public command hierarchy, evidence-rich inventory, cautious usage and backup findings, exact-match role intelligence, immutable cleanup previews, approval-gated allowlisted execution, append-only recovery manifests, fresh verification, and undo. Phase 5 local acceptance is synthetic/fake-mutator evidence, not permission to test real installed software without explicit authority. `GOAL.md` remains the full contract for Codex integration and public release. See the phase acceptance audits under `docs/` for proof and limitations.
+Phases 1–6 have local acceptance audits under `docs/`. Phase 7 is preparing public
+artifacts and install paths. Hosted CI, PyPI, GitHub Release, and the tap are not claimed
+until those systems run successfully. See the [release checklist](docs/release-checklist.md).
 
 ## Development
 
-Requires Python 3.12 or newer and [uv](https://docs.astral.sh/uv/).
+Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/):
 
 ```bash
 uv sync --locked --all-groups
