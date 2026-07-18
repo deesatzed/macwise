@@ -104,3 +104,14 @@ def test_all_eight_operations_are_closed_enum_values() -> None:
         "inspect_backups",
         "get_removal_preview",
     }
+
+
+def test_tool_result_rejects_an_oversized_serialized_payload() -> None:
+    facts = tuple(Fact(topic=f"topic-{index}", value="x" * 4096) for index in range(200))
+
+    with pytest.raises(ValidationError):
+        ToolResult(
+            operation=Operation.AUDIT_MAC,
+            status=ToolStatus.OK,
+            facts=facts,
+        )

@@ -202,7 +202,10 @@ HELP: dict[str, str] = {
         "you want to type $macwise inside Codex and review local audit evidence conversationally.",
         "Setup changes only MacWise-owned plugin files and its personal plugin entry; Codex tools cannot apply or undo cleanup.",
         ("macwise setup codex", "macwise doctor"),
-        ("Start a new Codex session and type $macwise.", "Run macwise doctor if setup reports a prerequisite problem."),
+        (
+            "Start a new Codex session and type $macwise.",
+            "Run macwise doctor if setup reports a prerequisite problem.",
+        ),
     ),
     "help": _help(
         "Shows the guided MacWise command overview and points to detailed command help.",

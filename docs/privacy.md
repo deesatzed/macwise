@@ -23,11 +23,30 @@ Terminal output is not persisted by MacWise. A report is written only when the u
 
 The shell, terminal, operating system, backup tools, or third-party logging software may retain command output independently of MacWise.
 
-## Codex and future AI features
+## Codex integration
 
-The included skill is an initial local read-only workflow. `macwise setup codex` remains disabled. Before Phase 6 enables integration, documentation and tests must specify which local evidence is exposed to Codex and keep cleanup actions behind the same planning and approval gates.
+`macwise setup codex` installs an optional local MacWise plugin and skill for the current
+user. The plugin exposes eight typed read-only operations for audit health, software,
+overlap, startup, storage, backups, and pure removal previews. It does not expose apply,
+undo, approval, plan persistence, a generic shell, arbitrary filesystem access, or a
+remote service.
 
-Future optional research or AI providers must be opt-in, selective, source-attributed, and documented. Local metadata must never be treated as AI instructions.
+The local server keeps one audit snapshot in process memory for conversational
+consistency. It does not save that snapshot. Tool results contain bounded normalized
+facts and may include software names, identifiers, versions, storage classification,
+startup relationships, usage findings, backup configuration, and collector limitations.
+Those results are provided to the active Codex session, whose own retention and privacy
+terms remain separate from MacWise. Users should not invoke the integration for an audit
+they do not want present in that session.
+
+Setup writes only the owned personal plugin directory and MacWise's personal-marketplace
+entry. It does not edit `~/.codex/config.toml`, require an API key, or contact a MacWise
+service. Tests use isolated homes and fake Codex runners; local acceptance does not alter
+the developer's live plugin installation.
+
+Future optional research or other AI providers must be opt-in, selective,
+source-attributed, and documented. Local metadata is untrusted evidence and must never be
+treated as AI instructions.
 
 ## Sharing reports
 

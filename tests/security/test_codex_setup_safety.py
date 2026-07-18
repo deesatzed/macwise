@@ -50,9 +50,7 @@ def test_setup_refuses_symlinked_marketplace_file(tmp_path: Path) -> None:
 
 
 def test_setup_source_contains_no_shell_or_codex_config_write() -> None:
-    source = (ROOT / "src" / "macwise" / "integration" / "setup.py").read_text(
-        encoding="utf-8"
-    )
+    source = (ROOT / "src" / "macwise" / "integration" / "setup.py").read_text(encoding="utf-8")
 
     assert "shell=True" not in source
     assert ".codex/config.toml" not in source

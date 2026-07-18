@@ -9,13 +9,13 @@ MacWise should let a user inspect software without executing discovered content,
 - Installed applications, command-line tools, services, and their configuration.
 - User documents, application support data, models, databases, and containers.
 - Audit reports containing paths and software inventory.
-- Cleanup plans, approvals, rollback manifests, and future Codex configuration.
+- Cleanup plans, approvals, rollback manifests, and owned Codex plugin configuration.
 
 ## Trust boundaries
 
 - Application names, paths, plists, signatures, Homebrew JSON, service metadata, and disk metadata are untrusted input.
 - macOS and Homebrew command output crosses into normalized models through bounded parsers.
-- Terminal, Markdown, JSON, Codex prompts, and future typed tools are separate presentation/integration boundaries.
+- Terminal, Markdown, JSON, Codex prompts, and typed local tools are separate presentation/integration boundaries.
 - Cleanup execution is an approval-gated write boundary kept separate from collectors,
   inert plan models, and read-only review commands.
 
@@ -28,6 +28,35 @@ A malicious name or metadata value could contain shell syntax. MacWise selects p
 ### Prompt injection through metadata
 
 An app name, description, file, or web result could contain instructions aimed at an AI layer. The normalized value remains evidence data, not an instruction. The Codex skill requires deterministic CLI evidence first and forbids inventing or executing removal actions.
+
+The Phase 6 server instructions are static and lead with the untrusted-evidence boundary.
+All eight tools have strict versioned request/result models, neutralize control/format
+characters in model-facing structure, bound pages and serialized results, and advertise
+read-only/non-destructive/closed-world annotations. Those annotations are hints only;
+AST/import tests and the absence of mutation/state-store dependencies enforce the actual
+boundary. Prompt-shaped hostile fixtures pass through the tools as structured evidence,
+never dispatch input.
+
+### Codex plugin setup and local protocol
+
+Setup owns only `~/plugins/macwise`, its ownership marker, and MacWise's exact entry in
+the automatically discovered personal marketplace. It refuses symlinked/nonregular
+paths, an unowned existing plugin, a foreign same-name source, invalid/oversized JSON, or
+an unverifiable Codex result. New trees/files are staged and atomically replaced with a
+bounded prior owned copy retained until `codex plugin add --json` verifies. Failed setup
+restores files and compensates the plugin selector; failed compensation is reported as
+interrupted rather than success.
+
+The installed `.mcp.json` uses the resolved absolute current Python executable plus
+`-m macwise codex serve`, so it does not trust the desktop process PATH. Codex commands
+are limited to exact MacWise plugin add/remove selectors, use no shell, receive a reduced
+environment, have a timeout, and drain output while retaining at most 64 KiB per stream.
+The STDIO server reserves stdout for protocol framing and exposes no generic dispatcher.
+
+The read facade stores one lock-protected audit snapshot only in process memory. Removal
+preview uses pure planning functions and never opens `PlanStore`, `ExecutionStore`,
+approval, revalidation, or execution services. Any state change remains in the standalone
+terminal workflow with its independent fresh revalidation and action-time consent.
 
 ### Accidental host mutation during audit
 
@@ -110,12 +139,13 @@ Before public release, MacWise must continue to prove:
 - independent review closure and privacy-safe public artifacts,
 - hosted CI and release-platform behavior without relabeling local evidence.
 
-## Out of scope through Phase 5
+## Out of scope through Phase 6
 
 MacWise does not claim malware detection, vulnerability scanning, complete backup
 verification, complete usage history, arbitrary application uninstallation, privileged
 cleanup, deletion of related data, exact-version Homebrew restoration, or production
-safety. Local acceptance uses synthetic bundles and fake Homebrew/launchctl mutators; it
-does not prove permissions or behavior for every real installed tool. macOS, Homebrew,
-Codex, terminal history, backups, and third-party security products retain their own trust
-and privacy boundaries.
+safety. Local acceptance uses synthetic bundles, fake Homebrew/launchctl mutators, and
+isolated-home/fake-Codex setup. It does not prove permissions or behavior for every real
+installed tool or alter/prove a live personal Codex plugin installation. macOS, Homebrew,
+Codex, terminal history, backups, and third-party security products retain their own
+trust and privacy boundaries.

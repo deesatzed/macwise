@@ -153,7 +153,9 @@ class SubprocessCodexRunner:
         self._environment = {
             "HOME": str(self.home),
             "PATH": SAFE_PATH,
-            **{key: source[key] for key in SAFE_ENVIRONMENT_KEYS if key != "HOME" and key in source},
+            **{
+                key: source[key] for key in SAFE_ENVIRONMENT_KEYS if key != "HOME" and key in source
+            },
         }
 
     def run(self, arguments: tuple[str, ...]) -> CodexCommandResult:
@@ -176,7 +178,9 @@ class SubprocessCodexRunner:
                 env=self._environment,
             )
         except (FileNotFoundError, OSError, subprocess.TimeoutExpired) as error:
-            return CodexCommandResult(ok=False, stderr=f"Codex setup could not run: {type(error).__name__}.")
+            return CodexCommandResult(
+                ok=False, stderr=f"Codex setup could not run: {type(error).__name__}."
+            )
         stdout_truncated = len(completed.stdout) > _CODEX_OUTPUT_LIMIT
         stderr_truncated = len(completed.stderr) > _CODEX_OUTPUT_LIMIT
         stdout = completed.stdout[:_CODEX_OUTPUT_LIMIT].decode("utf-8", errors="replace")
@@ -316,7 +320,9 @@ def _load_marker(plugin: Path) -> OwnershipMarker:
             _read_regular_bytes(marker_path, limit=64 * 1024, label="MacWise ownership marker")
         )
     except (SetupError, ValidationError, ValueError) as error:
-        raise SetupError("The existing MacWise plugin is not safely owned by this installer.") from error
+        raise SetupError(
+            "The existing MacWise plugin is not safely owned by this installer."
+        ) from error
 
 
 def _load_marketplace(path: Path) -> tuple[dict[str, object], bytes | None]:

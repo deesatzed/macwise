@@ -4,7 +4,7 @@ import unicodedata
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from macwise.models import EntityType
 
@@ -179,3 +179,10 @@ class ToolResult(StrictModel):
     errors: tuple[ToolError, ...] = Field(default=(), max_length=16)
     next_cursor: int | None = Field(default=None, ge=0)
     truncated: bool = False
+
+    @model_validator(mode="after")
+    def bound_serialized_result(self) -> "ToolResult":
+        """Fail closed before an unexpectedly large result reaches MCP framing."""
+        if len(self.model_dump_json().encode("utf-8")) > 512 * 1024:
+            raise ValueError("tool result exceeds the serialized output limit")
+        return self

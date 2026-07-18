@@ -65,7 +65,9 @@ def test_audit_summary_reports_collector_limits_without_negative_claims(
             "limitations": ("Spotlight metadata was unavailable.",),
         }
     )
-    audit = sample_audit.model_copy(update={"collectors": (*sample_audit.collectors, usage_limited)})
+    audit = sample_audit.model_copy(
+        update={"collectors": (*sample_audit.collectors, usage_limited)}
+    )
 
     result = CodexReadService(audit_provider=lambda: audit).audit_mac(AuditMacRequest())
 
@@ -197,7 +199,9 @@ def test_inspect_storage_returns_volume_facts_without_content_scanning(
         InspectStorageRequest()
     )
 
-    assert any(fact.topic == "volume_location" and fact.value == "internal" for fact in result.facts)
+    assert any(
+        fact.topic == "volume_location" and fact.value == "internal" for fact in result.facts
+    )
     assert not result.errors
 
 

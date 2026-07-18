@@ -140,7 +140,9 @@ def _software_facts(record: SoftwareRecord) -> tuple[Fact, ...]:
     )
 
 
-def _usage_evidence(audit: AuditDocument, subject_id: str) -> tuple[tuple[Fact, ...], tuple[Unknown, ...]]:
+def _usage_evidence(
+    audit: AuditDocument, subject_id: str
+) -> tuple[tuple[Fact, ...], tuple[Unknown, ...]]:
     findings = tuple(
         finding
         for finding in audit.findings
@@ -305,9 +307,7 @@ class CodexReadService:
                 for relation in relations
                 for subject_id in (relation.left_subject_id, relation.right_subject_id)
             }
-            selected_records = [
-                record for record in audit.software if record.id in related_ids
-            ]
+            selected_records = [record for record in audit.software if record.id in related_ids]
         limitations = (
             *_collector_limitations(audit),
             *(
@@ -387,7 +387,10 @@ class CodexReadService:
                     ),
                 )
             )
-            for topic, value in (("startup_enabled", item.enabled), ("startup_running", item.running)):
+            for topic, value in (
+                ("startup_enabled", item.enabled),
+                ("startup_running", item.running),
+            ):
                 if value is None:
                     unknowns.append(
                         Unknown(
@@ -552,7 +555,11 @@ class CodexReadService:
             include_startup=request.include_supported_startup,
         ).plan
         facts: list[Fact] = [
-            Fact(subject_id=_bounded(resolved.id, 256), topic="eligibility", value=preview.eligibility.value)
+            Fact(
+                subject_id=_bounded(resolved.id, 256),
+                topic="eligibility",
+                value=preview.eligibility.value,
+            )
         ]
         facts.extend(
             Fact(
