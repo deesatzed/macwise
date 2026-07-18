@@ -12,18 +12,17 @@ SDIST_DIGEST = "a" * 64
 WHEEL_DIGEST = "b" * 64
 
 
-def fixture_files(tmp_path: Path, *, formula_digest: str = SDIST_DIGEST) -> list[str]:
+def fixture_files(tmp_path: Path, *, wheel_digest: str = WHEEL_DIGEST) -> list[str]:
     pypi = tmp_path / "pypi.json"
     github = tmp_path / "github.json"
     checksums = tmp_path / "SHA256SUMS"
-    formula = tmp_path / "macwise.rb"
     pypi.write_text(
         json.dumps(
             {
                 "info": {"version": VERSION},
                 "urls": [
                     {"filename": SDIST, "digests": {"sha256": SDIST_DIGEST}},
-                    {"filename": WHEEL, "digests": {"sha256": WHEEL_DIGEST}},
+                    {"filename": WHEEL, "digests": {"sha256": wheel_digest}},
                 ],
             }
         ),
@@ -43,16 +42,6 @@ def fixture_files(tmp_path: Path, *, formula_digest: str = SDIST_DIGEST) -> list
         f"{SDIST_DIGEST}  dist/{SDIST}\n{WHEEL_DIGEST}  dist/{WHEEL}\n",
         encoding="utf-8",
     )
-    formula.write_text(
-        (
-            "class Macwise < Formula\n"
-            f'  url "https://github.com/deesatzed/macwise/releases/download/v{VERSION}/{SDIST}"\n'
-            f'  version "{VERSION}"\n'
-            f'  sha256 "{formula_digest}"\n'
-            "end\n"
-        ),
-        encoding="utf-8",
-    )
     return [
         "--pypi-json",
         str(pypi),
@@ -60,8 +49,6 @@ def fixture_files(tmp_path: Path, *, formula_digest: str = SDIST_DIGEST) -> list
         str(github),
         "--checksums",
         str(checksums),
-        "--formula",
-        str(formula),
     ]
 
 
@@ -83,13 +70,13 @@ def test_public_release_verifier_accepts_one_exact_cross_channel_identity(tmp_pa
     }
 
 
-def test_public_release_verifier_rejects_formula_digest_drift(tmp_path: Path) -> None:
+def test_public_release_verifier_rejects_pypi_checksum_drift(tmp_path: Path) -> None:
     result = subprocess.run(
         [
             sys.executable,
             str(SCRIPT),
             VERSION,
-            *fixture_files(tmp_path, formula_digest="c" * 64),
+            *fixture_files(tmp_path, wheel_digest="c" * 64),
         ],
         cwd=ROOT,
         check=False,
@@ -98,4 +85,4 @@ def test_public_release_verifier_rejects_formula_digest_drift(tmp_path: Path) ->
     )
 
     assert result.returncode == 2
-    assert "formula" in result.stderr.casefold()
+    assert "digests" in result.stderr.casefold()

@@ -44,24 +44,10 @@ def test_release_workflow_builds_once_checks_artifacts_and_releases_after_pypi()
     assert "prerelease: true" in text
 
 
-def test_ci_has_ephemeral_macos_homebrew_candidate_install_proof() -> None:
-    text = CI_WORKFLOW.read_text(encoding="utf-8")
-    workflow = yaml.safe_load(text)
-    job = workflow["jobs"]["homebrew-candidate"]
+def test_ci_does_not_gate_first_release_on_deferred_homebrew_distribution() -> None:
+    workflow = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
 
-    assert job["runs-on"] == "macos-26"
-    tap_creation = text.index("brew tap-new macwise-local/tap")
-    tap_trust = text.index("brew trust macwise-local/tap")
-    formula_copy = text.index(
-        'cp packaging/homebrew/Formula/macwise.rb "$TAP_ROOT/Formula/macwise.rb"'
-    )
-    named_audit = text.index("brew audit --strict macwise-local/tap/macwise")
-    assert tap_creation < tap_trust < formula_copy < named_audit
-    assert "brew install --build-from-source" in text
-    assert "brew test" in text
-    assert "uv build --sdist" in text
-    assert "file://" in text
-    assert "brew uninstall" in text
+    assert "homebrew-candidate" not in workflow["jobs"]
 
 
 def test_ci_covers_supported_python_versions_and_current_macos() -> None:
@@ -72,20 +58,22 @@ def test_ci_covers_supported_python_versions_and_current_macos() -> None:
     assert matrix["os"] == ["ubuntu-latest", "macos-15", "macos-26"]
 
 
-def test_public_install_smoke_requires_manual_version_and_tests_both_channels() -> None:
+def test_public_install_smoke_requires_manual_version_and_tests_uv_tool() -> None:
     text = PUBLIC_SMOKE_WORKFLOW.read_text(encoding="utf-8")
     workflow = yaml.safe_load(text)
 
     assert "workflow_dispatch" in text
     assert workflow["permissions"] == {"contents": "read"}
-    assert "pipx install" in text
-    assert "brew install deesatzed/tap/macwise" in text
+    assert 'uv tool install "macwise==$VERSION"' in text
+    assert "UV_TOOL_DIR" in text
+    assert "UV_TOOL_BIN_DIR" in text
+    assert "pipx install" not in text
+    assert "brew install" not in text
     assert "macwise setup codex --help" in text
     assert "macwise --version" in text
     assert 'python3 scripts/verify_public_release.py "$VERSION"' in text
-    assert workflow["jobs"]["pipx"]["runs-on"] == "macos-26"
-    assert workflow["jobs"]["homebrew"]["runs-on"] == "macos-26"
-    assert workflow["jobs"]["cross-channel-identity"]["needs"] == ["pipx", "homebrew"]
+    assert workflow["jobs"]["uv-tool"]["runs-on"] == "macos-26"
+    assert workflow["jobs"]["cross-channel-identity"]["needs"] == ["uv-tool"]
 
 
 def test_every_release_related_action_is_commit_pinned() -> None:

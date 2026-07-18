@@ -65,12 +65,13 @@ def test_readme_starts_with_the_required_novice_sections_in_order() -> None:
 
     assert readme.startswith("# MacWise\n")
     assert positions == sorted(positions)
-    assert "brew install deesatzed/tap/macwise" in readme
-    assert "pipx install macwise" in readme
+    assert readme.index("uv tool install macwise") < readme.index("pipx install macwise")
+    assert "brew install deesatzed/tap/macwise" not in readme
     assert "macwise setup codex" in readme
     assert "macwise review apps" in readme
     assert "macwise scan --format json" in readme
     assert "not yet published" in readme.lower()
+    assert "homebrew distribution is deferred" in readme.lower()
     assert "setup codex` still refuses" not in readme
     assert "not enabled in the current" not in readme
     assert "1.0.0rc1" in readme
