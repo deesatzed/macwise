@@ -61,7 +61,13 @@ from macwise.persistence import (
     PlanStoreError,
     execution_digest,
 )
-from macwise.reporting import render_json, render_markdown
+from macwise.reporting import (
+    render_json,
+    render_markdown,
+    render_score_json,
+    render_score_markdown,
+    render_score_terminal,
+)
 from macwise.services import (
     ApprovalError,
     AuditService,
@@ -73,6 +79,7 @@ from macwise.services import (
     apply_approval_phrase,
     prepare_execution,
     require_approval,
+    score_audit,
     undo_approval_phrase,
 )
 from macwise.system.commands import CommandState, ReadCommand, resolve_executable, run_read_command
@@ -447,7 +454,9 @@ def _render(audit: AuditDocument, output_format: OutputFormat) -> str:
     return render_json(audit) if output_format is OutputFormat.JSON else render_markdown(audit)
 
 
-def _write_or_print(content: str, output: Path | None, force: bool) -> None:
+def _write_or_print(
+    content: str, output: Path | None, force: bool, *, artifact: str = "audit"
+) -> None:
     if output is None:
         typer.echo(content, nl=False)
         return
@@ -466,7 +475,7 @@ def _write_or_print(content: str, output: Path | None, force: bool) -> None:
         )
         typer.echo("Run with a writable --output path.")
         raise typer.Exit(2) from error
-    typer.echo(f"Saved the read-only audit to {safe_display_text(output)}.")
+    typer.echo(f"Saved the read-only {artifact} to {safe_display_text(output)}.")
 
 
 def _matching_records(audit: AuditDocument, query: str) -> tuple[SoftwareRecord, ...]:
@@ -852,6 +861,32 @@ def scan(
         project_roots=_deduplicated_roots(project_root or ()),
     )
     _write_or_print(_render(audit, output_format), output, force)
+
+
+@app.command(help=HELP["score"])
+def score(
+    output_format: Annotated[
+        OutputFormat,
+        typer.Option("--format", "-f", help="Choose terminal, JSON, or Markdown output."),
+    ] = OutputFormat.TERMINAL,
+    output: Annotated[
+        Path | None,
+        typer.Option("--output", "-o", help="Explicitly save the scorecard to this file."),
+    ] = None,
+    force: Annotated[
+        bool,
+        typer.Option("--force", help="Replace an existing --output file after review."),
+    ] = False,
+) -> None:
+    """Create and render one aggregate read-only scorecard."""
+    scorecard = score_audit(_audit(), now=_now())
+    if output_format is OutputFormat.JSON:
+        rendered = render_score_json(scorecard)
+    elif output_format is OutputFormat.MARKDOWN:
+        rendered = render_score_markdown(scorecard)
+    else:
+        rendered = render_score_terminal(scorecard)
+    _write_or_print(rendered, output, force, artifact="scorecard")
 
 
 @review_app.callback()

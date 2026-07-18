@@ -57,6 +57,17 @@ HELP: dict[str, str] = {
         ),
         ("Run macwise review apps.", "Run macwise storage."),
     ),
+    "score": _help(
+        "Scores review opportunities and the usefulness of the current read-only audit with transparent components.",
+        "you want a short, evidence-linked summary of what deserves review and how complete the result is.",
+        AUDIT_FILE,
+        (
+            "macwise score",
+            "macwise score --format json",
+            "macwise score --format markdown --output score.md",
+        ),
+        ("Run macwise startup.", "Run macwise review unknown."),
+    ),
     "review": _help(
         "Groups installed software into simple views so you can review one question at a time.",
         "the full scan is too broad and you want apps, Homebrew, storage, or uncertainty views.",

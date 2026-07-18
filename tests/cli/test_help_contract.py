@@ -7,6 +7,7 @@ runner = CliRunner()
 
 COMMANDS = (
     ("scan",),
+    ("score",),
     ("review",),
     ("review", "apps"),
     ("review", "brew"),
@@ -87,6 +88,7 @@ def test_root_help_lists_the_small_public_hierarchy() -> None:
     assert result.exit_code == 0
     for command in (
         "scan",
+        "score",
         "review",
         "explain",
         "compare",

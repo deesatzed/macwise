@@ -303,7 +303,7 @@ def score_audit(audit: AuditDocument, *, now: datetime) -> MacWiseScorecard:
         limitations.append("Collector status is missing, so evidence coverage is unverified.")
     if partial:
         limitations.append(
-            f"Partial or unavailable collectors limit this score: {', '.join(sorted(partial))}."
+            f"{len(partial)} partial or unavailable collectors limit this score."
         )
     return MacWiseScorecard(
         opportunity_score=sum(item.score for item in opportunity),
