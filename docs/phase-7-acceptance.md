@@ -42,6 +42,8 @@ pipx as an alternative, and defers Homebrew distribution to a later milestone.
   relations out of 6, 22 applications at least 500 MiB out of 69 measured, 53 unknown-purpose
   records, zero supported non-use findings, and a stale-backup warning. No name or path entered
   `docs/scorecard-evaluation.md` or the public examples.
+- Scorecard commit `3953348` passed all nine hosted matrix jobs in run `29653569296` after a clean
+  public-clone locked install and focused score/privacy contract proof.
 
 ## Claim validation
 

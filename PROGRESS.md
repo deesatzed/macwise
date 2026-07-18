@@ -232,3 +232,6 @@ None required for local implementation. PyPI account configuration is required i
 - 2026-07-18 scorecard local gate: 405 tests passed in 35.10 seconds; all 109 files passed Ruff
   formatting, Ruff lint passed, Pyright reported zero errors, workflow YAML parsed, wheel and sdist
   built, repository privacy/link contracts passed, and `git diff --check` was clean.
+- 2026-07-18 scorecard clean-clone/hosted proof: public GitHub clone `3953348` was clean, locked UV
+  sync installed `1.0.0rc1`, score help rendered, and 21 score/model/privacy contracts passed.
+  Hosted run `29653569296` passed all nine Linux/macOS 15/macOS 26 and Python 3.12-3.14 jobs.
