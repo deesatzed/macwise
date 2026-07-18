@@ -193,16 +193,16 @@ HELP: dict[str, str] = {
     "setup": _help(
         "Configures optional integrations without making them part of the standalone CLI requirement.",
         "you want to connect MacWise to a supported conversational tool.",
-        "Setup is not read-only because it can change local integration configuration; unavailable setup targets refuse safely.",
+        "Setup changes only MacWise-owned user integration files and refuses unsafe or conflicting paths.",
         ("macwise setup codex", "macwise doctor"),
         ("Run macwise setup codex.", "Run macwise scan first."),
     ),
     "setup_codex": _help(
-        "Installs the bundled MacWise Codex experience when the integration package is ready.",
+        "Installs or updates the bundled read-only MacWise Codex experience for this user.",
         "you want to type $macwise inside Codex and review local audit evidence conversationally.",
-        "Setup is not read-only because it can change local Codex configuration; this build refuses safely because integration is not ready.",
+        "Setup changes only MacWise-owned plugin files and its personal plugin entry; Codex tools cannot apply or undo cleanup.",
         ("macwise setup codex", "macwise doctor"),
-        ("Run macwise scan.", "Retry setup after the Codex integration phase is installed."),
+        ("Start a new Codex session and type $macwise.", "Run macwise doctor if setup reports a prerequisite problem."),
     ),
     "help": _help(
         "Shows the guided MacWise command overview and points to detailed command help.",

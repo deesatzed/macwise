@@ -4,11 +4,13 @@ import hashlib
 import os
 import platform
 import re
+import shutil
 import stat
 import sys
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
 from enum import StrEnum
+from importlib.resources import files
 from itertools import combinations
 from pathlib import Path
 from typing import Annotated, Never, Protocol
@@ -24,6 +26,13 @@ from macwise.execution import (
     application_identity_digest,
 )
 from macwise.help_text import HELP
+from macwise.integration.server import run_stdio
+from macwise.integration.setup import (
+    CodexSetupService,
+    SetupResult,
+    SetupStatus,
+    SubprocessCodexRunner,
+)
 from macwise.models import (
     ActionObservation,
     ActionState,
@@ -118,12 +127,61 @@ setup_app = typer.Typer(
     no_args_is_help=False,
     rich_markup_mode=None,
 )
+codex_app = typer.Typer(invoke_without_command=False, no_args_is_help=True)
 app.add_typer(review_app, name="review")
 app.add_typer(plan_app, name="plan")
 app.add_typer(setup_app, name="setup")
+app.add_typer(codex_app, name="codex", hidden=True)
 
 _service_factory: Callable[[], AuditService] = AuditService
 _plan_store_factory: Callable[[], PlanStore] = PlanStore
+
+
+class CLICodexSetupService(Protocol):
+    def install(self) -> SetupResult: ...
+
+
+def _default_codex_setup_factory() -> CLICodexSetupService:
+    executable = shutil.which("codex")
+    if executable is None:
+        return _UnavailableCodexSetupService(
+            "Codex is not installed or is not available to MacWise.",
+            "Install or update Codex, then run macwise setup codex again.",
+        )
+    try:
+        runner = SubprocessCodexRunner(
+            executable=Path(executable),
+            home=Path.home(),
+        )
+    except ValueError:
+        return _UnavailableCodexSetupService(
+            "MacWise could not verify the Codex executable.",
+            "Install or update Codex, then run macwise setup codex again.",
+        )
+    payload = Path(str(files("macwise").joinpath("codex_payload", "macwise")))
+    return CodexSetupService(
+        home=Path.home(),
+        payload=payload,
+        python_executable=Path(sys.executable),
+        runner=runner,
+    )
+
+
+class _UnavailableCodexSetupService:
+    def __init__(self, message: str, recovery: str) -> None:
+        self.message = message
+        self.recovery = recovery
+
+    def install(self) -> SetupResult:
+        return SetupResult(
+            status=SetupStatus.REFUSED,
+            message=self.message,
+            recovery=self.recovery,
+        )
+
+
+_codex_setup_factory: Callable[[], CLICodexSetupService] = _default_codex_setup_factory
+_codex_stdio_runner: Callable[[], None] = run_stdio
 
 
 class CLIExecutionService(Protocol):
@@ -404,16 +462,6 @@ def _write_or_print(content: str, output: Path | None, force: bool) -> None:
         typer.echo("Run with a writable --output path.")
         raise typer.Exit(2) from error
     typer.echo(f"Saved the read-only audit to {safe_display_text(output)}.")
-
-
-def _phase_message(message: str, *next_steps: str, failure: bool = False) -> None:
-    typer.echo(message)
-    typer.echo("No changes were made.")
-    typer.echo("\nNext:")
-    for step in next_steps:
-        typer.echo(f"  {step}")
-    if failure:
-        raise typer.Exit(2)
 
 
 def _matching_records(audit: AuditDocument, query: str) -> tuple[SoftwareRecord, ...]:
@@ -1493,12 +1541,25 @@ def setup_root(ctx: typer.Context) -> None:
 
 @setup_app.command("codex", help=HELP["setup_codex"])
 def setup_codex() -> None:
-    _phase_message(
-        "Codex setup is unavailable until the bundled skill and typed read-only integration pass Phase 6 tests.",
-        "macwise scan",
-        "macwise doctor",
-        failure=True,
-    )
+    result = _codex_setup_factory().install()
+    if result.status is SetupStatus.INSTALLED:
+        typer.echo("The MacWise Codex experience is installed.")
+    elif result.status is SetupStatus.UPDATED:
+        typer.echo("The MacWise Codex experience is updated.")
+    elif result.status is SetupStatus.ALREADY_CURRENT:
+        typer.echo("The MacWise Codex experience is already current.")
+    else:
+        typer.echo(safe_display_text(result.message))
+        if result.recovery:
+            typer.echo(safe_display_text(result.recovery))
+        raise typer.Exit(2)
+    typer.echo("Start a new Codex session, then type $macwise.")
+
+
+@codex_app.command("serve", hidden=True)
+def codex_serve() -> None:
+    """Run the internal read-only local protocol server."""
+    _codex_stdio_runner()
 
 
 @app.command("help", help=HELP["help"])

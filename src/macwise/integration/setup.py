@@ -5,20 +5,26 @@ import json
 import os
 import re
 import shutil
-from collections.abc import Mapping
+import subprocess
+import threading
+from collections.abc import Mapping, Sequence
 from contextlib import suppress
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
-from typing import Protocol, cast
+from typing import BinaryIO, Protocol, cast
 from uuid import uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+from macwise.system.commands import SAFE_ENVIRONMENT_KEYS, SAFE_PATH, ProcessRunner
 
 _MAX_MARKETPLACE_BYTES = 2 * 1024 * 1024
 _MAX_PAYLOAD_BYTES = 8 * 1024 * 1024
 _MAX_PAYLOAD_FILES = 512
 _MARKETPLACE_NAME = re.compile(r"^[A-Za-z0-9_-]+$")
+_CODEX_SELECTOR = re.compile(r"^macwise@[A-Za-z0-9_-]+$")
+_CODEX_OUTPUT_LIMIT = 64 * 1024
 _PLUGIN_SOURCE = {"source": "local", "path": "./plugins/macwise"}
 _PLUGIN_ENTRY: dict[str, object] = {
     "name": "macwise",
@@ -51,6 +57,138 @@ class CodexRunner(Protocol):
     """Run one fixed Codex subcommand without a shell."""
 
     def run(self, arguments: tuple[str, ...]) -> CodexCommandResult: ...
+
+
+def _bounded_codex_process_runner(
+    args: Sequence[str],
+    *,
+    shell: bool,
+    check: bool,
+    capture_output: bool,
+    timeout: float,
+    env: Mapping[str, str],
+) -> subprocess.CompletedProcess[bytes]:
+    if not capture_output:
+        raise ValueError("Codex output must be captured.")
+    process = subprocess.Popen(
+        list(args),
+        shell=shell,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+    )
+    stdout = bytearray()
+    stderr = bytearray()
+
+    def drain(stream: BinaryIO | None, destination: bytearray) -> None:
+        if stream is None:
+            return
+        while chunk := stream.read(8192):
+            remaining = (_CODEX_OUTPUT_LIMIT + 1) - len(destination)
+            if remaining > 0:
+                destination.extend(chunk[:remaining])
+
+    readers = (
+        threading.Thread(target=drain, args=(process.stdout, stdout), daemon=True),
+        threading.Thread(target=drain, args=(process.stderr, stderr), daemon=True),
+    )
+    for reader in readers:
+        reader.start()
+    try:
+        return_code = process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired as error:
+        process.kill()
+        process.wait()
+        for reader in readers:
+            reader.join()
+        raise subprocess.TimeoutExpired(
+            error.cmd,
+            error.timeout,
+            output=bytes(stdout),
+            stderr=bytes(stderr),
+        ) from error
+    for reader in readers:
+        reader.join()
+    completed = subprocess.CompletedProcess(
+        list(args),
+        return_code,
+        stdout=bytes(stdout),
+        stderr=bytes(stderr),
+    )
+    if check and return_code != 0:
+        raise subprocess.CalledProcessError(
+            return_code,
+            list(args),
+            output=completed.stdout,
+            stderr=completed.stderr,
+        )
+    return completed
+
+
+class SubprocessCodexRunner:
+    """Run only the exact plugin add/remove commands needed by setup."""
+
+    def __init__(
+        self,
+        *,
+        executable: Path,
+        home: Path,
+        process_runner: ProcessRunner = _bounded_codex_process_runner,
+        source_environment: Mapping[str, str] | None = None,
+        timeout: float = 20.0,
+    ) -> None:
+        try:
+            resolved = executable.expanduser().resolve(strict=True)
+        except OSError as error:
+            raise ValueError("The Codex executable is unavailable.") from error
+        if not resolved.is_file() or not os.access(resolved, os.X_OK):
+            raise ValueError("The Codex executable is unavailable.")
+        if timeout <= 0:
+            raise ValueError("The Codex setup timeout must be positive.")
+        self.executable = resolved
+        self.home = home.expanduser().absolute()
+        self._runner = process_runner
+        self._timeout = timeout
+        source = source_environment if source_environment is not None else os.environ
+        self._environment = {
+            "HOME": str(self.home),
+            "PATH": SAFE_PATH,
+            **{key: source[key] for key in SAFE_ENVIRONMENT_KEYS if key != "HOME" and key in source},
+        }
+
+    def run(self, arguments: tuple[str, ...]) -> CodexCommandResult:
+        """Run one allowlisted MacWise plugin command and bound both streams."""
+        if (
+            len(arguments) != 4
+            or arguments[0] != "plugin"
+            or arguments[1] not in {"add", "remove"}
+            or _CODEX_SELECTOR.fullmatch(arguments[2]) is None
+            or arguments[3] != "--json"
+        ):
+            return CodexCommandResult(ok=False, stderr="That Codex command is not allowlisted.")
+        try:
+            completed = self._runner(
+                (str(self.executable), *arguments),
+                shell=False,
+                check=False,
+                capture_output=True,
+                timeout=self._timeout,
+                env=self._environment,
+            )
+        except (FileNotFoundError, OSError, subprocess.TimeoutExpired) as error:
+            return CodexCommandResult(ok=False, stderr=f"Codex setup could not run: {type(error).__name__}.")
+        stdout_truncated = len(completed.stdout) > _CODEX_OUTPUT_LIMIT
+        stderr_truncated = len(completed.stderr) > _CODEX_OUTPUT_LIMIT
+        stdout = completed.stdout[:_CODEX_OUTPUT_LIMIT].decode("utf-8", errors="replace")
+        stderr = completed.stderr[:_CODEX_OUTPUT_LIMIT].decode("utf-8", errors="replace")
+        if stdout_truncated or stderr_truncated:
+            suffix = "Codex output limit exceeded."
+            stderr = f"{stderr}\n{suffix}" if stderr else suffix
+        return CodexCommandResult(
+            ok=completed.returncode == 0 and not stdout_truncated and not stderr_truncated,
+            stdout=stdout,
+            stderr=stderr,
+        )
 
 
 @dataclass(frozen=True, slots=True)
