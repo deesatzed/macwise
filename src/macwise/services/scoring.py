@@ -262,7 +262,7 @@ def _usefulness_components(audit: AuditDocument) -> tuple[ScoreComponent, ...]:
             explanation_score,
             20,
             explained_findings + explained_recommendations,
-            "Measured how often findings and guidance retained basis, confidence, and limitations or prerequisites.",
+            f"{explained_findings} of {len(audit.findings)} findings and {explained_recommendations} of {len(audit.recommendations)} recommendations retained the required explanation structure.",
             "This structural metric does not prove that prose is personally helpful.",
         ),
         _component(
@@ -302,9 +302,7 @@ def score_audit(audit: AuditDocument, *, now: datetime) -> MacWiseScorecard:
     if not audit.collectors:
         limitations.append("Collector status is missing, so evidence coverage is unverified.")
     if partial:
-        limitations.append(
-            f"{len(partial)} partial or unavailable collectors limit this score."
-        )
+        limitations.append(f"{len(partial)} partial or unavailable collectors limit this score.")
     return MacWiseScorecard(
         opportunity_score=sum(item.score for item in opportunity),
         opportunity_components=opportunity,
