@@ -214,3 +214,8 @@ None required for local implementation. PyPI account configuration is required i
   wheel/sdist build, workflow YAML parsing, documentation links, repository privacy contracts,
   and `git diff --check` passed. Scoped TODO/FIXME/HACK/XXX/NotImplemented and skipped/xfail
   scans found no launch-blocking implementation gap. Public PyPI/GitHub release proof remains open.
+- 2026-07-18 launch-doc publish proof: commit `991a608` pushed to `main`; a new GitHub clone was
+  clean at that exact commit, locked UV sync installed `1.0.0rc1`, doctor reported Darwin 27 and
+  read-only collectors, and all 10 launch contracts passed. Hosted run `29652271086` then passed
+  all nine Linux/macOS 15/macOS 26 and Python 3.12-3.14 jobs. No tag, PyPI package, GitHub Release,
+  GitHub Pages deployment, Homebrew tap, or shared online database was published.

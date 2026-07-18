@@ -33,8 +33,9 @@ pipx as an alternative, and defers Homebrew distribution to a later milestone.
   examples, distinguish trusted-checkout evaluation from after-publication installation, and
   expose local-link/privacy contracts. Desktop and 390-pixel mobile Chrome renders were inspected
   locally without remote assets or scripts.
-- Hosted run `29646278423` passed all nine jobs after the final real-Mac UX corrections. A new
-  hosted run is still required for the final documentation commit before release.
+- Hosted run `29646278423` passed all nine jobs after the final real-Mac UX corrections. Launch
+  documentation commit `991a608` then passed all nine Linux/macOS 15/macOS 26 and Python
+  3.12-3.14 jobs in run `29652271086`, including privacy contracts and package builds.
 
 ## Claim validation
 
