@@ -47,10 +47,14 @@ def test_parses_internal_volume_capacity_security_and_health() -> None:
 
 
 def test_mounted_apfs_volume_uses_container_free_when_free_space_is_zero() -> None:
-    metadata = fixture_bytes("info-internal.plist").decode().replace(
-        "<key>FreeSpace</key><integer>400000</integer>",
-        "<key>FreeSpace</key><integer>0</integer>\n"
-        "  <key>APFSContainerFree</key><integer>375000</integer>",
+    metadata = (
+        fixture_bytes("info-internal.plist")
+        .decode()
+        .replace(
+            "<key>FreeSpace</key><integer>400000</integer>",
+            "<key>FreeSpace</key><integer>0</integer>\n"
+            "  <key>APFSContainerFree</key><integer>375000</integer>",
+        )
     )
 
     volume = parse_volume_info(metadata, collected_at=COLLECTED_AT)

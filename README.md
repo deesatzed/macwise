@@ -75,7 +75,7 @@ same menu without blocking in automation. A first read-only review can be:
 macwise scan
 macwise explain "Example App"
 macwise review unused
-macwise review duplicates
+macwise overlap
 ```
 
 Save a report only when you choose a path:
@@ -138,6 +138,10 @@ macwise doctor
 ```
 
 Use `--help` on every root or nested command.
+
+Long inventories show a concise default view. Add `--all` only when you want every
+Homebrew item, startup item, unknown item, measured application, backup-path observation,
+or mounted macOS support volume—for example, `macwise review brew --all`.
 
 ## Release status
 

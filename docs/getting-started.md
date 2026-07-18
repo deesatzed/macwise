@@ -30,9 +30,12 @@ without reviewing and redacting them.
 
 ## 3. Compare before planning
 
-Use `macwise explain NAME`, `macwise compare LEFT RIGHT`, and `macwise review duplicates`.
+Use `macwise explain NAME`, `macwise compare LEFT RIGHT`, and `macwise overlap`.
 Role overlap does not automatically mean interchangeability. Unique learning or workflow
 value stays visible.
+
+Long inventories are summarized by default. When the summary says more records exist,
+use the exact suggested `--all` command to inspect the complete detail.
 
 ## 4. Plan before applying
 

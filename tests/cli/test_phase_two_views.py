@@ -214,7 +214,17 @@ def test_storage_default_shows_only_mounted_volumes_with_readable_known_space(
         location=StorageLocation.INTERNAL,
         free_bytes=0,
     )
-    audit = phase_two_cli.model_copy(update={"volumes": (mounted, unknown, unmounted)})
+    system_support = VolumeRecord(
+        id="volume:preboot",
+        name="Preboot",
+        device_identifier="disk9s3",
+        mount_point="/System/Volumes/Preboot",
+        location=StorageLocation.INTERNAL,
+        free_bytes=157 * 1024**3,
+    )
+    audit = phase_two_cli.model_copy(
+        update={"volumes": (mounted, unknown, unmounted, system_support)}
+    )
     monkeypatch.setattr(cli, "_service_factory", lambda: StaticAuditService(audit))
 
     result = RUNNER.invoke(cli.app, ["storage"])
@@ -223,7 +233,13 @@ def test_storage_default_shows_only_mounted_volumes_with_readable_known_space(
     assert "System: 157.0 GiB free of 500.0 GiB" in result.stdout
     assert "Archive: free space unknown" in result.stdout
     assert "Recovery" not in result.stdout
+    assert "Preboot" not in result.stdout
     assert "0 bytes free" not in result.stdout
+    assert "macwise storage --all" in result.stdout
+
+    detailed = RUNNER.invoke(cli.app, ["storage", "--all"])
+    assert detailed.exit_code == 0, detailed.stdout
+    assert "Preboot" in detailed.stdout
 
 
 def test_startup_lists_owner_and_tri_state_without_claiming_enabled(

@@ -64,15 +64,15 @@ Phases 1-6 are locally accepted. The public repository exists and hosted run `29
 
 ## Decision Links
 
-- D-001 through D-035 are in `DECISIONS.md`.
+- D-001 through D-036 are in `DECISIONS.md`.
 
 ## Current Milestone
 
-UV-first `1.0.0rc1` candidate transition is locally verified; public publication and public UV-tool proof remain explicitly gated.
+UV-first `1.0.0rc1` candidate UX correction is under final clean-clone verification; public publication and public UV-tool proof remain explicitly gated.
 
 ## Next Actions
 
-1. Complete and verify the UV-first repository transition and clean-clone run-through.
+1. Complete the autonomous corrected-UX clean-clone run-through and exact-head CI.
 2. Configure the GitHub `pypi` environment and PyPI pending trusted publisher.
 3. Run the exact RC release workflow, then verify public UV-tool installation.
 4. Update acceptance from external evidence; never infer those results from local structure.

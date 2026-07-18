@@ -145,7 +145,7 @@ HELP: dict[str, str] = {
         "Shows internal and external volumes, free space, and verified application bundle locations.",
         "you want to know which drive holds software and which drive could regain measured space.",
         READ_ONLY,
-        ("macwise storage", "macwise review largest"),
+        ("macwise storage", "macwise storage --all", "macwise review largest"),
         ("Run macwise review largest.", "Run macwise backups."),
     ),
     "backups": _help(

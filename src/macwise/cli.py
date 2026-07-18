@@ -135,8 +135,11 @@ app.add_typer(codex_app, name="codex", hidden=True)
 
 _service_factory: Callable[[], AuditService] = AuditService
 _plan_store_factory: Callable[[], PlanStore] = PlanStore
-_now: Callable[[], datetime] = lambda: datetime.now(UTC)
 _DEFAULT_RESULT_LIMIT = 20
+
+
+def _now() -> datetime:
+    return datetime.now(UTC)
 
 
 class CLICodexSetupService(Protocol):
@@ -549,6 +552,14 @@ def _echo_hidden_count(*, total: int, shown: int, command: str) -> None:
     hidden = total - shown
     if hidden > 0:
         typer.echo(f"\nShowing {shown} of {total}. Run {command} to see all {total}.")
+
+
+def _is_user_relevant_mount(mount_point: str | None) -> bool:
+    return mount_point is not None and (
+        mount_point == "/"
+        or mount_point.startswith("/Volumes/")
+        or mount_point.startswith("/Network/")
+    )
 
 
 def _finding_summary(finding: Finding) -> str:
@@ -1252,11 +1263,21 @@ def startup(
 
 
 @app.command(help=HELP["storage"])
-def storage() -> None:
+def storage(
+    all_items: Annotated[
+        bool,
+        typer.Option("--all", help="Also show mounted macOS support volumes."),
+    ] = False,
+) -> None:
     audit = _audit()
     typer.echo("Storage volumes\n")
     mounted = tuple(volume for volume in audit.volumes if volume.mount_point is not None)
-    for volume in mounted:
+    visible = (
+        mounted
+        if all_items
+        else tuple(volume for volume in mounted if _is_user_relevant_mount(volume.mount_point))
+    )
+    for volume in visible:
         free = (
             f"{_bytes(volume.free_bytes)} free of {_bytes(volume.capacity_bytes)}"
             if volume.free_bytes is not None and volume.capacity_bytes is not None
@@ -1268,8 +1289,13 @@ def storage() -> None:
             f"- {safe_display_text(volume.name)}: {free}; {volume.location.value}; "
             f"{safe_display_text(volume.mount_point)}"
         )
-    if not mounted:
+    if not visible:
         typer.echo("No mounted storage volumes were collected.")
+    _echo_hidden_count(
+        total=len(mounted),
+        shown=len(visible),
+        command="macwise storage --all",
+    )
     typer.echo("\nThis command is read-only. MacWise did not change this Mac.")
 
 
