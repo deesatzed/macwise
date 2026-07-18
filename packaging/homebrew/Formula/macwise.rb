@@ -4,7 +4,6 @@ class Macwise < Formula
   desc "Understand Mac software and plan safe, reversible cleanup"
   homepage "https://github.com/deesatzed/macwise"
   url "https://github.com/deesatzed/macwise/releases/download/v1.0.0rc1/macwise-1.0.0rc1.tar.gz"
-  version "1.0.0rc1"
   sha256 "bcc52a5d3d74c62776c3fa8be92e66099b7bbdb78aa4f31db041dabf96ad6ad2"
   license "MIT"
 

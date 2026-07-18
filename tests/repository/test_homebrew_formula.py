@@ -66,8 +66,8 @@ def formula_resources(text: str) -> dict[str, tuple[str, str]]:
 def test_formula_is_exact_rc_with_no_placeholder_or_install_time_resolution() -> None:
     text = FORMULA.read_text(encoding="utf-8")
 
-    assert 'version "1.0.0rc1"' in text
     assert "macwise-1.0.0rc1.tar.gz" in text
+    assert not re.search(r'^  version "', text, re.MULTILINE)
     assert re.search(r'^  sha256 "[0-9a-f]{64}"$', text, re.MULTILINE)
     assert "PLACEHOLDER" not in text
     assert "pip install" not in text

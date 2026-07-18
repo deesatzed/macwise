@@ -79,6 +79,7 @@ jobs:
         run: |
           set -euo pipefail
           brew tap-new macwise-local/tap
+          brew trust macwise-local/tap
           TAP_ROOT="$(brew --repository macwise-local/tap)"
           cp packaging/homebrew/Formula/macwise.rb "$TAP_ROOT/Formula/macwise.rb"
           brew audit --strict macwise-local/tap/macwise

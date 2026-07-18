@@ -177,3 +177,18 @@ None required. Tap ownership and publication credentials are deferred until they
 - 2026-07-18 MW-400 claim validation: PASS for local Phase 5 reversible-cleanup scope only. Live permissions/behavior, hosted CI, public artifacts, Codex integration, and production safety remain unproven.
 - 2026-07-18 first public hosted CI: Python 3.12/3.13 quality jobs passed, but the Homebrew candidate job failed because current Homebrew rejects `brew audit` by filesystem path and the temporary tap did not yet exist. Publication remained stopped.
 - 2026-07-18 hosted-CI repair RED/GREEN: repository workflow tests failed on the stale macOS/Python matrix and path-based audit ordering, then passed after covering Python 3.12-3.14, macOS 15/current hosted macOS 26, and creating/copying the ephemeral formula before auditing `macwise-local/tap/macwise`.
+
+## Rescue Ladder - step `hosted-homebrew-candidate` - attempt 2
+
+### Rung 1: alternate pattern
+- Searched: `Homebrew brew audit strict named formula in ephemeral tap GitHub Actions audit failure`
+- Considered: `7126fe8b-bc35-4d1b-a686-7a33d7a18662`, `3efab124-fa86-41e8-96da-9073bb94bc88`, `52e7729b-ee6c-4a20-ab42-cc2eb08e2b2d`
+- Selected / Rejected: Rejected all three stale immutable-audit-trail results as unrelated; selected the exact current Homebrew diagnostics from hosted job `88072721159`.
+
+### Rung 2: bisect
+- Diff hunks tried: 2
+- Smallest failing hunk: `packaging/homebrew/Formula/macwise.rb:7`; the explicit RC version duplicated the version inferred from the URL, and the generated local tap also required explicit trust before formula loading.
+
+### Rung 3: escalate
+- BLOCKER.md updated: no
+- User question: none; the hosted log provided an exact bounded repair and no expanded authority was required.

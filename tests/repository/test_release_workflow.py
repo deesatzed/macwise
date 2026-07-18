@@ -51,11 +51,12 @@ def test_ci_has_ephemeral_macos_homebrew_candidate_install_proof() -> None:
 
     assert job["runs-on"] == "macos-26"
     tap_creation = text.index("brew tap-new macwise-local/tap")
+    tap_trust = text.index("brew trust macwise-local/tap")
     formula_copy = text.index(
         'cp packaging/homebrew/Formula/macwise.rb "$TAP_ROOT/Formula/macwise.rb"'
     )
     named_audit = text.index("brew audit --strict macwise-local/tap/macwise")
-    assert tap_creation < formula_copy < named_audit
+    assert tap_creation < tap_trust < formula_copy < named_audit
     assert "brew install --build-from-source" in text
     assert "brew test" in text
     assert "uv build --sdist" in text
