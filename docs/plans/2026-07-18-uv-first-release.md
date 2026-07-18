@@ -82,6 +82,10 @@ git commit -m "feat: make UV the primary install path"
 
 State that UV/PyPI is the first-release requirement, pipx is an alternative, and Homebrew distribution is a future milestone. Preserve all Homebrew inventory, analysis, planning, execution, and safety requirements.
 
+Remove the stale `packaging/homebrew/` distribution candidate and its repository-level
+formula checksum tests. Preserve Git history and every product-level Homebrew feature and
+safety test.
+
 **Step 2: Reconcile acceptance language**
 
 Remove the Homebrew tap from current public-release blockers and checklists. Preserve historical evidence as dated history rather than rewriting past outcomes.

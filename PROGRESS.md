@@ -2,7 +2,7 @@
 
 ## Status Overview
 
-Phase 5 is locally accepted: MacWise now has exact approval, fresh locked revalidation, allowlisted reversible actions, crash-visible journals, bounded recovery classification, post-action verification, and separately approved undo. MW-400 passed Python 3.12/3.13, independent-review, quality, build, privacy, skill, and clean-wheel synthetic/fake-mutator gates. This does not prove live installed-app, Homebrew, or launchctl behavior. MW-011 remains PARTIAL because no hosted/Linux runner or Git remote exists; Phases 6–7 and public release remain open.
+Phases 1-6 are locally accepted. The public repository exists and hosted run `29641643615` passed Linux, macOS 15, macOS 26, Python 3.12-3.14, and the then-current Homebrew candidate proof. The approved first-release UX is now `uv tool install macwise`, with pipx as an alternative and Homebrew distribution deferred. Public PyPI/GitHub release execution remains open.
 
 ## Current Assumptions
 
@@ -10,7 +10,7 @@ Phase 5 is locally accepted: MacWise now has exact approval, fresh locked revali
 - `GOAL.md` is approved product design and takes precedence over the two older planning artifacts.
 - Python 3.12 is available for development or can be installed without changing product scope.
 - Phase 1 may use sanitized command fixtures on non-macOS CI while macOS runners exercise bounded integration smoke tests.
-- GitHub repository creation, package publication, Homebrew tap changes, and production release require explicit authority/credentials at the relevant phase; local preparation does not.
+- Package publication and production release require explicit authority/credentials; Homebrew tap work is outside the first-release milestone.
 - The approved Phase 3 goal authorizes a versioned exact-match role catalog and guarded read-only recommendations; unknown relationships remain unknown, and removal authorization stays deferred to planning/execution phases.
 - The active autonomous goal approves the Phase 4 assumption that one exact unsafe candidate may be persisted as blocked for review; ambiguous names still refuse, and no plan grants execution authority.
 
@@ -35,7 +35,7 @@ Phase 5 is locally accepted: MacWise now has exact approval, fresh locked revali
 | Audit Phase 1 against `GOAL.md` | Done | Codex | `docs/phase-1-acceptance.md` verdict is PARTIAL with direct evidence and explicit collector/release gaps. |
 | Close MW-009 inventory field gaps | Done | Codex | Schema v2 plus application signing/architecture/process/components/source, Homebrew size/executable/state/reference/location/correlation, and storage topology/ownership/Time Machine facts are fixture-tested and real-smoked. |
 | Complete MW-010 hostile metadata coverage | Done | Codex | Synthetic plist/Homebrew/disk/prompt fixtures prove path containment, raw JSON provenance, Markdown/terminal neutralization, inert CLI matching, and the skill's prompt boundary. |
-| Run MW-011 clean-platform acceptance | Partial | Codex | Python 3.12 and 3.13 pass on macOS; clean wheel and isolated pipx installs pass. Hosted Linux/macOS CI cannot run without a remote runner; Docker/Podman engines are not running. |
+| Run MW-011 clean-platform acceptance | Done | Codex | Hosted Linux/macOS 15/macOS 26 and Python 3.12-3.14 passed in run `29641643615`; local macOS 27 and isolated install evidence also pass. |
 | Build MW-100 evidence and analysis core | Done | Codex | Schema 3, v1/v2 migration, usage/startup collectors, evidence-basis findings, bounded related paths, and backup facts pass the 112-test gate. |
 | Build MW-100 explain/review views | Done | Codex | Explain, review unused, startup, backups, help, and four-basis Markdown views pass focused, hostile-render, and 118-test full gates. |
 | Run MW-100 acceptance | Done | Codex | `docs/phase-2-acceptance.md` records a local PASS from 118 tests on Python 3.12/3.13, quality/build/privacy/skill/clean-wheel gates, and aggregate-only real scans. |
@@ -59,35 +59,33 @@ Phase 5 is locally accepted: MacWise now has exact approval, fresh locked revali
 | Harden and accept MW-400 reversible cleanup | Done | Codex | Independent review findings were adjudicated and resolved except the explicitly rejected full-digest display change; 292 tests and all local artifact gates pass. `docs/phase-5-acceptance.md` records proof and limitations. |
 | Design MW-500 Codex integration | Done | Codex | Approved native plugin plus strictly read-only STDIO MCP design is saved under `docs/plans/`; D-031 pins the protocol and preserves the standalone mutation boundary. |
 | Build MW-500 Codex integration | Done | Codex | Eight typed read-only tools, native plugin/skill payload, one-command setup, bounded STDIO server, clean-wheel call proof, and review hardening pass 361 tests on Python 3.12/3.13. |
-| Complete Phase 7 local RC | Done | Codex | `1.0.0rc1` artifacts/docs/workflow, real isolated pipx, locked formula candidate, security/privacy review, and local acceptance are complete; external publication remains blocked. |
-| Prepare external distribution proof | Done | Codex | Hosted CI now includes ephemeral formula audit/install/test; a manual public smoke verifies pipx, Homebrew, checksums, PyPI, GitHub release, and tap identity after publication. No hosted run is claimed. |
+| Complete Phase 7 local RC | Done | Codex | `1.0.0rc1` artifacts, UV/pipx packaging, release workflow, security/privacy review, and local acceptance are complete; external publication remains gated. |
+| Prepare external distribution proof | Done | Codex | The manual public smoke now verifies isolated UV-tool installation plus PyPI/GitHub checksum identity; Homebrew distribution is deferred. |
 
 ## Decision Links
 
-- D-001 through D-032 are in `DECISIONS.md`.
+- D-001 through D-035 are in `DECISIONS.md`.
 
 ## Current Milestone
 
-Local `1.0.0rc1` handoff complete; public publication, hosted CI/release, and public install proof remain explicitly blocked.
+UV-first `1.0.0rc1` candidate transition is in progress; public publication and public UV-tool proof remain explicitly gated.
 
 ## Next Actions
 
-1. Obtain explicit tag/push/PyPI/GitHub/tap authority and confirm repository ownership.
-2. Upgrade/use a clean hosted Xcode 27 macOS runner for strict formula audit/install/test.
-3. Run hosted CI and the exact RC release workflow, then verify public pipx/brew installs.
+1. Complete and verify the UV-first repository transition and clean-clone run-through.
+2. Configure the GitHub `pypi` environment and PyPI pending trusted publisher.
+3. Run the exact RC release workflow, then verify public UV-tool installation.
 4. Update acceptance from external evidence; never infer those results from local structure.
 
 ## Blockers
 
-Local Phase 7 work is complete. Public completion is truly blocked by authority and external infrastructure: no publication authorization, no hosted run, no configured publisher/tap ownership proof, and Xcode 26.4 cannot satisfy Homebrew's Xcode 27 audit prerequisite.
-
-Live verification on 2026-07-18 found the intended GitHub repository, PyPI project, and
-Homebrew tap endpoints all return 404. `gh` is authenticated as `deesatzed`, but no
-remote exists and credentials alone do not authorize repository creation or publication.
+The GitHub repository and hosted CI now exist. Public completion remains blocked only by
+PyPI trusted-publisher configuration, the authorized RC tag/release workflow, and clean
+public UV-tool proof. The absent Homebrew tap is intentional deferred scope, not a blocker.
 
 ## Questions for User
 
-None required. Tap ownership and publication credentials are deferred until they become necessary for release.
+None required for local implementation. PyPI account configuration is required immediately before publication.
 
 ## Verification Log
 
@@ -194,3 +192,5 @@ None required. Tap ownership and publication credentials are deferred until they
 - User question: none; the hosted log provided an exact bounded repair and no expanded authority was required.
 
 - 2026-07-18 hosted-CI repair accepted by run `29641643615`: all nine Linux/macOS 15/macOS 26 jobs passed on Python 3.12, 3.13, and 3.14; the current Homebrew candidate audit, exact local-source install, installed-version test, and cleanup passed on macOS 26 in 8m34s.
+- 2026-07-18 D-035 scope decision: `uv tool install macwise` became the primary first-release UX, pipx remained an alternative, and Homebrew distribution moved to a later separately accepted milestone to reduce cross-repository drift.
+- 2026-07-18 deferred-formula drift check: the candidate formula checksum changed when packaged README content changed, directly demonstrating cross-channel drift. With user approval, only `packaging/homebrew/` and its repository-level formula tests were removed; all Homebrew inventory, analysis, service, planning, apply/undo, and safety code/tests remain in scope.

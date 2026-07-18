@@ -2,61 +2,43 @@
 
 Date: 2026-07-18
 
-Verdict: **PASS for the local `1.0.0rc1` candidate; BLOCKED for public release.** The
-repository contains tested RC artifacts, current documentation/demo, pinned least-
-privilege release automation, a real isolated pipx proof, a lock-aligned Homebrew
-candidate, an ephemeral hosted formula install job, and a manual post-publication smoke
-workflow. External publication and hosted behavior are not complete.
+Verdict: **PASS for the local and hosted `1.0.0rc1` candidate; BLOCKED for public
+release.** D-035 makes `uv tool install macwise` the primary first-release path, retains
+pipx as an alternative, and defers Homebrew distribution to a later milestone.
 
 ## Novice acceptance map
 
-| # | Outcome | Local evidence | Remaining boundary |
+| # | Outcome | Evidence | Remaining boundary |
 |---:|---|---|---|
-| 1 | Install with one command | Real isolated pipx wheel install passes; formula candidate is complete | Public pipx/brew installs unverified. |
-| 2 | Run without subcommands | Guided/noninteractive CLI tests and pipx smoke pass | None local. |
-| 3 | Understand an unfamiliar app | Explain service/CLI fixtures pass | Host evidence can remain unknown. |
-| 4 | Learn direct/indirect use | Usage finding and help/report tests pass | No complete usage-history claim. |
-| 5 | See overlap | Exact catalog compare/review tests pass | Unknown identities are not fuzzily matched. |
-| 6 | See which appears active | Evidence-basis activity comparison tests pass | Missing use stays unknown. |
-| 7 | Internal/external storage | Volume/location/size tests pass | Missing size is `Unknown`. |
-| 8 | Backup limitations | Backup configuration/coverage-separation tests pass | No complete recoverability claim. |
-| 9 | Create a no-change plan | Immutable planning and zero-mutation tests pass | Local state is written only on explicit add. |
-| 10 | Preview every change | Action/check/rollback integrity tests pass | Unsupported actions remain blocked. |
-| 11 | Trash one approved manual app | Synthetic descriptor-relative apply test passes | No live user app was moved. |
-| 12 | Undo that action | Synthetic exact restoration tests pass | Changed/occupied targets refuse. |
-| 13 | Set up Codex | Isolated setup/rollback/recovery matrix passes | No live personal installation. |
-| 14 | `$macwise` conversational review | Skill, workflow, eight-tool SDK and installed-wheel call proofs pass | No hosted model-quality evaluation. |
-| 15 | Useful help/errors | Root/nested help, refusal, recovery, pipx help smokes pass | None local. |
+| 1 | Install with one command | Local artifact installs through isolated UV tool state; prior isolated pipx proof also passes | Public PyPI UV-tool install requires publication. |
+| 2 | Run without subcommands | Guided/noninteractive CLI and installed-wheel smokes pass | None local. |
+| 3-8 | Understand software, usage, overlap, storage, and backup limits | Phase 1-3 acceptance suites pass | Host evidence may remain explicitly unknown. |
+| 9-12 | Plan, preview, apply, and undo safely | Immutable planning, approval, synthetic mutation, verification, and recovery suites pass | Live user software mutation is not claimed. |
+| 13-14 | Set up and use Codex | Plugin setup/recovery and eight read-only tool proofs pass | No hosted model-quality claim. |
+| 15 | Receive useful help/errors | Root, nested, refusal, and recovery help contracts pass | None local. |
 
 ## Release evidence
 
-- Python 3.12.11 and Python 3.13.13: 377 tests passed on each.
-- Full statement coverage: 88%; warnings exposed unclosed test SQLite connections, which
-  were fixed and the persistence-focused suite then passed with ResourceWarnings fatal.
-- Ruff, format, Pyright, build, plugin/skill validation, privacy, workflow, artifact,
-  pipx, and Homebrew resource-lock tests pass locally.
-- Installed-environment `pip-audit` reported no known dependency vulnerabilities; the
-  local editable MacWise package itself is not on PyPI and was skipped.
-- `brew style` passes. `brew audit --strict` is blocked before formula evaluation because
-  Homebrew requires Xcode 27.0 and this host has 26.4. Installation was not attempted
-  against the shared user prefix.
-- CI now defines an ephemeral macOS job that builds the exact sdist, audits the public
-  formula, substitutes only its source URL with the local artifact, installs/tests it,
-  and removes the temporary formula. A manual workflow separately tests both published
-  install commands and verifies PyPI/GitHub/checksum/tap identity. Neither hosted workflow
-  has run, so these are verification surfaces rather than pass evidence.
+- The complete local suite, Ruff format/lint, Pyright, build, privacy, artifact, and
+  release-workflow contracts pass.
+- Hosted run `29641643615` passed Linux, macOS 15, macOS 26, and Python 3.12-3.14.
+- That run also passed the historical resource-locked Homebrew candidate proof before
+  D-035 deferred Homebrew distribution; this remains technical evidence, not a public
+  Homebrew claim or first-release gate.
+- The release workflow is exact-RC-tag gated, builds artifacts once, uses PyPI OIDC,
+  checks artifacts, publishes checksums, and creates a GitHub prerelease only after PyPI.
+- The manual public smoke now installs through isolated `uv tool` state and verifies
+  PyPI/GitHub artifact and checksum identity.
 
 ## Claim validation
 
-**PASS:** “The repository contains a locally verified MacWise `1.0.0rc1` candidate.”
+**PASS:** “The repository contains a locally and hosted-CI-verified MacWise
+`1.0.0rc1` candidate with a UV-first release path.”
 
-**BLOCK:** “MacWise `1.0.0rc1` is publicly released or ready for public users.” That
-claim requires authorization, hosted CI/release results, trusted-publisher/tap ownership,
-strict formula audit/install, and clean public install proofs listed in
-`RELEASE_CHECKLIST.md`.
+**BLOCK:** “MacWise `1.0.0rc1` is publicly released.” That claim still requires the
+GitHub `pypi` environment, PyPI pending trusted publisher, authorized RC tag, successful
+release workflow, and clean public UV-tool installation.
 
-On 2026-07-18, direct checks found no public `deesatzed/macwise` repository, no PyPI
-`macwise` project, and no `deesatzed/homebrew-tap` repository; all three endpoints
-returned 404. The local GitHub CLI is authenticated as `deesatzed`, but creating those
-external surfaces, pushing, configuring trusted publishing, and releasing require an
-explicit publication decision.
+The public GitHub repository now exists. The PyPI project remains absent until the
+trusted publisher first publishes. The absent Homebrew tap is intentional deferred
+scope rather than a release blocker.

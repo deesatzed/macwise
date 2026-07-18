@@ -92,9 +92,10 @@ local Phase 5 acceptance.
 
 1. Live installed-application permissions, real user Trash behavior, and live
    Homebrew/launchctl mutations are unproven and were intentionally not attempted.
-2. MW-011 hosted Linux/macOS CI remains unverified because no remote runner is available.
-3. Public PyPI/pipx and Homebrew tap installation, signing, and release artifacts remain
-   Phase 7 work.
+2. MW-011 was later closed by hosted run `29641643615`; this Phase 5 audit's original
+   local-only verdict remains historical evidence.
+3. Public UV-tool/pipx installation, signing, and release artifacts remain Phase 7 work;
+   Homebrew distribution is deferred by D-035.
 4. One-command Codex setup, typed read-only local tools, and conversational integration
    remain Phase 6 work.
 5. This audit does not claim malware detection, vulnerability absence, complete backup

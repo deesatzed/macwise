@@ -78,7 +78,7 @@ promoted to a negative conclusion.
 
 1. MW-011 hosted Linux/macOS CI remains unverified because this checkout has no remote
    runner; local macOS version evidence does not substitute for hosted results.
-2. Public PyPI/pipx and Homebrew tap installation remain unproven until publication.
+2. Public UV-tool/pipx installation remains unproven until PyPI publication; Homebrew distribution is deferred by D-035.
 3. Persistent exact cleanup planning and previews belong to Phase 4.
 4. Reversible apply/verify/undo, typed Codex integration, and release work remain
    disabled until their owning phases pass.

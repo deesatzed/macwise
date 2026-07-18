@@ -72,6 +72,7 @@ This file records durable architecture, UX, safety, privacy, dependency, and rel
 | D-032 | 2026-07-18 | Codex Setup | Require capability preflight and exact installed selector/version verification; authorize replacement only when ownership marker and manifest identities match; repair only complete marker-owned transaction trees. | Setup must not trust exit zero, arbitrary JSON, or a marker alone, and recovery must not delete ambiguous user state. | Trust any JSON object; marker-only ownership; delete all setup-shaped remnants. | Accepted |
 | D-033 | 2026-07-18 | Public Release | Prepare `1.0.0rc1` as a PyPI-first package with a separately maintained, resource-locked Homebrew tap candidate; keep tagging and publication outside local acceptance. | This satisfies both install paths while preserving one Python artifact authority and the explicit credentials/ownership boundary. | GitHub-wheel wrapper formula; pipx-only RC; immediate publication. | Accepted |
 | D-034 | 2026-07-18 | CI Compatibility | Test Python 3.12, 3.13, and 3.14 across Linux, macOS 15, and the current GitHub-hosted macOS 26 image; run Homebrew candidate and public-install proof on macOS 26 while retaining local macOS 27 evidence separately. | The package declares Python 3.12+ and must cover the current interpreter and hosted macOS without confusing GitHub image availability with the developer Mac's newer OS. | Test only oldest versions; use only moving `latest` labels; attach the developer Mac as a self-hosted runner. | Accepted |
+| D-035 | 2026-07-18 | Public Release | Make `uv tool install macwise` the primary first-release UX, retain pipx as an alternative, and defer Homebrew distribution to a separately accepted later milestone. | A single PyPI authority reduces beginner friction and cross-repository drift while preserving a future Homebrew path after public demand and maintenance ownership exist. | Publish UV, pipx, and Homebrew together; pipx-only release; Homebrew-first release. | Accepted; supersedes D-033's two-channel requirement and D-034's Homebrew release gate only. |
 
 ## Initial Default Decisions
 
@@ -83,7 +84,8 @@ This file records durable architecture, UX, safety, privacy, dependency, and rel
 
 ## Superseded Decisions
 
-None.
+- D-033's requirement to ship a separate Homebrew tap with the first release is superseded by D-035; its PyPI-first artifact authority remains accepted.
+- D-034's Python/macOS compatibility matrix remains accepted, while its Homebrew candidate/public-install gate is superseded by D-035.
 
 ## Decision Rules for Future Agents
 
@@ -94,4 +96,4 @@ None.
 
 ## Pending Decision Questions
 
-- D-P03: Confirm tap/repository ownership and release credentials before external publication.
+- D-P03: Confirm Homebrew tap ownership only when the later Homebrew distribution milestone begins.

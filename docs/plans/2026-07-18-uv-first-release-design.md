@@ -27,10 +27,10 @@ wheel and source distribution to PyPI and creates the matching GitHub prerelease
 public installation smoke workflow verifies a clean `uv tool install` from PyPI and
 cross-checks the installed version against the GitHub release artifacts.
 
-The resource-locked Homebrew formula remains in the repository as deferred work and
-prior technical evidence, but it is removed from the first-release workflow, public
-completion gate, and beginner installation instructions. A future milestone may update,
-publish, and verify the separate tap without changing the first-release claim.
+The resource-locked Homebrew formula is removed from the active repository because its
+release checksum drifts whenever packaged project content changes. Git history preserves
+the prior experiment. A future milestone will generate and verify a fresh formula from
+the accepted published artifact without changing the first-release claim.
 
 ## Truth and testing
 

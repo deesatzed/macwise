@@ -8,7 +8,7 @@ MacWise must work as:
 
 1. A simple standalone CLI anyone can install and use.
 2. An optional Codex integration that gives users a conversational `$macwise` experience.
-3. A reusable open-source project with tests, documentation, releases, and a Homebrew installation path.
+3. A reusable open-source project with tests, documentation, and releases; Homebrew distribution is a later milestone.
 
 The public product is the CLI. The Codex skill is an optional intelligence and conversational layer. Users must not need to understand MCP, skills, agents, or internal architecture.
 
@@ -21,10 +21,10 @@ The public product is the CLI. The Codex skill is an optional intelligence and c
 Target public installation:
 
 ```bash
-brew install deesatzed/tap/macwise
+uv tool install macwise
 ```
 
-Also support:
+Also support as an alternative:
 
 ```bash
 pipx install macwise
@@ -612,8 +612,9 @@ Provide:
 - GitHub Actions for lint, types, and tests
 - Tagged releases
 - Semantic versioning
-- Homebrew tap formula
-- pipx installation
+- UV tool installation from PyPI
+- pipx installation as an alternative
+- A deferred, separately accepted Homebrew distribution milestone
 - Uninstall instructions
 - Privacy documentation
 - Threat model
@@ -697,13 +698,21 @@ Deliver:
 
 Deliver:
 
-- Homebrew tap
-- pipx package
+- UV tool installation from PyPI
+- pipx installation as an alternative
 - Documentation
 - GitHub release workflow
 - Demo
 - Security review
 - Version 1.0 release candidate
+
+## Later milestone — Homebrew distribution
+
+Deliver only after separate acceptance:
+
+- A maintained Homebrew tap
+- Formula/release identity automation
+- Clean public Homebrew install, upgrade, and uninstall proof
 
 ---
 
