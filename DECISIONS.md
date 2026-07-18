@@ -64,6 +64,12 @@ This file records durable architecture, UX, safety, privacy, dependency, and rel
 | D-029 | 2026-07-18 | Execution Boundary | Permit only same-filesystem atomic moves to canonical Trash, exact formula/cask Homebrew argv, and reversible current-user LaunchAgent/Homebrew-service operations through dedicated allowlisted adapters; never elevate privileges. | These operations are bounded, previewable, testable, and have explicit inverse/verification paths without arbitrary deletion or shell execution. | Generic subprocess adapter; recursive move/copy fallback; system daemon support; sudo/Finder authorization. | Accepted |
 | D-030 | 2026-07-18 | Startup Planning | Make startup changes opt-in and preview every supported startup action in plan schema 2; keep system/privileged/ambiguous startup kinds blocked. | Phase 5 cannot silently add startup mutations to a Phase 4 preview, and the public contract requires reversible startup disable. | Implicitly disable all owned startup items during removal; defer startup disable; manage startup outside cleanup plans. | Accepted |
 
+## MW-500 Decisions
+
+| ID | Date | Category | Decision | Rationale | Alternatives Considered | Status |
+|---|---|---|---|---|---|---|
+| D-031 | 2026-07-18 | Codex Integration | Package the `$macwise` skill and eight strictly read-only local tools as a native Codex plugin backed by an official STDIO MCP server; keep every mutation and approval operation outside the tool surface. | Current Codex supports plugins as the distribution unit for skills plus MCP configuration and supports local STDIO servers; this meets one-command setup and typed-tool requirements without granting model-driven mutation authority. | Direct skill copy plus shared TOML editing; skill-only CLI invocation; remote MCP service. | Accepted |
+
 ## Initial Default Decisions
 
 - MIT license unless a later legal decision selects Apache-2.0.
@@ -85,5 +91,4 @@ None.
 
 ## Pending Decision Questions
 
-- D-P02: Select and pin the Phase 6 local typed protocol after evaluating current official support.
 - D-P03: Confirm tap/repository ownership and release credentials before external publication.

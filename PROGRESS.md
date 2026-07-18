@@ -57,7 +57,8 @@ Phase 5 is locally accepted: MacWise now has exact approval, fresh locked revali
 | Build MW-400 command execution slice | Done | Codex | Closed fixed-path Homebrew and current-user launchctl adapters accept only structured safe identities, use bounded shell-free fake-runner-tested invocations, require fresh before/after observations, preserve startup/removal and reverse undo ordering, and journal verification or undo failure before stopping. |
 | Build MW-400 approval and recovery CLI | Done | Codex | `apply` and `undo` render review surfaces, require exact interactive or explicit fingerprints, collect fresh evidence, expose durable failure states and recovery guidance, and use injected fake execution services in tests; default assembly uses the shared journal lock and closed adapters without elevation. |
 | Harden and accept MW-400 reversible cleanup | Done | Codex | Independent review findings were adjudicated and resolved except the explicitly rejected full-digest display change; 292 tests and all local artifact gates pass. `docs/phase-5-acceptance.md` records proof and limitations. |
-| Build MW-500 Codex integration | Ready | Codex | Bundle/setup/typed read-only integration work is next; mutation authority does not expand. |
+| Design MW-500 Codex integration | Done | Codex | Approved native plugin plus strictly read-only STDIO MCP design is saved under `docs/plans/`; D-031 pins the protocol and preserves the standalone mutation boundary. |
+| Build MW-500 Codex integration | Ready | Codex | Bundle/setup/typed read-only integration implementation is next; mutation authority does not expand. |
 | Complete Phases 6–7 | Pending | Codex | Governed by `IMPLEMENT.md` and acceptance audits. |
 
 ## Decision Links
