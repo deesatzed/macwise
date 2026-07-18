@@ -1,0 +1,37 @@
+{
+  "name": "macwise",
+  "version": "0.1.0-alpha.0",
+  "description": "Review installed Mac software using local, read-only MacWise evidence.",
+  "author": {
+    "name": "MacWise contributors",
+    "url": "https://github.com/deesatzed"
+  },
+  "homepage": "https://github.com/deesatzed/macwise",
+  "repository": "https://github.com/deesatzed/macwise",
+  "license": "MIT",
+  "keywords": [
+    "macos",
+    "software-inventory",
+    "homebrew",
+    "audit"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "MacWise",
+    "shortDescription": "Understand installed Mac software",
+    "longDescription": "Review applications, Homebrew packages, startup items, storage, backups, and overlap using local read-only evidence.",
+    "developerName": "MacWise contributors",
+    "category": "Productivity",
+    "capabilities": [
+      "Read"
+    ],
+    "websiteURL": "https://github.com/deesatzed/macwise",
+    "privacyPolicyURL": "https://github.com/deesatzed/macwise/blob/main/docs/privacy.md",
+    "defaultPrompt": [
+      "Use $macwise to review installed software.",
+      "Use $macwise to explain app overlap.",
+      "Use $macwise to review startup items."
+    ]
+  }
+}
