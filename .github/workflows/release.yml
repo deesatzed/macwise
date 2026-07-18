@@ -43,7 +43,7 @@ jobs:
       - name: Build and inspect distributions
         run: |
           uv build
-          uvx twine check dist/*
+          uv run --frozen twine check dist/*
           sha256sum dist/* > SHA256SUMS
 
       - name: Upload immutable candidate

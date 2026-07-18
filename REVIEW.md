@@ -19,3 +19,19 @@ regressions. The installed-wheel test now calls `audit_mac` over real STDIO JSON
 
 Remaining boundaries: no live personal plugin installation or model-driven Codex
 session was run, and concurrent third-party marketplace modification is not simulated.
+
+## Phase 7 release-readiness adjudication
+
+The release-readiness and adversarial self-review found four Important candidate gaps;
+all were accepted and resolved before the final matrix:
+
+| Finding | Resolution |
+|---|---|
+| The default sdist included tests, planning controls, and the formula itself, making the formula hash drift and exposing non-runtime files. | The sdist now has an explicit minimal public include set; artifact-content and formula-hash tests rebuild it. |
+| The first Homebrew dependency-closure check ignored optional extras, omitting the MCP JWT crypto chain. | The checker traverses requested extras and the formula now includes cryptography, cffi, and pycparser with locked URLs/hashes. |
+| Release workflow used an unpinned ephemeral Twine tool. | Twine is a constrained locked development dependency and the workflow invokes it through `uv --frozen`. |
+| Python 3.13 coverage exposed unclosed SQLite inspection connections in tests. | Test connections now combine transaction and explicit closing contexts; the focused suite passes with ResourceWarnings fatal. |
+
+No Critical/Important local candidate finding remains open. External Homebrew build
+behavior, hosted workflows, publisher/tap configuration, and public install commands
+remain blocking evidence gaps rather than accepted passes.

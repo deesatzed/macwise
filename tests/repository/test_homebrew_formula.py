@@ -23,23 +23,33 @@ def production_resources() -> dict[str, tuple[str, str]]:
         "os_name": "posix",
         "platform_machine": "arm64",
     }
-    seen = {"macwise"}
-    pending = ["macwise"]
+    requested_names = {"macwise"}
+    seen_states: set[tuple[str, frozenset[str]]] = set()
+    pending = [("macwise", frozenset[str]())]
     while pending:
-        for dependency in packages[pending.pop()].get("dependencies", []):
+        name, extras = pending.pop()
+        state = (name, extras)
+        if state in seen_states:
+            continue
+        seen_states.add(state)
+        package = packages[name]
+        dependencies = list(package.get("dependencies", []))
+        for extra in extras:
+            dependencies.extend(package.get("optional-dependencies", {}).get(extra, []))
+        for dependency in dependencies:
             marker = dependency.get("marker")
             if marker and not Marker(marker).evaluate(environment):
                 continue
-            name = dependency["name"]
-            if name not in seen:
-                seen.add(name)
-                pending.append(name)
+            dependency_name = dependency["name"]
+            dependency_extras = frozenset(dependency.get("extra", []))
+            requested_names.add(dependency_name)
+            pending.append((dependency_name, dependency_extras))
     return {
         name: (
             packages[name]["sdist"]["url"],
             packages[name]["sdist"]["hash"].removeprefix("sha256:"),
         )
-        for name in seen - {"macwise"}
+        for name in requested_names - {"macwise"}
     }
 
 

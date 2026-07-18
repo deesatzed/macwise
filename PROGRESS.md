@@ -59,7 +59,7 @@ Phase 5 is locally accepted: MacWise now has exact approval, fresh locked revali
 | Harden and accept MW-400 reversible cleanup | Done | Codex | Independent review findings were adjudicated and resolved except the explicitly rejected full-digest display change; 292 tests and all local artifact gates pass. `docs/phase-5-acceptance.md` records proof and limitations. |
 | Design MW-500 Codex integration | Done | Codex | Approved native plugin plus strictly read-only STDIO MCP design is saved under `docs/plans/`; D-031 pins the protocol and preserves the standalone mutation boundary. |
 | Build MW-500 Codex integration | Done | Codex | Eight typed read-only tools, native plugin/skill payload, one-command setup, bounded STDIO server, clean-wheel call proof, and review hardening pass 361 tests on Python 3.12/3.13. |
-| Complete Phase 7 | Pending | Codex | MW-600 release engineering and public acceptance remain; external publication requires explicit authority. |
+| Complete Phase 7 local RC | Done | Codex | `1.0.0rc1` artifacts/docs/workflow, real isolated pipx, locked formula candidate, security/privacy review, and local acceptance are complete; external publication remains blocked. |
 
 ## Decision Links
 
@@ -67,18 +67,18 @@ Phase 5 is locally accepted: MacWise now has exact approval, fresh locked revali
 
 ## Current Milestone
 
-Phase 7 release engineering, documentation, distribution artifacts, and final acceptance while hosted-CI and external publication gates remain explicitly open.
+Local `1.0.0rc1` handoff complete; public publication, hosted CI/release, and public install proof remain explicitly blocked.
 
 ## Next Actions
 
-1. Design and plan MW-600 release engineering against the public distribution contract.
-2. Build and verify release, Homebrew, documentation, demo, and security artifacts locally.
-3. Run final requirement-by-requirement acceptance without publishing externally absent authority.
-4. Re-run hosted Linux/macOS CI once a Git remote/runner is authorized and available; do not treat the workflow definition as a run result.
+1. Obtain explicit tag/push/PyPI/GitHub/tap authority and confirm repository ownership.
+2. Upgrade/use a clean hosted Xcode 27 macOS runner for strict formula audit/install/test.
+3. Run hosted CI and the exact RC release workflow, then verify public pipx/brew installs.
+4. Update acceptance from external evidence; never infer those results from local structure.
 
 ## Blockers
 
-No blocker for local Phase 7 implementation. Hosted CI and external publication remain authority/infrastructure gates.
+Local Phase 7 work is complete. Public completion is truly blocked by authority and external infrastructure: no publication authorization, no hosted run, no configured publisher/tap ownership proof, and Xcode 26.4 cannot satisfy Homebrew's Xcode 27 audit prerequisite.
 
 ## Questions for User
 

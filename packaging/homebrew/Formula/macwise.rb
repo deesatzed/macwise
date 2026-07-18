@@ -5,7 +5,7 @@ class Macwise < Formula
   homepage "https://github.com/deesatzed/macwise"
   url "https://github.com/deesatzed/macwise/releases/download/v1.0.0rc1/macwise-1.0.0rc1.tar.gz"
   version "1.0.0rc1"
-  sha256 "c49e096bf0a0f03d9effd6de1d813acd59e847671aa368199d45bde4d29c16f8"
+  sha256 "bcc52a5d3d74c62776c3fa8be92e66099b7bbdb78aa4f31db041dabf96ad6ad2"
   license "MIT"
 
   depends_on "rust" => :build
@@ -36,9 +36,19 @@ class Macwise < Formula
     sha256 "024c88eeec92ca068db80f02b8b07c9cef7b9fe261d1d535abfd5abd6f6af432"
   end
 
+  resource "cffi" do
+    url "https://files.pythonhosted.org/packages/57/5f/ff100cae70ebe9d8df1c01a00e510e45d9adb5c1fdda84791b199141de97/cffi-2.1.0.tar.gz"
+    sha256 "efc1cdd798b1aaf39b4610bba7aad28c9bea9b910f25c784ccf9ec1fa719d1f9"
+  end
+
   resource "click" do
     url "https://files.pythonhosted.org/packages/76/d4/81420972a676e8ffea40450d8c8c92943e7218a78fe9b64359836cc9876b/click-8.4.2.tar.gz"
     sha256 "9a6cea6e60b17ebe0a44c5cc636d94f09bd66142c1cd7d8b4cd731c4917a15f6"
+  end
+
+  resource "cryptography" do
+    url "https://files.pythonhosted.org/packages/1f/99/d1c90d6041656cc6ee229dc99cd67fd0cd5aec3c5f7d72fffc27cc750054/cryptography-49.0.0.tar.gz"
+    sha256 "f89660a348f4f78a92366240a61404e337586ef7f5909a2fef59ca88ef505493"
   end
 
   resource "h11" do
@@ -94,6 +104,11 @@ class Macwise < Formula
   resource "platformdirs" do
     url "https://files.pythonhosted.org/packages/d7/47/e4501f49c178ae1d9f4a75073fda4204f52647993f075a9db4d14930e0c5/platformdirs-4.10.0.tar.gz"
     sha256 "31e761a6a0ca04faf7353ea759bdba55652be214725111e5aac52dfa29d4bef7"
+  end
+
+  resource "pycparser" do
+    url "https://files.pythonhosted.org/packages/1b/7d/92392ff7815c21062bea51aa7b87d45576f649f16458d78b7cf94b9ab2e6/pycparser-3.0.tar.gz"
+    sha256 "600f49d217304a5902ac3c37e1281c9fe94e4d0489de643a9504c5cdfdfc6b29"
   end
 
   resource "pydantic" do

@@ -1,7 +1,7 @@
 import shutil
 import sqlite3
-from contextlib import closing
 import subprocess
+from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
