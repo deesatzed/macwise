@@ -1,18 +1,31 @@
 from dataclasses import dataclass
+from pathlib import Path
 
 from macwise.integration.models import (
     AuditMacRequest,
+    FindOverlapsRequest,
+    InspectBackupsRequest,
     InspectSoftwareRequest,
+    InspectStartupRequest,
+    InspectStorageRequest,
     ListSoftwareRequest,
     Operation,
+    RemovalPreviewRequest,
     ToolStatus,
 )
 from macwise.integration.service import CodexReadService
 from macwise.models import (
     AuditDocument,
+    BackupStatus,
+    ClaimBasis,
     CollectorState,
     EntityType,
+    OverlapCategory,
+    OverlapRelation,
+    Reliability,
     SoftwareRecord,
+    StartupKind,
+    StartupRecord,
     stable_software_id,
 )
 
@@ -131,3 +144,97 @@ def test_inspect_refuses_unknown_identity(sample_audit: AuditDocument) -> None:
 
     assert result.status is ToolStatus.REFUSED
     assert result.errors[0].code == "unknown_identity"
+
+
+def test_find_overlaps_returns_only_catalog_backed_relations(sample_audit: AuditDocument) -> None:
+    left, right = sample_audit.software
+    relation = OverlapRelation(
+        id="overlap:example",
+        left_subject_id=left.id,
+        right_subject_id=right.id,
+        category=OverlapCategory.PARTIAL_OVERLAP,
+        statement="The exact catalog records share one bounded capability.",
+        shared_capabilities=("example capability",),
+        basis=ClaimBasis.VERIFIED,
+        confidence=Reliability.HIGH,
+    )
+    audit = sample_audit.model_copy(update={"overlaps": (relation,)})
+
+    result = CodexReadService(audit_provider=lambda: audit).find_overlaps(
+        FindOverlapsRequest(identities=(left.id, right.id))
+    )
+
+    assert result.status is ToolStatus.OK
+    assert any(fact.topic == "overlap_partial_overlap" for fact in result.facts)
+    assert "similar name" not in result.model_dump_json().casefold()
+
+
+def test_inspect_startup_preserves_unknown_enabled_state(sample_audit: AuditDocument) -> None:
+    application = sample_audit.software[0]
+    startup = StartupRecord(
+        id="startup:example",
+        label="org.example.agent",
+        kind=StartupKind.LAUNCH_AGENT,
+        owner_software_ids=(application.id,),
+        enabled=None,
+        running=False,
+    )
+    audit = sample_audit.model_copy(update={"startup": (startup,)})
+
+    result = CodexReadService(audit_provider=lambda: audit).inspect_startup(
+        InspectStartupRequest(identity=application.id)
+    )
+
+    assert any(fact.topic == "startup_kind" for fact in result.facts)
+    assert any(unknown.topic == "startup_enabled" for unknown in result.unknowns)
+    assert "disabled" not in result.model_dump_json().casefold()
+
+
+def test_inspect_storage_returns_volume_facts_without_content_scanning(
+    sample_audit: AuditDocument,
+) -> None:
+    result = CodexReadService(audit_provider=lambda: sample_audit).inspect_storage(
+        InspectStorageRequest()
+    )
+
+    assert any(fact.topic == "volume_location" and fact.value == "internal" for fact in result.facts)
+    assert not result.errors
+
+
+def test_inspect_backups_never_converts_configuration_into_coverage(
+    sample_audit: AuditDocument,
+) -> None:
+    audit = sample_audit.model_copy(
+        update={
+            "backup": BackupStatus(
+                configured=True,
+                available_destination_volume_ids=("volume:internal",),
+                limitations=("Path-specific recoverability was not verified.",),
+            )
+        }
+    )
+
+    result = CodexReadService(audit_provider=lambda: audit).inspect_backups(
+        InspectBackupsRequest(identity=sample_audit.software[0].id)
+    )
+
+    assert any(fact.topic == "backup_configured" and fact.value == "true" for fact in result.facts)
+    assert any(unknown.topic == "backup_coverage" for unknown in result.unknowns)
+    assert "is backed up" not in result.model_dump_json().casefold()
+
+
+def test_removal_preview_is_pure_and_never_mints_approval(
+    sample_audit: AuditDocument, tmp_path: Path
+) -> None:
+    service = CodexReadService(audit_provider=lambda: sample_audit)
+
+    result = service.get_removal_preview(
+        RemovalPreviewRequest(identity=sample_audit.software[0].id)
+    )
+
+    assert result.operation is Operation.GET_REMOVAL_PREVIEW
+    assert any(fact.topic == "eligibility" for fact in result.facts)
+    assert any("not approval" in limitation.casefold() for limitation in result.limitations)
+    assert "fingerprint" not in result.model_dump_json().casefold()
+    assert "APPLY " not in result.model_dump_json()
+    assert not list(tmp_path.iterdir())
