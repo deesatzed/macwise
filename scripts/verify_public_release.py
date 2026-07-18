@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify one published MacWise release identity across PyPI, GitHub, and Homebrew."""
+"""Verify one published MacWise release identity across PyPI and GitHub."""
 
 import argparse
 import json
@@ -109,23 +109,12 @@ def checksum_map(data: bytes) -> dict[str, str]:
     return result
 
 
-def verify_formula(text: str, version: str, sdist: str, digest: str) -> None:
-    expected_url = f"https://github.com/deesatzed/macwise/releases/download/v{version}/{sdist}"
-    if (
-        f'version "{version}"' not in text
-        or f'url "{expected_url}"' not in text
-        or f'sha256 "{digest}"' not in text
-    ):
-        raise VerificationError("Homebrew formula identity or source digest does not match.")
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("version")
     parser.add_argument("--pypi-json", type=Path)
     parser.add_argument("--github-json", type=Path)
     parser.add_argument("--checksums", type=Path)
-    parser.add_argument("--formula", type=Path)
     return parser.parse_args()
 
 
@@ -134,7 +123,7 @@ def main() -> int:
     version = cast(str, args.version)
     if VERSION_PATTERN.fullmatch(version) is None:
         raise VerificationError("Version must be an exact 1.0.0 release candidate.")
-    fixture_paths = (args.pypi_json, args.github_json, args.checksums, args.formula)
+    fixture_paths = (args.pypi_json, args.github_json, args.checksums)
     local = all(path is not None for path in fixture_paths)
     if any(path is not None for path in fixture_paths) and not local:
         raise VerificationError("Fixture inputs must be supplied together.")
@@ -153,14 +142,10 @@ def main() -> int:
     asset_names, checksum_url = github_assets(github_document, version)
     if local:
         checksum_data = read_local(cast(Path, args.checksums))
-        formula_data = read_local(cast(Path, args.formula))
     else:
         if checksum_url is None:
             raise VerificationError("GitHub release has no downloadable SHA256SUMS asset.")
         checksum_data = fetch(checksum_url)
-        formula_data = fetch(
-            "https://raw.githubusercontent.com/deesatzed/homebrew-tap/HEAD/Formula/macwise.rb"
-        )
 
     sdist = f"macwise-{version}.tar.gz"
     wheel = f"macwise-{version}-py3-none-any.whl"
@@ -171,11 +156,6 @@ def main() -> int:
         raise VerificationError("GitHub release is missing an expected artifact.")
     if any(pypi.get(name) != checksums.get(name) for name in expected):
         raise VerificationError("PyPI and GitHub artifact digests do not match.")
-    try:
-        formula_text = formula_data.decode("utf-8")
-    except UnicodeDecodeError as error:
-        raise VerificationError("Homebrew formula is not UTF-8.") from error
-    verify_formula(formula_text, version, sdist, checksums[sdist])
     print(
         json.dumps(
             {

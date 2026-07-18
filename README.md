@@ -36,15 +36,26 @@ Every choice also has a deterministic command. See the [synthetic walkthrough](d
 
 ## Installation
 
-The intended public commands are:
+The intended primary public command is:
+
+```bash
+uv tool install macwise
+```
+
+Then open MacWise:
+
+```bash
+macwise
+```
+
+If you already use pipx, it remains a supported alternative:
 
 ```bash
 pipx install macwise
-# or
-brew install deesatzed/tap/macwise
 ```
 
-The package and tap are **not yet published**. To evaluate this exact candidate from a
+The package is **not yet published**. Homebrew distribution is deferred to a later
+milestone so it cannot drift from the first release. To evaluate this exact candidate from a
 trusted checkout:
 
 ```bash
@@ -131,7 +142,7 @@ Use `--help` on every root or nested command.
 ## Release status
 
 Phases 1–6 have local acceptance audits under `docs/`. Phase 7 is preparing public
-artifacts and install paths. Hosted CI, PyPI, GitHub Release, and the tap are not claimed
+artifacts and install paths. Hosted CI, PyPI, and GitHub Release are not claimed
 until those systems run successfully. See the [release checklist](docs/release-checklist.md).
 
 ## Development

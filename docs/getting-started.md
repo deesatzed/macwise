@@ -2,9 +2,18 @@
 
 ## 1. Install and open
 
-Public `pipx` and Homebrew commands are listed in the README but remain unavailable
-until `1.0.0rc1` is published. From a trusted candidate checkout, run `uv sync --locked
---all-groups`, then `uv run macwise`.
+After publication, install the command-line app in its own managed environment:
+
+```zsh
+uv tool install macwise
+macwise
+```
+
+If `uv` is not installed, follow the official installation instructions at
+<https://docs.astral.sh/uv/getting-started/installation/>. Existing pipx users may use
+`pipx install macwise` instead. Homebrew distribution is deferred to a later milestone.
+Until `1.0.0rc1` is published, evaluate a trusted candidate checkout with
+`uv sync --locked --all-groups`, then `uv run macwise`.
 
 MacWise starts with a numbered menu. Choosing a read-only review never requires cleanup
 permission. Start with Scan this Mac, then ask about one unfamiliar item.
