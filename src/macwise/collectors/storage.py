@@ -203,6 +203,15 @@ def parse_volume_info(data: bytes | str, *, collected_at: datetime) -> VolumeRec
     )
     capacity = _integer(cast(object, metadata.get("TotalSize")))
     free = _integer(cast(object, metadata.get("FreeSpace")))
+    container_free = _integer(cast(object, metadata.get("APFSContainerFree")))
+    if (
+        mount_point is not None
+        and filesystem is not None
+        and "apfs" in filesystem.casefold()
+        and free in {None, 0}
+        and container_free not in {None, 0}
+    ):
+        free = container_free
     removable = _boolean(cast(object, metadata.get("RemovableMedia")))
     protocol = _text(cast(object, metadata.get("BusProtocol")))
     smart_status = _text(cast(object, metadata.get("SMARTStatus")))
@@ -242,6 +251,7 @@ def parse_volume_info(data: bytes | str, *, collected_at: datetime) -> VolumeRec
                     "physical_store_identifiers": list(physical_store_identifiers),
                     "encrypted": encrypted,
                     "free_bytes": free,
+                    "apfs_container_free_bytes": container_free,
                     "internal": internal,
                     "mount_point": mount_point,
                     "read_only": read_only,

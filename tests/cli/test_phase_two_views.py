@@ -19,6 +19,7 @@ from macwise.models import (
     StartupRecord,
     StorageLocation,
     UsageLabel,
+    VolumeRecord,
     stable_software_id,
 )
 
@@ -187,6 +188,42 @@ def test_review_unused_lists_only_supported_cautious_labels(
     assert "openssl@3" not in result.stdout
     assert "Missing evidence alone never qualifies an item" in result.stdout
     assert "never used" not in result.stdout.casefold()
+
+
+def test_storage_default_shows_only_mounted_volumes_with_readable_known_space(
+    phase_two_cli: AuditDocument,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    mounted = phase_two_cli.volumes[0].model_copy(
+        update={"capacity_bytes": 500 * 1024**3, "free_bytes": 157 * 1024**3}
+    )
+    unknown = VolumeRecord(
+        id="volume:external",
+        name="Archive",
+        device_identifier="disk9s1",
+        mount_point="/Volumes/Archive",
+        location=StorageLocation.EXTERNAL,
+        capacity_bytes=None,
+        free_bytes=None,
+    )
+    unmounted = VolumeRecord(
+        id="volume:partition",
+        name="Recovery",
+        device_identifier="disk9s2",
+        mount_point=None,
+        location=StorageLocation.INTERNAL,
+        free_bytes=0,
+    )
+    audit = phase_two_cli.model_copy(update={"volumes": (mounted, unknown, unmounted)})
+    monkeypatch.setattr(cli, "_service_factory", lambda: StaticAuditService(audit))
+
+    result = RUNNER.invoke(cli.app, ["storage"])
+
+    assert result.exit_code == 0, result.stdout
+    assert "System: 157.0 GiB free of 500.0 GiB" in result.stdout
+    assert "Archive: free space unknown" in result.stdout
+    assert "Recovery" not in result.stdout
+    assert "0 bytes free" not in result.stdout
 
 
 def test_startup_lists_owner_and_tri_state_without_claiming_enabled(

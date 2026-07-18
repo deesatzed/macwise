@@ -1189,14 +1189,21 @@ def startup() -> None:
 def storage() -> None:
     audit = _audit()
     typer.echo("Storage volumes\n")
-    for volume in audit.volumes:
-        mount = safe_display_text(volume.mount_point or "unmounted")
-        typer.echo(
-            f"- {safe_display_text(volume.name)}: {volume.location.value}, "
-            f"{volume.free_bytes or 0} bytes free, {mount}"
+    mounted = tuple(volume for volume in audit.volumes if volume.mount_point is not None)
+    for volume in mounted:
+        free = (
+            f"{_bytes(volume.free_bytes)} free of {_bytes(volume.capacity_bytes)}"
+            if volume.free_bytes is not None and volume.capacity_bytes is not None
+            else f"{_bytes(volume.free_bytes)} free"
+            if volume.free_bytes is not None
+            else "free space unknown"
         )
-    if not audit.volumes:
-        typer.echo("No storage metadata was collected.")
+        typer.echo(
+            f"- {safe_display_text(volume.name)}: {free}; {volume.location.value}; "
+            f"{safe_display_text(volume.mount_point)}"
+        )
+    if not mounted:
+        typer.echo("No mounted storage volumes were collected.")
     typer.echo("\nThis command is read-only. MacWise did not change this Mac.")
 
 
