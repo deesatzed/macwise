@@ -192,3 +192,5 @@ None required. Tap ownership and publication credentials are deferred until they
 ### Rung 3: escalate
 - BLOCKER.md updated: no
 - User question: none; the hosted log provided an exact bounded repair and no expanded authority was required.
+
+- 2026-07-18 hosted-CI repair accepted by run `29641643615`: all nine Linux/macOS 15/macOS 26 jobs passed on Python 3.12, 3.13, and 3.14; the current Homebrew candidate audit, exact local-source install, installed-version test, and cleanup passed on macOS 26 in 8m34s.
