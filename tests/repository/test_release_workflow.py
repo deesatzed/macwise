@@ -49,13 +49,26 @@ def test_ci_has_ephemeral_macos_homebrew_candidate_install_proof() -> None:
     workflow = yaml.safe_load(text)
     job = workflow["jobs"]["homebrew-candidate"]
 
-    assert job["runs-on"] == "macos-15"
-    assert "brew audit --strict" in text
+    assert job["runs-on"] == "macos-26"
+    tap_creation = text.index("brew tap-new macwise-local/tap")
+    formula_copy = text.index(
+        'cp packaging/homebrew/Formula/macwise.rb "$TAP_ROOT/Formula/macwise.rb"'
+    )
+    named_audit = text.index("brew audit --strict macwise-local/tap/macwise")
+    assert tap_creation < formula_copy < named_audit
     assert "brew install --build-from-source" in text
     assert "brew test" in text
     assert "uv build --sdist" in text
     assert "file://" in text
     assert "brew uninstall" in text
+
+
+def test_ci_covers_supported_python_versions_and_current_macos() -> None:
+    workflow = yaml.safe_load(CI_WORKFLOW.read_text(encoding="utf-8"))
+    matrix = workflow["jobs"]["quality"]["strategy"]["matrix"]
+
+    assert matrix["python-version"] == ["3.12", "3.13", "3.14"]
+    assert matrix["os"] == ["ubuntu-latest", "macos-15", "macos-26"]
 
 
 def test_public_install_smoke_requires_manual_version_and_tests_both_channels() -> None:
@@ -69,6 +82,8 @@ def test_public_install_smoke_requires_manual_version_and_tests_both_channels() 
     assert "macwise setup codex --help" in text
     assert "macwise --version" in text
     assert 'python3 scripts/verify_public_release.py "$VERSION"' in text
+    assert workflow["jobs"]["pipx"]["runs-on"] == "macos-26"
+    assert workflow["jobs"]["homebrew"]["runs-on"] == "macos-26"
     assert workflow["jobs"]["cross-channel-identity"]["needs"] == ["pipx", "homebrew"]
 
 

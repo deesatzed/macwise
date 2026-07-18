@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   pipx:
-    runs-on: macos-15
+    runs-on: macos-26
     env:
       VERSION: ${{ inputs.version }}
       PIPX_HOME: ${{ runner.temp }}/pipx-home
@@ -43,7 +43,7 @@ jobs:
           "$PIPX_BIN_DIR/macwise" setup codex --help
 
   homebrew:
-    runs-on: macos-15
+    runs-on: macos-26
     env:
       VERSION: ${{ inputs.version }}
     steps:
