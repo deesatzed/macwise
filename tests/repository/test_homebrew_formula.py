@@ -1,4 +1,6 @@
+import hashlib
 import re
+import subprocess
 import tomllib
 from pathlib import Path
 
@@ -72,3 +74,20 @@ def test_formula_smoke_checks_the_installed_rc() -> None:
 
     assert 'system bin/"macwise", "--version"' in text
     assert 'assert_match "MacWise 1.0.0rc1"' in text
+
+
+def test_formula_main_hash_matches_reproducible_release_sdist(tmp_path: Path) -> None:
+    subprocess.run(
+        ("uv", "build", "--sdist", "--out-dir", str(tmp_path)),
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    artifact = next(tmp_path.glob("macwise-1.0.0rc1.tar.gz"))
+    digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    text = FORMULA.read_text(encoding="utf-8")
+    main_digest = re.search(r'^  sha256 "([0-9a-f]{64})"$', text, re.MULTILINE)
+
+    assert main_digest is not None
+    assert main_digest.group(1) == digest

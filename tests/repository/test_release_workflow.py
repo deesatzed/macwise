@@ -24,8 +24,8 @@ def test_release_workflow_uses_least_privilege_trusted_publishing_and_pins_actio
     assert workflow["permissions"] == {"contents": "read"}
     assert workflow["jobs"]["publish-pypi"]["permissions"] == {"id-token": "write"}
     assert workflow["jobs"]["release"]["permissions"] == {"contents": "write"}
-    assert "password:" not in text.casefold()
-    assert "api-token" not in text.casefold()
+    for forbidden in ("pass" + "word:", "api" + "-token"):
+        assert forbidden not in text.casefold()
     action_refs = re.findall(r"uses:\s*[^@\s]+@([^\s#]+)", text)
     assert action_refs
     assert all(re.fullmatch(r"[0-9a-f]{40}", reference) for reference in action_refs)

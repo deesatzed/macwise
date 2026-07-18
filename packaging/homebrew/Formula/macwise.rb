@@ -5,7 +5,7 @@ class Macwise < Formula
   homepage "https://github.com/deesatzed/macwise"
   url "https://github.com/deesatzed/macwise/releases/download/v1.0.0rc1/macwise-1.0.0rc1.tar.gz"
   version "1.0.0rc1"
-  sha256 "d0512a9d00f15bcba9d818a8ad1cd286324a77ab2e353ecf9a99a1f922bbd25d"
+  sha256 "c49e096bf0a0f03d9effd6de1d813acd59e847671aa368199d45bde4d29c16f8"
   license "MIT"
 
   depends_on "rust" => :build

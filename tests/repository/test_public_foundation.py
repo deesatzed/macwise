@@ -2,6 +2,7 @@ import json
 import re
 import socket
 import subprocess
+import tarfile
 import tomllib
 import zipfile
 from pathlib import Path
@@ -111,6 +112,26 @@ def test_built_release_wheel_has_rc_metadata_and_no_repository_state(tmp_path: P
         part in name
         for name in names
         for part in (".git/", ".uv-cache/", "macwise.db", ".macwise-backup-")
+    )
+
+
+def test_release_sdist_excludes_development_and_local_control_surfaces(tmp_path: Path) -> None:
+    subprocess.run(
+        ("uv", "build", "--sdist", "--out-dir", str(tmp_path)),
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    sdist = next(tmp_path.glob("macwise-1.0.0rc1.tar.gz"))
+    with tarfile.open(sdist) as archive:
+        names = archive.getnames()
+
+    assert any(name.endswith("/src/macwise/cli.py") for name in names)
+    assert not any(
+        part in name
+        for name in names
+        for part in ("/tests/", "/docs/plans/", "/packaging/", "/PROGRESS.md", "/GOAL.md")
     )
 
 

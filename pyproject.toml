@@ -49,6 +49,16 @@ dev = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/macwise"]
 
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/README.md",
+  "/LICENSE",
+  "/pyproject.toml",
+  "/CHANGELOG.md",
+  "/SECURITY.md",
+]
+
 [tool.pytest.ini_options]
 addopts = "--strict-config --strict-markers"
 testpaths = ["tests"]
