@@ -1,6 +1,6 @@
 # Changelog
 
-MacWise follows Semantic Versioning. The project is pre-alpha; unreleased behavior may still change while safety and compatibility contracts are established.
+MacWise follows Semantic Versioning. Release candidates may still change while public distribution and platform behavior are verified.
 
 ## [Unreleased]
 
@@ -37,10 +37,14 @@ MacWise follows Semantic Versioning. The project is pre-alpha; unreleased behavi
 - Fixed-path, shell-free Homebrew formula/cask/service and current-user LaunchAgent adapters with structured identity validation, bounded fake-runner-tested execution, unchanged-plist hashing, and fresh after-state verification.
 - Review-first `apply` and `undo` CLI workflows with exact interactive/non-interactive approval, durable recovery-state guidance, no elevation, preserved related data, and explicit best-effort Homebrew undo limits.
 
-### Not yet available
+## [1.0.0rc1] - 2026-07-18
 
-- One-command Codex setup and typed local integration.
-- Published pipx package, Homebrew tap, and signed release artifacts.
+First public release candidate. It includes the guided CLI, evidence-based review,
+role-aware overlap analysis, immutable cleanup planning, approval-gated reversible
+cleanup, and the optional read-only `$macwise` Codex integration described above.
+
+PyPI, GitHub Release, and Homebrew tap publication remain pending; this repository state
+is the locally verified candidate, not evidence that those external channels are live.
 
 ## [0.1.0a0] - 2026-07-17
 

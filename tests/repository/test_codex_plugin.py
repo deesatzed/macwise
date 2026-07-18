@@ -24,7 +24,7 @@ def test_plugin_manifest_is_native_read_only_and_complete() -> None:
     interface = cast(dict[str, object], manifest["interface"])
 
     assert PLUGIN.name == manifest["name"] == "macwise"
-    assert manifest["version"] == "0.1.0-alpha.0"
+    assert manifest["version"] == "1.0.0-rc.1"
     assert isinstance(manifest["version"], str) and SEMVER.fullmatch(manifest["version"])
     assert manifest["license"] == "MIT"
     assert manifest["repository"] == "https://github.com/deesatzed/macwise"

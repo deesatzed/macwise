@@ -1,7 +1,9 @@
+import json
 import re
 import socket
 import subprocess
 import tomllib
+import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).parents[2]
@@ -70,6 +72,40 @@ def test_packaging_metadata_points_to_public_docs_and_mit_license() -> None:
     assert metadata["readme"] == "README.md"
     assert metadata["license"] == "MIT"
     assert metadata["urls"]["Repository"] == "https://github.com/deesatzed/macwise"
+
+
+def test_release_candidate_identity_is_aligned_across_public_surfaces() -> None:
+    metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    plugin = json.loads(
+        (ROOT / "src/macwise/codex_payload/macwise/.codex-plugin/plugin.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+
+    assert metadata["version"] == "1.0.0rc1"
+    assert "Development Status :: 4 - Beta" in metadata["classifiers"]
+    assert plugin["version"] == "1.0.0-rc.1"
+    assert "## [1.0.0rc1] - 2026-07-18" in changelog
+
+
+def test_built_release_wheel_has_rc_metadata_and_no_repository_state(tmp_path: Path) -> None:
+    subprocess.run(
+        ("uv", "build", "--wheel", "--out-dir", str(tmp_path)),
+        cwd=ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    wheel = next(tmp_path.glob("macwise-*.whl"))
+    names = zipfile.ZipFile(wheel).namelist()
+
+    assert wheel.name.startswith("macwise-1.0.0rc1-")
+    assert not any(
+        part in name
+        for name in names
+        for part in (".git/", ".uv-cache/", "macwise.db", ".macwise-backup-")
+    )
 
 
 def test_ci_runs_tests_lint_types_format_build_and_privacy_check() -> None:
