@@ -39,6 +39,9 @@ def test_required_public_repository_files_exist() -> None:
         "skills/macwise/SKILL.md",
         "skills/macwise/agents/openai.yaml",
         ".github/workflows/ci.yml",
+        ".github/workflows/release.yml",
+        ".github/workflows/public-install-smoke.yml",
+        "scripts/verify_public_release.py",
     )
 
     missing = [path for path in required if not (ROOT / path).is_file()]

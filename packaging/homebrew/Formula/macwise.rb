@@ -8,6 +8,7 @@ class Macwise < Formula
   sha256 "bcc52a5d3d74c62776c3fa8be92e66099b7bbdb78aa4f31db041dabf96ad6ad2"
   license "MIT"
 
+  depends_on "maturin" => :build
   depends_on "rust" => :build
   depends_on "python@3.13"
 

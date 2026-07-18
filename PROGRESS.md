@@ -60,6 +60,7 @@ Phase 5 is locally accepted: MacWise now has exact approval, fresh locked revali
 | Design MW-500 Codex integration | Done | Codex | Approved native plugin plus strictly read-only STDIO MCP design is saved under `docs/plans/`; D-031 pins the protocol and preserves the standalone mutation boundary. |
 | Build MW-500 Codex integration | Done | Codex | Eight typed read-only tools, native plugin/skill payload, one-command setup, bounded STDIO server, clean-wheel call proof, and review hardening pass 361 tests on Python 3.12/3.13. |
 | Complete Phase 7 local RC | Done | Codex | `1.0.0rc1` artifacts/docs/workflow, real isolated pipx, locked formula candidate, security/privacy review, and local acceptance are complete; external publication remains blocked. |
+| Prepare external distribution proof | Done | Codex | Hosted CI now includes ephemeral formula audit/install/test; a manual public smoke verifies pipx, Homebrew, checksums, PyPI, GitHub release, and tap identity after publication. No hosted run is claimed. |
 
 ## Decision Links
 

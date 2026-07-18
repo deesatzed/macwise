@@ -7,6 +7,7 @@
 - [ ] Ruff, formatting, Pyright, build, artifact, privacy, and secret checks pass.
 - [ ] Clean pipx install and installed-wheel STDIO call pass.
 - [ ] Homebrew formula has exact hashes and passes the available local audit/install test.
+- [ ] Hosted ephemeral formula audit/install/test succeeds from the exact built sdist.
 - [ ] Independent security and release-readiness reviews have no open Critical/Important finding.
 - [ ] Final acceptance distinguishes synthetic/local evidence from hosted/public evidence.
 
@@ -19,5 +20,6 @@
 - [ ] Published artifacts and checksums match locally accepted artifacts.
 - [ ] Clean public `pipx install macwise` succeeds.
 - [ ] Clean public `brew install deesatzed/tap/macwise` succeeds.
+- [ ] Cross-channel verifier confirms PyPI, GitHub artifacts/checksums, and tap formula agree.
 
 Do not check an external gate from a local approximation.

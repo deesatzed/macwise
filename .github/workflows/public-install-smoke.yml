@@ -1,0 +1,82 @@
+name: Public install smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Exact published release-candidate version, without the v prefix
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  pipx:
+    runs-on: macos-15
+    env:
+      VERSION: ${{ inputs.version }}
+      PIPX_HOME: ${{ runner.temp }}/pipx-home
+      PIPX_BIN_DIR: ${{ runner.temp }}/pipx-bin
+      PIPX_MAN_DIR: ${{ runner.temp }}/pipx-man
+    steps:
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.11.28"
+          python-version: "3.12"
+
+      - name: Validate requested identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^1\.0\.0rc[0-9]+$ ]]
+
+      - name: Install from public PyPI with pipx
+        run: uvx --from pipx pipx install "macwise==$VERSION" --python 3.12 --backend pip --pip-args=--pre
+
+      - name: Smoke public pipx command
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$("$PIPX_BIN_DIR/macwise" --version)" = "MacWise $VERSION"
+          "$PIPX_BIN_DIR/macwise" setup codex --help
+
+  homebrew:
+    runs-on: macos-15
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Validate requested identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$VERSION" =~ ^1\.0\.0rc[0-9]+$ ]]
+
+      - name: Install from public tap
+        run: brew install deesatzed/tap/macwise
+
+      - name: Smoke public Homebrew command
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(macwise --version)" = "MacWise $VERSION"
+          macwise setup codex --help
+
+      - name: Remove public smoke installation
+        if: always()
+        run: brew uninstall --force macwise || true
+
+  cross-channel-identity:
+    needs: [pipx, homebrew]
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+    steps:
+      - name: Check out verifier
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Verify PyPI, GitHub, checksums, and tap agree
+        run: python3 scripts/verify_public_release.py "$VERSION"

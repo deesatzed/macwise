@@ -18,7 +18,7 @@ Homebrew audit is also blocked by Xcode 26.4 while Homebrew requires 27.0.
 | Area | Status | Evidence | Notes |
 |---|---|---|---|
 | Build | PASS local | Reproducible wheel/sdist build and content/hash tests | Public artifact URLs do not exist yet. |
-| Tests | PASS local | 372 tests on Python 3.12 and 3.13 | Hosted matrix has not run. |
+| Tests | PASS local | 377 tests on Python 3.12 and 3.13 | Hosted matrix has not run. |
 | Lint/Typecheck | PASS local | Ruff format/lint and strict Pyright | Re-run on release commit. |
 | Security | PASS local / external open | `pip-audit` found no known installed dependency vulnerabilities; read/mutation boundary tests pass | RC is not production certification. |
 | Privacy | PASS local | Public candidate scan rejects current home, hostname, and secret-shaped assignments | Re-scan downloaded public artifacts. |
@@ -28,8 +28,8 @@ Homebrew audit is also blocked by Xcode 26.4 while Homebrew requires 27.0.
 | Logging | PASS local | STDIO MCP protocol test rejects traceback/stdout corruption; no telemetry | Terminal/shell/Codex may retain output independently. |
 | Rollback | PASS scoped | Cleanup journal/undo and setup compensation/recovery suites pass | Homebrew reinstall remains best-effort. |
 | pipx | PASS local | Real isolated pipx installs the built wheel under Python 3.12 | Public index install unverified. |
-| Homebrew | PARTIAL | Exact RC/source/resource hashes, lock closure, formula test stanza, and `brew style` pass | Strict audit blocked by Xcode; install would alter shared prefix; public artifact unavailable. |
-| Release workflow | PASS structural | Exact RC tag/version gate, build once, pinned actions, OIDC, checksums, prerelease ordering tests | Workflow has not run on GitHub. |
+| Homebrew | PARTIAL | Exact RC/source/resource hashes including optional extras, formula test stanza, `brew style`, and an ephemeral hosted audit/install/test job are defined | Hosted job has not run; local strict audit is Xcode-blocked. |
+| Release workflow | PASS structural | Exact RC tag/version gate, build once, pinned actions, OIDC, checksums, prerelease ordering, manual public pipx/brew smoke, and cross-channel verifier tests | Workflows have not run on GitHub. |
 
 ## Known Blockers
 
@@ -50,8 +50,8 @@ Homebrew audit is also blocked by Xcode 26.4 while Homebrew requires 27.0.
 ## Required Fixes Before Release
 
 1. Obtain publication authority and configure protected external environments.
-2. Run hosted CI, strict online formula audit, clean formula install/test, and release workflow.
-3. Verify published checksums and both public install commands from clean machines.
+2. Run hosted CI, including its ephemeral local-artifact formula audit/install/test, and the release workflow.
+3. Trigger the manual public-install workflow to verify pipx, Homebrew, checksums, PyPI, GitHub, and tap identity.
 4. Update acceptance/checklist with those external results before calling the RC public.
 
 ## Rollback Plan

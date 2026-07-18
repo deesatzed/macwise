@@ -4,8 +4,9 @@ Date: 2026-07-18
 
 Verdict: **PASS for the local `1.0.0rc1` candidate; BLOCKED for public release.** The
 repository contains tested RC artifacts, current documentation/demo, pinned least-
-privilege release automation, a real isolated pipx proof, and a lock-aligned Homebrew
-candidate. External publication and hosted behavior are not complete.
+privilege release automation, a real isolated pipx proof, a lock-aligned Homebrew
+candidate, an ephemeral hosted formula install job, and a manual post-publication smoke
+workflow. External publication and hosted behavior are not complete.
 
 ## Novice acceptance map
 
@@ -29,7 +30,7 @@ candidate. External publication and hosted behavior are not complete.
 
 ## Release evidence
 
-- Python 3.12.11 and Python 3.13.13: 372 tests passed on each.
+- Python 3.12.11 and Python 3.13.13: 377 tests passed on each.
 - Full statement coverage: 88%; warnings exposed unclosed test SQLite connections, which
   were fixed and the persistence-focused suite then passed with ResourceWarnings fatal.
 - Ruff, format, Pyright, build, plugin/skill validation, privacy, workflow, artifact,
@@ -39,6 +40,11 @@ candidate. External publication and hosted behavior are not complete.
 - `brew style` passes. `brew audit --strict` is blocked before formula evaluation because
   Homebrew requires Xcode 27.0 and this host has 26.4. Installation was not attempted
   against the shared user prefix.
+- CI now defines an ephemeral macOS job that builds the exact sdist, audits the public
+  formula, substitutes only its source URL with the local artifact, installs/tests it,
+  and removes the temporary formula. A manual workflow separately tests both published
+  install commands and verifies PyPI/GitHub/checksum/tap identity. Neither hosted workflow
+  has run, so these are verification surfaces rather than pass evidence.
 
 ## Claim validation
 
