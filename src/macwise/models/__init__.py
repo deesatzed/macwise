@@ -47,6 +47,7 @@ from macwise.models.plan import (
     RollbackFeasibility,
     stable_plan_component_id,
 )
+from macwise.models.score import MacWiseScorecard, ScoreComponent
 from macwise.models.software import EntityType, InstallRole, SoftwareRecord, stable_software_id
 from macwise.models.storage import StorageLocation, VolumeRecord, stable_volume_id
 
@@ -71,6 +72,7 @@ __all__ = [
     "InverseIntent",
     "InverseKind",
     "LearningValue",
+    "MacWiseScorecard",
     "OverlapCategory",
     "OverlapRelation",
     "PathEvidence",
@@ -86,6 +88,7 @@ __all__ = [
     "Reliability",
     "RollbackBlueprint",
     "RollbackFeasibility",
+    "ScoreComponent",
     "SoftwareRecord",
     "StartupKind",
     "StartupRecord",
