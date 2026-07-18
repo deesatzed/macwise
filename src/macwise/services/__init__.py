@@ -13,6 +13,7 @@ from macwise.services.execution import ExecutionService, ExecutionServiceError
 from macwise.services.overlap import OverlapAnalysis, analyze_overlaps
 from macwise.services.planning import PlanningResult, add_candidate
 from macwise.services.revalidation import PreparedExecution, RevalidationError, prepare_execution
+from macwise.services.scoring import score_audit
 
 __all__ = [
     "ApprovalError",
@@ -30,5 +31,6 @@ __all__ = [
     "approval_fingerprint",
     "prepare_execution",
     "require_approval",
+    "score_audit",
     "undo_approval_phrase",
 ]
