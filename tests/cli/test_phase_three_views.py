@@ -264,6 +264,42 @@ def test_overlap_is_a_discoverable_alias_for_duplicate_review(
     assert "overlap" in root_help.stdout
 
 
+def test_overlap_disambiguates_same_name_installations_by_location(
+    phase_three_cli: AuditDocument,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    current = SoftwareRecord(
+        id="application:chatgpt-current",
+        entity_type=EntityType.APPLICATION,
+        name="ChatGPT",
+        display_name="ChatGPT",
+        install_path="/Applications/ChatGPT.app",
+    )
+    classic = SoftwareRecord(
+        id="application:chatgpt-classic",
+        entity_type=EntityType.APPLICATION,
+        name="ChatGPT",
+        display_name="ChatGPT",
+        install_path="/Applications/ChatGPT Classic.app",
+    )
+    analysis = analyze_overlaps((current, classic), usage_findings=())
+    audit = phase_three_cli.model_copy(
+        update={
+            "software": (current, classic),
+            "catalog_assessments": analysis.assessments,
+            "overlaps": analysis.relations,
+            "recommendations": analysis.recommendations,
+        }
+    )
+    monkeypatch.setattr(cli, "_service_factory", lambda: StaticAuditService(audit))
+
+    result = RUNNER.invoke(cli.app, ["overlap"])
+
+    assert result.exit_code == 0, result.stdout
+    assert "/Applications/ChatGPT.app" in result.stdout
+    assert "/Applications/ChatGPT Classic.app" in result.stdout
+
+
 def test_explain_adds_catalog_roles_learning_value_and_related_overlap(
     phase_three_cli: AuditDocument,
 ) -> None:

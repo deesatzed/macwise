@@ -524,6 +524,13 @@ def _record_label(record: SoftwareRecord) -> str:
     return f"{safe_display_text(record.display_name)} ({kind})"
 
 
+def _overlap_label(record: SoftwareRecord, *, include_location: bool) -> str:
+    label = safe_display_text(record.display_name)
+    if include_location and record.install_path:
+        return f"{label} [{safe_display_text(record.install_path)}]"
+    return label
+
+
 def _human_label(value: str) -> str:
     return safe_display_text(value.replace("_", " "))
 
@@ -911,8 +918,21 @@ def review_duplicates() -> None:
         for relation in grouped[category]:
             left = records.get(relation.left_subject_id)
             right = records.get(relation.right_subject_id)
-            left_name = left.display_name if left is not None else relation.left_subject_id
-            right_name = right.display_name if right is not None else relation.right_subject_id
+            same_name = (
+                left is not None
+                and right is not None
+                and left.display_name.casefold() == right.display_name.casefold()
+            )
+            left_name = (
+                _overlap_label(left, include_location=same_name)
+                if left is not None
+                else relation.left_subject_id
+            )
+            right_name = (
+                _overlap_label(right, include_location=same_name)
+                if right is not None
+                else relation.right_subject_id
+            )
             typer.echo(
                 f"- {safe_display_text(left_name)} and {safe_display_text(right_name)}: "
                 f"{safe_display_text(relation.statement)}"
