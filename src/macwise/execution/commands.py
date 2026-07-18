@@ -2,11 +2,14 @@
 
 import os
 import re
+import stat
 import subprocess
+import threading
 from collections.abc import Mapping, Sequence
 from enum import StrEnum
+from hashlib import sha256
 from pathlib import Path
-from typing import Protocol
+from typing import BinaryIO, Protocol
 
 from macwise.system.commands import (
     SAFE_ENVIRONMENT_KEYS,
@@ -16,6 +19,7 @@ from macwise.system.commands import (
 
 _HOMEBREW_TOKEN = re.compile(r"[A-Za-z0-9][A-Za-z0-9@+_.-]*")
 _LAUNCH_AGENT_LABEL = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]*")
+_SHA256 = re.compile(r"[0-9a-f]{64}")
 _OUTPUT_LIMIT = 64 * 1024
 
 
@@ -61,7 +65,7 @@ def _safe_environment(source: Mapping[str, str]) -> dict[str, str]:
     return environment
 
 
-def _default_runner(
+def bounded_mutation_runner(
     args: Sequence[str],
     *,
     shell: bool,
@@ -70,14 +74,62 @@ def _default_runner(
     timeout: float,
     env: Mapping[str, str],
 ) -> subprocess.CompletedProcess[bytes]:
-    return subprocess.run(
+    """Run a mutation subprocess while draining but never retaining unbounded output."""
+    if not capture_output:
+        raise ValueError("mutation subprocess output must be captured")
+    process = subprocess.Popen(
         list(args),
         shell=shell,
-        check=check,
-        capture_output=capture_output,
-        timeout=timeout,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         env=env,
     )
+    stdout = bytearray()
+    stderr = bytearray()
+
+    def drain(stream: BinaryIO | None, destination: bytearray) -> None:
+        if stream is None:
+            return
+        while chunk := stream.read(8192):
+            remaining = (_OUTPUT_LIMIT + 1) - len(destination)
+            if remaining > 0:
+                destination.extend(chunk[:remaining])
+
+    readers = (
+        threading.Thread(target=drain, args=(process.stdout, stdout), daemon=True),
+        threading.Thread(target=drain, args=(process.stderr, stderr), daemon=True),
+    )
+    for reader in readers:
+        reader.start()
+    try:
+        return_code = process.wait(timeout=timeout)
+    except subprocess.TimeoutExpired as error:
+        process.kill()
+        process.wait()
+        for reader in readers:
+            reader.join()
+        raise subprocess.TimeoutExpired(
+            error.cmd,
+            error.timeout,
+            output=bytes(stdout),
+            stderr=bytes(stderr),
+        ) from error
+    for reader in readers:
+        reader.join()
+    completed = subprocess.CompletedProcess(
+        list(args),
+        return_code,
+        stdout=bytes(stdout),
+        stderr=bytes(stderr),
+    )
+    if check and return_code != 0:
+        raise subprocess.CalledProcessError(
+            return_code,
+            list(args),
+            output=completed.stdout,
+            stderr=completed.stderr,
+        )
+    return completed
 
 
 class MutationCommandAdapter:
@@ -89,7 +141,7 @@ class MutationCommandAdapter:
         launch_agents_root: Path,
         uid: int,
         source_environment: Mapping[str, str] | None = None,
-        runner: ProcessRunner = _default_runner,
+        runner: ProcessRunner = bounded_mutation_runner,
         resolver: MutationExecutableResolver = resolve_mutation_executable,
         timeout: float = 30.0,
     ) -> None:
@@ -112,7 +164,12 @@ class MutationCommandAdapter:
             raise CommandActionError("The Homebrew token is not safe to execute.")
         return value
 
-    def _launch_agent(self, label: str, source_path: Path) -> tuple[str, Path]:
+    def _launch_agent(
+        self,
+        label: str,
+        source_path: Path,
+        expected_plist_sha256: str,
+    ) -> tuple[str, Path]:
         if _LAUNCH_AGENT_LABEL.fullmatch(label) is None:
             raise CommandActionError("The LaunchAgent label is not safe to execute.")
         source = source_path.expanduser().absolute()
@@ -130,6 +187,27 @@ class MutationCommandAdapter:
             or not source.is_file()
         ):
             raise CommandActionError("The LaunchAgent plist is not an exact safe source.")
+        if _SHA256.fullmatch(expected_plist_sha256) is None:
+            raise CommandActionError("The LaunchAgent content digest is invalid.")
+        flags = os.O_RDONLY
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        try:
+            descriptor = os.open(source, flags)
+            try:
+                if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+                    raise CommandActionError("The LaunchAgent plist is not an exact safe source.")
+                digest = sha256()
+                while chunk := os.read(descriptor, 64 * 1024):
+                    digest.update(chunk)
+            finally:
+                os.close(descriptor)
+        except OSError as error:
+            raise CommandActionError(
+                "The LaunchAgent plist is not an exact safe source."
+            ) from error
+        if digest.hexdigest() != expected_plist_sha256:
+            raise CommandActionError("The LaunchAgent plist content changed.")
         return label, source
 
     def _run(self, executable: MutationExecutable, arguments: tuple[str, ...]) -> None:
@@ -197,8 +275,9 @@ class MutationCommandAdapter:
         source_path: Path,
         *,
         was_running: bool,
+        expected_plist_sha256: str,
     ) -> None:
-        label, source = self._launch_agent(label, source_path)
+        label, source = self._launch_agent(label, source_path, expected_plist_sha256)
         domain = f"gui/{self.uid}"
         self._run(MutationExecutable.LAUNCHCTL, ("disable", f"{domain}/{label}"))
         if was_running:
@@ -210,12 +289,16 @@ class MutationCommandAdapter:
         source_path: Path,
         *,
         was_running: bool,
+        expected_plist_sha256: str,
     ) -> None:
         self.restore_launch_agent(
             label,
             source_path,
             was_enabled=True,
             was_running=was_running,
+            current_enabled=False,
+            current_running=False,
+            expected_plist_sha256=expected_plist_sha256,
         )
 
     def restore_launch_agent(
@@ -225,11 +308,17 @@ class MutationCommandAdapter:
         *,
         was_enabled: bool,
         was_running: bool,
+        current_enabled: bool,
+        current_running: bool,
+        expected_plist_sha256: str,
     ) -> None:
         """Restore the exact recorded user-domain enablement and running state."""
-        label, source = self._launch_agent(label, source_path)
+        label, source = self._launch_agent(label, source_path, expected_plist_sha256)
         domain = f"gui/{self.uid}"
-        if was_enabled:
-            self._run(MutationExecutable.LAUNCHCTL, ("enable", f"{domain}/{label}"))
-        if was_running:
+        if current_running and not was_running:
+            self._run(MutationExecutable.LAUNCHCTL, ("bootout", domain, str(source)))
+        if current_enabled != was_enabled:
+            operation = "enable" if was_enabled else "disable"
+            self._run(MutationExecutable.LAUNCHCTL, (operation, f"{domain}/{label}"))
+        if was_running and not current_running:
             self._run(MutationExecutable.LAUNCHCTL, ("bootstrap", domain, str(source)))

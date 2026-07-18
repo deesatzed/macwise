@@ -3,6 +3,7 @@
 import hashlib
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 from platformdirs import user_data_path
@@ -142,7 +143,7 @@ class PlanStore:
         if not self.path.exists():
             return None
         try:
-            with self._connect(read_only=True) as connection:
+            with closing(self._connect(read_only=True)) as connection:
                 version = self._schema_version(connection)
                 if version == 0:
                     if self._table_names(connection):

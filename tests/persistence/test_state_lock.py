@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pytest
@@ -35,3 +36,14 @@ def test_state_lock_rejects_symlink_ancestors_without_creating_outside_state(
         raise AssertionError("unsafe lock acquired")
 
     assert not (outside / "nested").exists()
+
+
+def test_state_lock_rejects_existing_non_regular_file(tmp_path: Path) -> None:
+    path = tmp_path / "macwise.lock"
+    os.mkfifo(path)
+
+    with (
+        pytest.raises(StateLockError, match="regular file"),
+        StateLock(path),
+    ):
+        raise AssertionError("unsafe lock acquired")

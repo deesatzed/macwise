@@ -23,11 +23,12 @@ from macwise.persistence import (
     PlanStore,
     PlanStoreError,
     StateLock,
+    StateLockError,
     execution_digest,
     plan_digest,
 )
 from macwise.services.approval import approval_fingerprint, require_approval
-from macwise.services.revalidation import PreparedExecution
+from macwise.services.revalidation import PreparedExecution, RevalidationError
 
 
 class ExecutionServiceError(RuntimeError):
@@ -36,6 +37,17 @@ class ExecutionServiceError(RuntimeError):
 
 class ActionVerificationError(RuntimeError):
     """Fresh host evidence does not confirm an action's required state."""
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        observation: ActionObservation,
+        mutation_attempted: bool,
+    ) -> None:
+        super().__init__(message)
+        self.observation = observation
+        self.mutation_attempted = mutation_attempted
 
 
 class TrashAdapter(Protocol):
@@ -67,6 +79,7 @@ class CommandAdapter(Protocol):
         source_path: Path,
         *,
         was_running: bool,
+        expected_plist_sha256: str,
     ) -> None: ...
 
     def restore_launch_agent(
@@ -76,6 +89,9 @@ class CommandAdapter(Protocol):
         *,
         was_enabled: bool,
         was_running: bool,
+        current_enabled: bool,
+        current_running: bool,
+        expected_plist_sha256: str,
     ) -> None: ...
 
 
@@ -97,6 +113,8 @@ class ExecutionService:
         trash_adapter: TrashAdapter,
         command_adapter: CommandAdapter | None = None,
         action_observer: ActionObserver | None = None,
+        filesystem_probe: Callable[[Path], ActionObservation] | None = None,
+        revalidator: Callable[[PlanDocument], PreparedExecution] | None = None,
         clock: Callable[[], datetime],
         run_id_factory: Callable[[], str],
     ) -> None:
@@ -106,12 +124,18 @@ class ExecutionService:
         self.trash_adapter = trash_adapter
         self.command_adapter = command_adapter
         self.action_observer = action_observer
+        self.filesystem_probe = filesystem_probe
+        self.revalidator = revalidator
         self.clock = clock
         self.run_id_factory = run_id_factory
 
     def active(self) -> ExecutionRun | None:
         """Return the current integrity-checked recovery manifest, if one exists."""
         return self.execution_store.active()
+
+    def undoable(self) -> ExecutionRun | None:
+        """Return the latest run with safely observed reversible actions."""
+        return self.execution_store.latest_undoable()
 
     def _revision(
         self,
@@ -145,13 +169,27 @@ class ExecutionService:
         current: ActionObservation,
         expected: ActionObservation,
         fields: tuple[str, ...],
+        *,
+        mutation_attempted: bool = False,
     ) -> None:
-        if any(
+        if not ExecutionService._observation_matches(current, expected, fields):
+            raise ActionVerificationError(
+                "Fresh host state does not match the recorded state.",
+                observation=current,
+                mutation_attempted=mutation_attempted,
+            )
+
+    @staticmethod
+    def _observation_matches(
+        current: ActionObservation,
+        expected: ActionObservation,
+        fields: tuple[str, ...],
+    ) -> bool:
+        return not any(
             getattr(expected, field) is not None
             and getattr(current, field) != getattr(expected, field)
             for field in fields
-        ):
-            raise ActionVerificationError("Fresh host state does not match the recorded state.")
+        )
 
     def _command_boundaries(self) -> tuple[CommandAdapter, ActionObserver]:
         if self.command_adapter is None or self.action_observer is None:
@@ -159,6 +197,194 @@ class ExecutionService:
                 "This approved action does not have complete allowlisted command boundaries."
             )
         return self.command_adapter, self.action_observer
+
+    @staticmethod
+    def _decisive_fields(action: ExecutionAction) -> tuple[str, ...]:
+        if action.kind in {
+            PlanActionKind.HOMEBREW_UNINSTALL_FORMULA,
+            PlanActionKind.HOMEBREW_UNINSTALL_CASK,
+        }:
+            return ("installed",)
+        if action.kind is PlanActionKind.STOP_HOMEBREW_SERVICE:
+            return ("running",)
+        if action.kind is PlanActionKind.DISABLE_LAUNCH_AGENT:
+            return ("exists", "running", "enabled", "plist_sha256")
+        return ("exists", "device", "inode", "identity_digest")
+
+    @classmethod
+    def _observation_is_authoritative(
+        cls,
+        action: ExecutionAction,
+        observation: ActionObservation,
+    ) -> bool:
+        return all(
+            getattr(observation, field) is not None for field in cls._decisive_fields(action)
+        )
+
+    @staticmethod
+    def _expected_command_after(action: ExecutionAction) -> ActionObservation:
+        if action.kind in {
+            PlanActionKind.HOMEBREW_UNINSTALL_FORMULA,
+            PlanActionKind.HOMEBREW_UNINSTALL_CASK,
+        }:
+            return ActionObservation(installed=False)
+        if action.kind is PlanActionKind.STOP_HOMEBREW_SERVICE:
+            return ActionObservation(running=False)
+        return ActionObservation(
+            exists=True,
+            enabled=False,
+            running=False if action.before.running is True else None,
+            plist_sha256=action.inverse.plist_sha256,
+        )
+
+    def _observe_action_position(
+        self,
+        action: ExecutionAction,
+    ) -> tuple[bool, bool, ActionObservation]:
+        """Classify fresh state as before, applied, or neither without mutation."""
+        if action.kind is not PlanActionKind.MOVE_APPLICATION_TO_TRASH:
+            if self.action_observer is None:
+                raise ExecutionServiceError("Fresh command recovery evidence is unavailable.")
+            current = self.action_observer.observe(action)
+            if action.kind in {
+                PlanActionKind.HOMEBREW_UNINSTALL_FORMULA,
+                PlanActionKind.HOMEBREW_UNINSTALL_CASK,
+            }:
+                fields = ("installed",)
+            elif action.kind is PlanActionKind.STOP_HOMEBREW_SERVICE:
+                fields = ("running", "enabled")
+            else:
+                fields = ("exists", "running", "enabled", "plist_sha256")
+            expected_after = action.after or self._expected_command_after(action)
+            return (
+                self._observation_matches(current, action.before, fields),
+                self._observation_matches(current, expected_after, fields),
+                current,
+            )
+
+        if self.filesystem_probe is None:
+            raise ExecutionServiceError("Fresh filesystem recovery evidence is unavailable.")
+        trash_path = action.inverse.source_path
+        original_path = action.inverse.destination_path
+        if trash_path is None or original_path is None:
+            raise ExecutionServiceError("The Trash recovery paths are incomplete.")
+        original = self.filesystem_probe(Path(original_path))
+        trash = self.filesystem_probe(Path(trash_path))
+        fields = ("exists", "device", "inode", "identity_digest")
+        applied_identity = action.after or action.before
+        before_match = (
+            self._observation_matches(original, action.before, fields) and trash.exists is False
+        )
+        after_match = original.exists is False and self._observation_matches(
+            trash, applied_identity, fields
+        )
+        return before_match, after_match, original if before_match else trash
+
+    def _classify_interrupted(
+        self,
+        manifest: ExecutionRun,
+        *,
+        state_lock: StateLock,
+    ) -> ExecutionRun:
+        interrupted = next(
+            (
+                action
+                for action in manifest.actions
+                if action.state in {ActionState.IN_PROGRESS, ActionState.UNDO_IN_PROGRESS}
+            ),
+            None,
+        )
+        if interrupted is None:
+            return manifest
+        before_match, after_match, current = self._observe_action_position(interrupted)
+        if interrupted.state is ActionState.IN_PROGRESS:
+            if after_match:
+                replacement = ExecutionAction.model_validate(
+                    {
+                        **interrupted.model_dump(),
+                        "state": ActionState.VERIFIED,
+                        "verification": VerificationState.VERIFIED,
+                        "after": current,
+                        "error": None,
+                    }
+                )
+            elif before_match:
+                replacement = ExecutionAction.model_validate(
+                    {
+                        **interrupted.model_dump(),
+                        "state": ActionState.FAILED,
+                        "verification": VerificationState.FAILED,
+                        "after": current,
+                        "error": "Fresh recovery evidence confirms no mutation remains.",
+                    }
+                )
+            else:
+                replacement = interrupted.model_copy(
+                    update={
+                        "verification": VerificationState.UNKNOWN,
+                        "error": "Fresh recovery evidence is ambiguous.",
+                    }
+                )
+                if manifest.state is ExecutionState.INTERRUPTED:
+                    return manifest
+                classified = self._revision(
+                    manifest,
+                    state=ExecutionState.INTERRUPTED,
+                    actions=self._replace_action(manifest.actions, replacement),
+                )
+                self.execution_store.append(classified, state_lock=state_lock)
+                return classified
+            actions = self._replace_action(manifest.actions, replacement)
+            state = (
+                ExecutionState.SUCCEEDED
+                if all(action.state is ActionState.VERIFIED for action in actions)
+                else ExecutionState.PARTIAL
+            )
+        else:
+            if before_match:
+                replacement = ExecutionAction.model_validate(
+                    {
+                        **interrupted.model_dump(),
+                        "state": ActionState.UNDONE,
+                        "verification": VerificationState.VERIFIED,
+                        "after": current,
+                        "error": None,
+                    }
+                )
+            elif after_match:
+                replacement = ExecutionAction.model_validate(
+                    {
+                        **interrupted.model_dump(),
+                        "state": ActionState.VERIFIED,
+                        "verification": VerificationState.VERIFIED,
+                        "error": None,
+                    }
+                )
+            else:
+                replacement = interrupted.model_copy(
+                    update={
+                        "verification": VerificationState.UNKNOWN,
+                        "error": "Fresh undo recovery evidence is ambiguous.",
+                    }
+                )
+                if manifest.state is ExecutionState.INTERRUPTED:
+                    return manifest
+                classified = self._revision(
+                    manifest,
+                    state=ExecutionState.INTERRUPTED,
+                    actions=self._replace_action(manifest.actions, replacement),
+                )
+                self.execution_store.append(classified, state_lock=state_lock)
+                return classified
+            actions = self._replace_action(manifest.actions, replacement)
+            state = (
+                ExecutionState.UNDONE
+                if all(action.state is ActionState.UNDONE for action in actions)
+                else ExecutionState.UNDO_PARTIAL
+            )
+        classified = self._revision(manifest, state=state, actions=actions)
+        self.execution_store.append(classified, state_lock=state_lock)
+        return classified
 
     @staticmethod
     def _require_prepared_matches_plan(
@@ -227,7 +453,12 @@ class ExecutionService:
             else:
                 commands.uninstall_cask(token)
             after = observer.observe(action)
-            self._require_observation(after, ActionObservation(installed=False), ("installed",))
+            self._require_observation(
+                after,
+                ActionObservation(installed=False),
+                ("installed",),
+                mutation_attempted=True,
+            )
             return after
         if action.kind is PlanActionKind.STOP_HOMEBREW_SERVICE:
             self._require_observation(before, action.before, ("running", "enabled"))
@@ -236,7 +467,12 @@ class ExecutionService:
                 raise ExecutionServiceError("The service action lost its exact token.")
             commands.stop_service(token)
             after = observer.observe(action)
-            self._require_observation(after, ActionObservation(running=False), ("running",))
+            self._require_observation(
+                after,
+                ActionObservation(running=False),
+                ("running",),
+                mutation_attempted=True,
+            )
             return after
 
         if action.kind is not PlanActionKind.DISABLE_LAUNCH_AGENT:
@@ -254,6 +490,7 @@ class ExecutionService:
             label,
             Path(source),
             was_running=action.before.running is True,
+            expected_plist_sha256=action.inverse.plist_sha256 or "",
         )
         after = observer.observe(action)
         expected_after = ActionObservation(
@@ -266,6 +503,7 @@ class ExecutionService:
             after,
             expected_after,
             ("exists", "running", "enabled", "plist_sha256"),
+            mutation_attempted=True,
         )
         return after
 
@@ -277,10 +515,16 @@ class ExecutionService:
         current = observer.observe(action)
         if action.after is None:
             raise ExecutionServiceError("The verified action has no recorded after-state.")
+        if not self._observation_is_authoritative(action, action.after):
+            raise ExecutionServiceError(
+                "The recorded after-state is not authoritative enough to reverse."
+            )
         if action.kind in {
             PlanActionKind.HOMEBREW_UNINSTALL_FORMULA,
             PlanActionKind.HOMEBREW_UNINSTALL_CASK,
         }:
+            if self._observation_matches(current, action.before, ("installed",)):
+                return current
             self._require_observation(current, action.after, ("installed",))
             token = action.inverse.homebrew_token
             if token is None:
@@ -292,9 +536,16 @@ class ExecutionService:
             else:
                 raise ExecutionServiceError("The Homebrew inverse kind changed.")
             restored = observer.observe(action)
-            self._require_observation(restored, ActionObservation(installed=True), ("installed",))
+            self._require_observation(
+                restored,
+                ActionObservation(installed=True),
+                ("installed",),
+                mutation_attempted=True,
+            )
             return restored
         if action.kind is PlanActionKind.STOP_HOMEBREW_SERVICE:
+            if self._observation_matches(current, action.before, ("running", "enabled")):
+                return current
             self._require_observation(current, action.after, ("running",))
             token = action.inverse.homebrew_token
             if token is None:
@@ -306,13 +557,17 @@ class ExecutionService:
                 restored,
                 ActionObservation(running=action.inverse.prior_running),
                 ("running",),
+                mutation_attempted=True,
             )
             return restored
 
+        launch_fields = ("exists", "running", "enabled", "plist_sha256")
+        if self._observation_matches(current, action.before, launch_fields):
+            return current
         self._require_observation(
             current,
             action.after,
-            ("exists", "running", "enabled", "plist_sha256"),
+            launch_fields,
         )
         label = action.inverse.startup_label
         source = action.inverse.startup_source_path
@@ -323,6 +578,9 @@ class ExecutionService:
             Path(source),
             was_enabled=action.inverse.prior_enabled is True,
             was_running=action.inverse.prior_running is True,
+            current_enabled=current.enabled is True,
+            current_running=current.running is True,
+            expected_plist_sha256=action.inverse.plist_sha256 or "",
         )
         restored = observer.observe(action)
         expected = ActionObservation(
@@ -335,6 +593,7 @@ class ExecutionService:
             restored,
             expected,
             ("exists", "running", "enabled", "plist_sha256"),
+            mutation_attempted=True,
         )
         return restored
 
@@ -348,6 +607,18 @@ class ExecutionService:
                     raise ExecutionServiceError(
                         "The active cleanup plan changed after it was reviewed."
                     )
+                if self.revalidator is not None:
+                    try:
+                        locked_prepared = self.revalidator(plan)
+                    except RevalidationError as error:
+                        raise ExecutionServiceError(
+                            "Fresh host evidence changed before the execution lock."
+                        ) from error
+                    if locked_prepared.plan_digest != prepared.plan_digest:
+                        raise ExecutionServiceError(
+                            "The revalidated cleanup plan digest changed before execution."
+                        )
+                    prepared = locked_prepared
                 self._require_prepared_matches_plan(plan, prepared)
                 prior_execution = self.execution_store.active()
                 if (
@@ -376,6 +647,11 @@ class ExecutionService:
                 self.execution_store.append(manifest, state_lock=held)
 
                 for pending in prepared.actions:
+                    current_plan = self.plan_store.active()
+                    if current_plan is None or plan_digest(current_plan) != prepared.plan_digest:
+                        raise ExecutionServiceError(
+                            "The active cleanup plan changed before an ordered action."
+                        )
                     in_progress = ExecutionAction.model_validate(
                         {**pending.model_dump(), "state": ActionState.IN_PROGRESS}
                     )
@@ -392,26 +668,58 @@ class ExecutionService:
                         CommandActionError,
                         ExecutionServiceError,
                         FilesystemActionError,
+                        OSError,
+                        RuntimeError,
+                        ValueError,
                     ) as error:
                         verification_failed = isinstance(error, ActionVerificationError)
-                        failed = ExecutionAction.model_validate(
-                            {
-                                **pending.model_dump(),
-                                "state": ActionState.FAILED,
-                                "verification": VerificationState.FAILED,
-                                "error": "The allowlisted action did not complete.",
-                            }
-                        )
-                        actions = self._replace_action(manifest.actions, failed)
-                        failed_state = (
-                            ExecutionState.VERIFICATION_FAILED
-                            if verification_failed
-                            else (
-                                ExecutionState.PARTIAL
-                                if any(action.state is ActionState.VERIFIED for action in actions)
-                                else ExecutionState.FAILED
+                        failed_after: ActionObservation | None = None
+                        if isinstance(error, ActionVerificationError) and error.mutation_attempted:
+                            failed_after = error.observation
+                        elif isinstance(error, CommandActionError) and self.action_observer:
+                            try:
+                                failed_after = self.action_observer.observe(pending)
+                            except (OSError, RuntimeError, ValueError):
+                                failed_after = None
+                        if failed_after is not None and not self._observation_is_authoritative(
+                            pending,
+                            failed_after,
+                        ):
+                            failed_after = None
+                        mutation_may_have_occurred = not (
+                            isinstance(error, ActionVerificationError)
+                            and not error.mutation_attempted
+                        ) and not isinstance(error, ExecutionServiceError)
+                        if failed_after is None and mutation_may_have_occurred:
+                            failed = ExecutionAction.model_validate(
+                                {
+                                    **pending.model_dump(),
+                                    "state": ActionState.IN_PROGRESS,
+                                    "verification": VerificationState.UNKNOWN,
+                                    "error": "Fresh post-action state is unavailable.",
+                                }
                             )
-                        )
+                            failed_state = ExecutionState.INTERRUPTED
+                        else:
+                            failed = ExecutionAction.model_validate(
+                                {
+                                    **pending.model_dump(),
+                                    "state": ActionState.FAILED,
+                                    "verification": VerificationState.FAILED,
+                                    "after": failed_after,
+                                    "error": "The allowlisted action did not complete.",
+                                }
+                            )
+                            failed_state = (
+                                ExecutionState.VERIFICATION_FAILED
+                                if verification_failed
+                                else (
+                                    ExecutionState.PARTIAL
+                                    if mutation_may_have_occurred
+                                    else ExecutionState.FAILED
+                                )
+                            )
+                        actions = self._replace_action(manifest.actions, failed)
                         manifest = self._revision(
                             manifest,
                             state=failed_state,
@@ -442,7 +750,12 @@ class ExecutionService:
                     )
                     self.execution_store.append(manifest, state_lock=held)
                 return manifest
-        except (ExecutionStoreError, PlanStoreError, FilesystemActionError) as error:
+        except (
+            ExecutionStoreError,
+            PlanStoreError,
+            FilesystemActionError,
+            StateLockError,
+        ) as error:
             raise ExecutionServiceError(
                 "MacWise could not complete the approved action."
             ) from error
@@ -451,11 +764,52 @@ class ExecutionService:
         """Reverse the latest fully verified run after separate exact approval."""
         try:
             with StateLock(self.state_lock_path) as held:
-                manifest = self.execution_store.active()
-                if manifest is None or manifest.state is not ExecutionState.SUCCEEDED:
-                    raise ExecutionServiceError("No fully verified execution is ready to undo.")
+                manifest = self.execution_store.latest_undoable()
+                allowed_states = {
+                    ExecutionState.SUCCEEDED,
+                    ExecutionState.PARTIAL,
+                    ExecutionState.VERIFICATION_FAILED,
+                    ExecutionState.UNDO_PARTIAL,
+                    ExecutionState.IN_PROGRESS,
+                    ExecutionState.UNDO_IN_PROGRESS,
+                    ExecutionState.INTERRUPTED,
+                }
+                if manifest is None or manifest.state not in allowed_states:
+                    raise ExecutionServiceError(
+                        "No execution with separately recoverable actions is ready to undo."
+                    )
                 require_approval(execution_digest(manifest), approval, verb="UNDO")
-                for verified in reversed(manifest.actions):
+                if manifest.state in {
+                    ExecutionState.IN_PROGRESS,
+                    ExecutionState.UNDO_IN_PROGRESS,
+                    ExecutionState.INTERRUPTED,
+                }:
+                    manifest = self._classify_interrupted(manifest, state_lock=held)
+                    if manifest.state is ExecutionState.UNDONE:
+                        return manifest
+                recoverable = tuple(
+                    action
+                    for action in reversed(manifest.actions)
+                    if action.state
+                    in {
+                        ActionState.VERIFIED,
+                        ActionState.UNDO_FAILED,
+                        ActionState.FAILED,
+                    }
+                    and action.after is not None
+                )
+                if not recoverable:
+                    raise ExecutionServiceError(
+                        "The unresolved execution has no safely observed inverse action."
+                    )
+                for verified in recoverable:
+                    normalized = ExecutionAction.model_validate(
+                        {
+                            **verified.model_dump(),
+                            "state": ActionState.VERIFIED,
+                            "verification": VerificationState.VERIFIED,
+                        }
+                    )
                     undoing = ExecutionAction.model_validate(
                         {**verified.model_dump(), "state": ActionState.UNDO_IN_PROGRESS}
                     )
@@ -466,24 +820,43 @@ class ExecutionService:
                     )
                     self.execution_store.append(manifest, state_lock=held)
                     try:
-                        restored = self._undo_action(verified)
+                        restored = self._undo_action(normalized)
                     except (
                         ActionVerificationError,
                         CommandActionError,
                         ExecutionServiceError,
                         FilesystemActionError,
+                        OSError,
+                        RuntimeError,
+                        ValueError,
                     ) as error:
+                        mutation_may_have_occurred = not (
+                            isinstance(error, ActionVerificationError)
+                            and not error.mutation_attempted
+                        ) and not isinstance(error, ExecutionServiceError)
                         failed = ExecutionAction.model_validate(
                             {
                                 **verified.model_dump(),
-                                "state": ActionState.UNDO_FAILED,
-                                "verification": VerificationState.FAILED,
+                                "state": (
+                                    ActionState.UNDO_IN_PROGRESS
+                                    if mutation_may_have_occurred
+                                    else ActionState.UNDO_FAILED
+                                ),
+                                "verification": (
+                                    VerificationState.UNKNOWN
+                                    if mutation_may_have_occurred
+                                    else VerificationState.FAILED
+                                ),
                                 "error": "The allowlisted inverse action did not complete.",
                             }
                         )
                         manifest = self._revision(
                             manifest,
-                            state=ExecutionState.UNDO_PARTIAL,
+                            state=(
+                                ExecutionState.INTERRUPTED
+                                if mutation_may_have_occurred
+                                else ExecutionState.UNDO_PARTIAL
+                            ),
                             actions=self._replace_action(manifest.actions, failed),
                         )
                         self.execution_store.append(manifest, state_lock=held)
@@ -499,10 +872,28 @@ class ExecutionService:
                         }
                     )
                     actions = self._replace_action(manifest.actions, undone)
+                    if verified is recoverable[-1] and all(
+                        action.state
+                        in {ActionState.UNDONE, ActionState.PENDING, ActionState.NOT_APPLIED}
+                        for action in actions
+                    ):
+                        actions = tuple(
+                            action.model_copy(update={"state": ActionState.NOT_APPLIED})
+                            if action.state is ActionState.PENDING
+                            else action
+                            for action in actions
+                        )
                     final_state = (
                         ExecutionState.UNDONE
-                        if all(action.state is ActionState.UNDONE for action in actions)
-                        else ExecutionState.UNDO_IN_PROGRESS
+                        if all(
+                            action.state in {ActionState.UNDONE, ActionState.NOT_APPLIED}
+                            for action in actions
+                        )
+                        else (
+                            ExecutionState.UNDO_PARTIAL
+                            if verified is recoverable[-1]
+                            else ExecutionState.UNDO_IN_PROGRESS
+                        )
                     )
                     manifest = self._revision(
                         manifest,
@@ -516,5 +907,6 @@ class ExecutionService:
             CommandActionError,
             ExecutionStoreError,
             FilesystemActionError,
+            StateLockError,
         ) as error:
             raise ExecutionServiceError("MacWise could not complete the approved undo.") from error

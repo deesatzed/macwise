@@ -9,6 +9,8 @@ from macwise.models import (
     ActionObservation,
     ActionState,
     AuditDocument,
+    CollectorState,
+    CollectorStatus,
     EntityType,
     ExecutionAction,
     ExecutionRun,
@@ -84,6 +86,9 @@ class FakeExecutionService:
         return self.current
 
     def active(self) -> ExecutionRun | None:
+        return self.current
+
+    def undoable(self) -> ExecutionRun | None:
         return self.current
 
     def undo(self, *, approval: str) -> ExecutionRun:
@@ -253,7 +258,7 @@ def test_launchctl_read_probe_uses_override_and_running_evidence_without_mutatio
                 command=ReadCommand.LAUNCHCTL,
                 state=CommandState.FAILED,
                 stdout="",
-                stderr="bounded synthetic failure",
+                stderr="bounded synthetic permission failure",
                 return_code=113,
                 duration_seconds=0,
             ),
@@ -275,11 +280,90 @@ def test_launchctl_read_probe_uses_override_and_running_evidence_without_mutatio
         default_enabled=True,
     )
 
-    assert state == (False, False)
+    assert state == (False, None)
     assert calls == [
         (ReadCommand.LAUNCHCTL, ("print-disabled", f"gui/{cli.os.getuid()}")),
         (ReadCommand.LAUNCHCTL, ("print", f"gui/{cli.os.getuid()}/com.example.agent")),
     ]
+
+
+def test_launchctl_probe_only_treats_canonical_not_found_as_not_running(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    responses = iter(
+        (
+            CommandResult(
+                command=ReadCommand.LAUNCHCTL,
+                state=CommandState.COMPLETE,
+                stdout="disabled services = { }",
+                stderr="",
+                return_code=0,
+                duration_seconds=0,
+            ),
+            CommandResult(
+                command=ReadCommand.LAUNCHCTL,
+                state=CommandState.FAILED,
+                stdout="",
+                stderr="Could not find service com.example.agent",
+                return_code=113,
+                duration_seconds=0,
+            ),
+        )
+    )
+
+    def fake_read(
+        command: ReadCommand,
+        arguments: tuple[str, ...],
+    ) -> CommandResult:
+        del command, arguments
+        return next(responses)
+
+    monkeypatch.setattr(cli, "run_read_command", fake_read)
+
+    assert cli.LiveActionObserver.launchctl_state(
+        "com.example.agent",
+        default_enabled=True,
+    ) == (True, False)
+
+
+def test_homebrew_absence_requires_complete_collector_evidence() -> None:
+    partial = AuditDocument(
+        audit_id="audit:partial",
+        collected_at=NOW,
+        collectors=(
+            CollectorStatus(
+                collector="homebrew",
+                state=CollectorState.PARTIAL,
+                collected_at=NOW,
+                records_count=0,
+                limitations=("synthetic failure",),
+            ),
+        ),
+    )
+    complete = partial.model_copy(
+        update={
+            "collectors": (
+                partial.collectors[0].model_copy(update={"state": CollectorState.COMPLETE}),
+            )
+        }
+    )
+
+    assert (
+        cli.LiveActionObserver.homebrew_installed(
+            partial,
+            EntityType.HOMEBREW_FORMULA,
+            "ripgrep",
+        )
+        is None
+    )
+    assert (
+        cli.LiveActionObserver.homebrew_installed(
+            complete,
+            EntityType.HOMEBREW_FORMULA,
+            "ripgrep",
+        )
+        is False
+    )
 
 
 def test_apply_failure_reports_durable_recovery_state(
@@ -308,3 +392,57 @@ def test_apply_failure_reports_durable_recovery_state(
     assert "durable state: verification failed" in result.stdout
     assert "macwise doctor" in result.stdout
     assert "synthetic" not in result.stdout
+
+
+def test_partial_run_exposes_separately_approved_recovery_and_doctor_state(
+    execution_cli: tuple[PlanStore, FakeExecutionService, PreparedExecution],
+) -> None:
+    _store, service, _prepared = execution_cli
+    service.current = service.build_run(undone=False).model_copy(
+        update={"state": ExecutionState.PARTIAL}
+    )
+    phrase = f"UNDO {execution_digest(service.current)[:16].upper()}"
+
+    doctor = RUNNER.invoke(cli.app, ["doctor"])
+    undone = RUNNER.invoke(cli.app, ["undo", "--approve", phrase])
+
+    assert doctor.exit_code == 0
+    assert "Execution recovery journal: partial" in doctor.stdout
+    assert "run macwise undo" in doctor.stdout
+    assert undone.exit_code == 0, undone.stdout
+    assert service.undo_approvals == [phrase]
+
+
+def test_doctor_routes_interrupted_run_to_bounded_undo_classification(
+    execution_cli: tuple[PlanStore, FakeExecutionService, PreparedExecution],
+) -> None:
+    _store, service, _prepared = execution_cli
+    run = service.build_run(undone=False)
+    service.current = run.model_copy(
+        update={
+            "state": ExecutionState.IN_PROGRESS,
+            "actions": (run.actions[0].model_copy(update={"state": ActionState.IN_PROGRESS}),),
+        }
+    )
+
+    doctor = RUNNER.invoke(cli.app, ["doctor"])
+
+    assert doctor.exit_code == 0
+    assert "run macwise undo" in doctor.stdout
+    assert "fresh-state classification" in doctor.stdout
+
+
+def test_doctor_reveals_older_historical_undo_surface(
+    execution_cli: tuple[PlanStore, FakeExecutionService, PreparedExecution],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _store, service, _prepared = execution_cli
+    older = service.build_run(undone=False).model_copy(update={"run_id": "run:older"})
+    service.current = service.build_run(undone=True)
+    monkeypatch.setattr(service, "undoable", lambda: older)
+
+    doctor = RUNNER.invoke(cli.app, ["doctor"])
+
+    assert doctor.exit_code == 0
+    assert "Historical recovery" in doctor.stdout
+    assert "run macwise undo" in doctor.stdout

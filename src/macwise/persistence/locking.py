@@ -3,6 +3,7 @@
 import errno
 import fcntl
 import os
+import stat
 from pathlib import Path
 from types import TracebackType
 
@@ -47,6 +48,9 @@ class StateLock:
             descriptor = os.open(self.path, flags, 0o600)
         except OSError as error:
             raise StateLockError("MacWise could not open the state lock safely.") from error
+        if not stat.S_ISREG(os.fstat(descriptor).st_mode):
+            os.close(descriptor)
+            raise StateLockError("The MacWise state lock must be a regular file.")
         try:
             fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except OSError as error:

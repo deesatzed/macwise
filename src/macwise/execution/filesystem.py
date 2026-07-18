@@ -1,6 +1,7 @@
 """Exclusive descriptor-relative Trash moves for exact synthetic or approved bundles."""
 
 import ctypes
+import hashlib
 import os
 import stat
 import sys
@@ -25,6 +26,63 @@ _RENAME_NOREPLACE_LINUX = 0x1
 
 class FilesystemActionError(RuntimeError):
     """An exact filesystem action could not proceed or verify safely."""
+
+
+def _identity_digest_from_directory(descriptor: int, item: os.stat_result) -> str:
+    digest = hashlib.sha256()
+    digest.update(f"macwise-bundle-v1\0{item.st_dev}\0{item.st_ino}\0".encode())
+    flags = os.O_RDONLY
+    directory_flags = flags | os.O_DIRECTORY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+        directory_flags |= os.O_NOFOLLOW
+    contents_descriptor: int | None = None
+    plist_descriptor: int | None = None
+    try:
+        try:
+            contents_descriptor = os.open("Contents", directory_flags, dir_fd=descriptor)
+            plist_descriptor = os.open(
+                "Info.plist",
+                flags,
+                dir_fd=contents_descriptor,
+            )
+        except FileNotFoundError:
+            digest.update(b"no-info-plist")
+        else:
+            plist_stat = os.fstat(plist_descriptor)
+            if not stat.S_ISREG(plist_stat.st_mode):
+                raise FilesystemActionError("The application metadata is not a regular file.")
+            plist_digest = hashlib.sha256()
+            while chunk := os.read(plist_descriptor, 64 * 1024):
+                plist_digest.update(chunk)
+            digest.update(b"info-plist\0")
+            digest.update(plist_digest.digest())
+    except OSError as error:
+        raise FilesystemActionError("The application metadata is not safely readable.") from error
+    finally:
+        if plist_descriptor is not None:
+            os.close(plist_descriptor)
+        if contents_descriptor is not None:
+            os.close(contents_descriptor)
+    return digest.hexdigest()
+
+
+def application_identity_digest(path: Path) -> str:
+    """Bind an application identity to its inode and descriptor-read metadata."""
+    flags = os.O_RDONLY | os.O_DIRECTORY
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+    try:
+        descriptor = os.open(path.expanduser().absolute(), flags)
+    except OSError as error:
+        raise FilesystemActionError("The application identity is not safely readable.") from error
+    try:
+        item = os.fstat(descriptor)
+        if not stat.S_ISDIR(item.st_mode):
+            raise FilesystemActionError("The application identity is not a directory.")
+        return _identity_digest_from_directory(descriptor, item)
+    finally:
+        os.close(descriptor)
 
 
 def _exclusive_rename(
@@ -110,6 +168,18 @@ class TrashFilesystemAdapter:
                 "An approved action directory is not safely openable."
             ) from error
 
+    @staticmethod
+    def _open_child_directory(parent_descriptor: int, name: str) -> int:
+        flags = os.O_RDONLY | os.O_DIRECTORY
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        try:
+            return os.open(name, flags, dir_fd=parent_descriptor)
+        except OSError as error:
+            raise FilesystemActionError(
+                "The approved application is not safely openable."
+            ) from error
+
     def _move(
         self,
         source: Path,
@@ -123,6 +193,7 @@ class TrashFilesystemAdapter:
         self._require_allowed_paths(source, destination, undo=undo)
         source_fd = self._open_directory(source.parent)
         destination_fd = self._open_directory(destination.parent)
+        source_bundle_fd: int | None = None
         try:
             try:
                 source_stat = os.stat(source.name, dir_fd=source_fd, follow_symlinks=False)
@@ -130,10 +201,13 @@ class TrashFilesystemAdapter:
                 raise FilesystemActionError("The exact application source is missing.") from error
             if not stat.S_ISDIR(source_stat.st_mode):
                 raise FilesystemActionError("The source is not an ordinary application directory.")
+            source_bundle_fd = self._open_child_directory(source_fd, source.name)
+            current_identity = _identity_digest_from_directory(source_bundle_fd, source_stat)
             if (
                 expected.exists is not True
                 or expected.device != source_stat.st_dev
                 or expected.inode != source_stat.st_ino
+                or expected.identity_digest != current_identity
             ):
                 raise FilesystemActionError("The exact application identity changed.")
             if os.fstat(destination_fd).st_dev != source_stat.st_dev:
@@ -170,13 +244,21 @@ class TrashFilesystemAdapter:
                 or destination_stat.st_ino != source_stat.st_ino
             ):
                 raise FilesystemActionError("The moved application identity did not verify.")
+            destination_identity = _identity_digest_from_directory(
+                source_bundle_fd,
+                destination_stat,
+            )
+            if destination_identity != current_identity:
+                raise FilesystemActionError("The moved application metadata did not verify.")
             return ActionObservation(
                 exists=True,
                 device=destination_stat.st_dev,
                 inode=destination_stat.st_ino,
-                identity_digest=expected.identity_digest,
+                identity_digest=destination_identity,
             )
         finally:
+            if source_bundle_fd is not None:
+                os.close(source_bundle_fd)
             os.close(destination_fd)
             os.close(source_fd)
 

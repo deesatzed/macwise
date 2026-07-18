@@ -168,7 +168,7 @@ def test_planning_and_local_state_write_do_not_call_host_mutation_apis(
     assert all(path == state_root or state_root in path.parents for path in tmp_path.rglob("*"))
 
 
-def test_threat_model_names_persisted_plan_non_authority_boundary() -> None:
+def test_threat_model_names_persisted_plan_and_allowlisted_execution_boundaries() -> None:
     threat_model = (Path(__file__).parents[2] / "docs" / "threat-model.md").read_text(
         encoding="utf-8"
     )
@@ -178,4 +178,6 @@ def test_threat_model_names_persisted_plan_non_authority_boundary() -> None:
     assert "persisted plan" in normalized
     assert "not execution authority" in normalized
     assert "revalidate" in normalized
-    assert "phase 4" in normalized and "no action" in normalized
+    assert "phase 5" in normalized
+    assert "allowlisted" in normalized
+    assert "not exit status" in normalized

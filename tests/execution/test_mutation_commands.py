@@ -1,4 +1,6 @@
+import hashlib
 import subprocess
+import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 
@@ -8,6 +10,7 @@ from macwise.execution.commands import (
     CommandActionError,
     MutationCommandAdapter,
     MutationExecutable,
+    bounded_mutation_runner,
 )
 
 
@@ -102,11 +105,13 @@ def test_launch_agent_methods_use_exact_current_user_domain_and_safe_plist(
         "com.example.agent",
         plist,
         was_running=True,
+        expected_plist_sha256=hashlib.sha256(plist.read_bytes()).hexdigest(),
     )
     commands.enable_launch_agent(
         "com.example.agent",
         plist,
         was_running=True,
+        expected_plist_sha256=hashlib.sha256(plist.read_bytes()).hexdigest(),
     )
 
     assert [call[0] for call in runner.calls] == [
@@ -114,6 +119,27 @@ def test_launch_agent_methods_use_exact_current_user_domain_and_safe_plist(
         ("/bin/launchctl", "bootout", "gui/501", str(plist)),
         ("/bin/launchctl", "enable", "gui/501/com.example.agent"),
         ("/bin/launchctl", "bootstrap", "gui/501", str(plist)),
+    ]
+
+
+def test_launch_agent_partial_restore_only_applies_missing_delta(tmp_path: Path) -> None:
+    runner = RecordingRunner()
+    commands = adapter(tmp_path, runner)
+    plist = tmp_path / "Library" / "LaunchAgents" / "com.example.agent.plist"
+    plist.write_bytes(b"synthetic")
+
+    commands.restore_launch_agent(
+        "com.example.agent",
+        plist,
+        was_enabled=True,
+        was_running=True,
+        current_enabled=False,
+        current_running=True,
+        expected_plist_sha256=hashlib.sha256(plist.read_bytes()).hexdigest(),
+    )
+
+    assert [call[0] for call in runner.calls] == [
+        ("/bin/launchctl", "enable", "gui/501/com.example.agent"),
     ]
 
 
@@ -153,6 +179,21 @@ def test_success_exit_with_oversized_output_still_fails_closed(tmp_path: Path) -
         commands.uninstall_formula("ripgrep")
 
 
+def test_default_mutation_runner_retains_only_bounded_output() -> None:
+    completed = bounded_mutation_runner(
+        (sys.executable, "-c", "import sys; sys.stdout.write('x' * 2000000)"),
+        shell=False,
+        check=False,
+        capture_output=True,
+        timeout=10.0,
+        env={},
+    )
+
+    assert completed.returncode == 0
+    assert len(completed.stdout) == (64 * 1024) + 1
+    assert completed.stderr == b""
+
+
 def test_resolver_cannot_substitute_a_discovered_executable(tmp_path: Path) -> None:
     runner = RecordingRunner()
     launch_agents = tmp_path / "Library" / "LaunchAgents"
@@ -182,6 +223,28 @@ def test_launch_agent_rejects_unsafe_labels_without_running(
     plist.write_bytes(b"synthetic")
 
     with pytest.raises(CommandActionError, match="label"):
-        commands.disable_launch_agent(label, plist, was_running=False)
+        commands.disable_launch_agent(
+            label,
+            plist,
+            was_running=False,
+            expected_plist_sha256=hashlib.sha256(plist.read_bytes()).hexdigest(),
+        )
+
+    assert runner.calls == []
+
+
+def test_launch_agent_rejects_changed_plist_hash_before_any_command(tmp_path: Path) -> None:
+    runner = RecordingRunner()
+    commands = adapter(tmp_path, runner)
+    plist = tmp_path / "Library" / "LaunchAgents" / "agent.plist"
+    plist.write_bytes(b"changed")
+
+    with pytest.raises(CommandActionError, match="content changed"):
+        commands.disable_launch_agent(
+            "com.example.agent",
+            plist,
+            was_running=True,
+            expected_plist_sha256="a" * 64,
+        )
 
     assert runner.calls == []

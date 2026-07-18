@@ -3,6 +3,7 @@
 import hashlib
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 from platformdirs import user_data_path
@@ -62,9 +63,14 @@ _ALLOWED_TRANSITIONS: dict[ExecutionState, frozenset[ExecutionState]] = {
     ExecutionState.VERIFICATION_FAILED: frozenset({ExecutionState.UNDO_IN_PROGRESS}),
     ExecutionState.INTERRUPTED: frozenset(
         {
+            ExecutionState.INTERRUPTED,
             ExecutionState.IN_PROGRESS,
             ExecutionState.UNDO_IN_PROGRESS,
             ExecutionState.FAILED,
+            ExecutionState.PARTIAL,
+            ExecutionState.SUCCEEDED,
+            ExecutionState.UNDO_PARTIAL,
+            ExecutionState.UNDONE,
         }
     ),
     ExecutionState.UNDO_IN_PROGRESS: frozenset(
@@ -195,7 +201,7 @@ class ExecutionStore:
         if not self.path.exists():
             return None
         try:
-            with self._connect(read_only=True) as connection:
+            with closing(self._connect(read_only=True)) as connection:
                 version = self._schema_version(connection)
                 if version == 0:
                     if self._table_names(connection):
@@ -226,6 +232,62 @@ class ExecutionStore:
         except (ValidationError, ValueError) as error:
             raise ExecutionStoreError("The active execution manifest is invalid.") from error
 
+    def latest_undoable(self) -> ExecutionRun | None:
+        """Return the latest integrity-checked run with an observed inverse surface."""
+        self._validate_path(create_parent=False)
+        if not self.path.exists():
+            return None
+        try:
+            with closing(self._connect(read_only=True)) as connection:
+                self._require_known_schema(connection, self._schema_version(connection))
+                rows = connection.execute(
+                    """
+                    SELECT revisions.document_json, revisions.document_sha256
+                    FROM execution_revisions AS revisions
+                    JOIN (
+                        SELECT run_id, MAX(manifest_revision) AS manifest_revision
+                        FROM execution_revisions
+                        GROUP BY run_id
+                    ) AS latest
+                      ON latest.run_id = revisions.run_id
+                     AND latest.manifest_revision = revisions.manifest_revision
+                    ORDER BY revisions.rowid DESC
+                    """
+                ).fetchall()
+        except ExecutionStoreError:
+            raise
+        except sqlite3.Error as error:
+            raise ExecutionStoreError("MacWise could not read execution history.") from error
+        allowed_states = {
+            ExecutionState.SUCCEEDED,
+            ExecutionState.PARTIAL,
+            ExecutionState.VERIFICATION_FAILED,
+            ExecutionState.UNDO_PARTIAL,
+            ExecutionState.IN_PROGRESS,
+            ExecutionState.UNDO_IN_PROGRESS,
+            ExecutionState.INTERRUPTED,
+        }
+        for raw_json, raw_digest in rows:
+            document_json = str(raw_json)
+            if hashlib.sha256(document_json.encode()).hexdigest() != str(raw_digest):
+                raise ExecutionStoreError(
+                    "An execution history manifest failed its integrity check."
+                )
+            try:
+                run = ExecutionRun.model_validate_json(document_json)
+            except (ValidationError, ValueError) as error:
+                raise ExecutionStoreError("An execution history manifest is invalid.") from error
+            if run.state in allowed_states and any(
+                (
+                    action.after is not None
+                    and action.state.value in {"verified", "failed", "undo_failed"}
+                )
+                or action.state.value in {"in_progress", "undo_in_progress"}
+                for action in run.actions
+            ):
+                return run
+        return None
+
     def append(self, run: ExecutionRun, *, state_lock: StateLock) -> None:
         """Append one manifest revision while the caller holds the shared state lock."""
         if state_lock.path != self.lock_path or not state_lock.is_held:
@@ -248,7 +310,7 @@ class ExecutionStore:
             active_row = connection.execute(
                 """
                 SELECT revisions.run_id, revisions.manifest_revision, revisions.state,
-                       revisions.document_json
+                       revisions.document_json, revisions.document_sha256
                 FROM active_execution AS active
                 JOIN execution_revisions AS revisions
                   ON revisions.run_id = active.run_id
@@ -256,6 +318,12 @@ class ExecutionStore:
                 WHERE active.singleton_id = 1
                 """
             ).fetchone()
+            if active_row is not None and (
+                hashlib.sha256(str(active_row[3]).encode()).hexdigest() != str(active_row[4])
+            ):
+                raise ExecutionStoreError(
+                    "The active execution manifest failed its integrity check."
+                )
             if run.manifest_revision == 1:
                 if active_row is not None and ExecutionState(str(active_row[2])) not in (
                     _NEW_RUN_ALLOWED_AFTER
@@ -268,12 +336,42 @@ class ExecutionStore:
                 active_identity = (
                     (str(active_row[0]), int(active_row[1])) if active_row is not None else None
                 )
-                if active_identity != expected:
-                    raise ExecutionStoreError(
-                        "The execution revision does not follow the active manifest."
-                    )
                 assert active_row is not None
-                previous = ExecutionRun.model_validate_json(str(active_row[3]))
+                active_previous = ExecutionRun.model_validate_json(str(active_row[3]))
+                if active_identity == expected:
+                    previous = active_previous
+                else:
+                    if active_previous.state is not ExecutionState.UNDONE:
+                        raise ExecutionStoreError(
+                            "The execution revision does not follow the active manifest."
+                        )
+                    history_row = connection.execute(
+                        """
+                        SELECT run_id, manifest_revision, document_json, document_sha256
+                        FROM execution_revisions
+                        WHERE run_id = ?
+                        ORDER BY manifest_revision DESC
+                        LIMIT 1
+                        """,
+                        (run.run_id,),
+                    ).fetchone()
+                    history_identity = (
+                        (str(history_row[0]), int(history_row[1]))
+                        if history_row is not None
+                        else None
+                    )
+                    if history_identity != expected:
+                        raise ExecutionStoreError(
+                            "The execution revision does not follow recoverable history."
+                        )
+                    assert history_row is not None
+                    if hashlib.sha256(str(history_row[2]).encode()).hexdigest() != str(
+                        history_row[3]
+                    ):
+                        raise ExecutionStoreError(
+                            "The execution history manifest failed its integrity check."
+                        )
+                    previous = ExecutionRun.model_validate_json(str(history_row[2]))
                 if (
                     previous.plan_id != run.plan_id
                     or previous.plan_revision != run.plan_revision

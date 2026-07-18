@@ -45,6 +45,24 @@ def action(state: ActionState = ActionState.PENDING) -> ExecutionAction:
     )
 
 
+def observed_action(state: ActionState) -> ExecutionAction:
+    return ExecutionAction(
+        plan_action_id="action:example",
+        sequence=1,
+        subject_id="application:example",
+        kind=PlanActionKind.MOVE_APPLICATION_TO_TRASH,
+        state=state,
+        verification=VerificationState.VERIFIED,
+        before=ActionObservation(exists=True, device=42, inode=100),
+        after=ActionObservation(exists=True, device=42, inode=100),
+        inverse=InverseIntent(
+            kind=InverseKind.RESTORE_FROM_TRASH,
+            source_path="/Users/example/.Trash/Example.app.macwise-test",
+            destination_path="/Applications/Example.app",
+        ),
+    )
+
+
 def run(
     manifest_revision: int = 1,
     *,
@@ -63,6 +81,27 @@ def run(
         updated_at=NOW,
         state=state,
         actions=(action(action_state),),
+    )
+
+
+def observed_run(
+    manifest_revision: int,
+    *,
+    run_id: str,
+    state: ExecutionState,
+    action_state: ActionState,
+) -> ExecutionRun:
+    return ExecutionRun(
+        run_id=run_id,
+        manifest_revision=manifest_revision,
+        plan_id=f"plan:{run_id}",
+        plan_revision=1,
+        plan_digest=PLAN_DIGEST,
+        approval_fingerprint="A" * 16,
+        created_at=NOW,
+        updated_at=NOW,
+        state=state,
+        actions=(observed_action(action_state),),
     )
 
 
@@ -128,6 +167,7 @@ def test_interrupted_or_in_progress_run_blocks_competing_initial_run(tmp_path: P
 
     active = store.active()
     assert active is not None and active.run_id == "run:test"
+    assert store.latest_undoable() == active
 
 
 def test_execution_store_rejects_corruption_and_future_schema_without_mutation(
@@ -172,3 +212,144 @@ def test_execution_store_rejects_nested_symlink_ancestor(tmp_path: Path) -> None
         store.append(run(), state_lock=held)
 
     assert not (outside / "nested").exists()
+
+
+def test_latest_undoable_skips_newer_undone_run_and_can_resume_older_history(
+    tmp_path: Path,
+) -> None:
+    lock_path = tmp_path / "macwise.lock"
+    store = ExecutionStore(tmp_path / "executions.db", lock_path=lock_path)
+    with StateLock(lock_path) as held:
+        store.append(
+            observed_run(
+                1, run_id="run:a", state=ExecutionState.PREPARED, action_state=ActionState.PENDING
+            ),
+            state_lock=held,
+        )
+        store.append(
+            observed_run(
+                2,
+                run_id="run:a",
+                state=ExecutionState.IN_PROGRESS,
+                action_state=ActionState.IN_PROGRESS,
+            ),
+            state_lock=held,
+        )
+        run_a = observed_run(
+            3, run_id="run:a", state=ExecutionState.SUCCEEDED, action_state=ActionState.VERIFIED
+        )
+        store.append(run_a, state_lock=held)
+        store.append(
+            observed_run(
+                1, run_id="run:b", state=ExecutionState.PREPARED, action_state=ActionState.PENDING
+            ),
+            state_lock=held,
+        )
+        store.append(
+            observed_run(
+                2,
+                run_id="run:b",
+                state=ExecutionState.IN_PROGRESS,
+                action_state=ActionState.IN_PROGRESS,
+            ),
+            state_lock=held,
+        )
+        run_b = observed_run(
+            3, run_id="run:b", state=ExecutionState.SUCCEEDED, action_state=ActionState.VERIFIED
+        )
+        store.append(run_b, state_lock=held)
+        store.append(
+            observed_run(
+                4,
+                run_id="run:b",
+                state=ExecutionState.UNDO_IN_PROGRESS,
+                action_state=ActionState.UNDO_IN_PROGRESS,
+            ),
+            state_lock=held,
+        )
+        store.append(
+            observed_run(
+                5, run_id="run:b", state=ExecutionState.UNDONE, action_state=ActionState.UNDONE
+            ),
+            state_lock=held,
+        )
+
+        assert store.latest_undoable() == run_a
+        resumed = observed_run(
+            4,
+            run_id="run:a",
+            state=ExecutionState.UNDO_IN_PROGRESS,
+            action_state=ActionState.UNDO_IN_PROGRESS,
+        )
+        store.append(resumed, state_lock=held)
+
+    assert store.active() == resumed
+
+
+def test_historical_resume_rechecks_prior_revision_integrity(tmp_path: Path) -> None:
+    lock_path = tmp_path / "macwise.lock"
+    database = tmp_path / "executions.db"
+    store = ExecutionStore(database, lock_path=lock_path)
+    with StateLock(lock_path) as held:
+        store.append(
+            observed_run(
+                1, run_id="run:a", state=ExecutionState.PREPARED, action_state=ActionState.PENDING
+            ),
+            state_lock=held,
+        )
+        store.append(
+            observed_run(
+                2,
+                run_id="run:a",
+                state=ExecutionState.IN_PROGRESS,
+                action_state=ActionState.IN_PROGRESS,
+            ),
+            state_lock=held,
+        )
+        store.append(
+            observed_run(
+                3,
+                run_id="run:a",
+                state=ExecutionState.SUCCEEDED,
+                action_state=ActionState.VERIFIED,
+            ),
+            state_lock=held,
+        )
+        for revision, state, action_state in (
+            (1, ExecutionState.PREPARED, ActionState.PENDING),
+            (2, ExecutionState.IN_PROGRESS, ActionState.IN_PROGRESS),
+            (3, ExecutionState.SUCCEEDED, ActionState.VERIFIED),
+            (4, ExecutionState.UNDO_IN_PROGRESS, ActionState.UNDO_IN_PROGRESS),
+            (5, ExecutionState.UNDONE, ActionState.UNDONE),
+        ):
+            store.append(
+                observed_run(
+                    revision,
+                    run_id="run:b",
+                    state=state,
+                    action_state=action_state,
+                ),
+                state_lock=held,
+            )
+
+    with sqlite3.connect(database) as connection:
+        document = connection.execute(
+            "SELECT document_json FROM execution_revisions WHERE run_id = ? AND manifest_revision = 3",
+            ("run:a",),
+        ).fetchone()[0]
+        connection.execute(
+            "UPDATE execution_revisions SET document_json = ? WHERE run_id = ? AND manifest_revision = 3",
+            (str(document).replace('"inode":100', '"inode":101'), "run:a"),
+        )
+
+    resumed = observed_run(
+        4,
+        run_id="run:a",
+        state=ExecutionState.UNDO_IN_PROGRESS,
+        action_state=ActionState.UNDO_IN_PROGRESS,
+    )
+    with (
+        StateLock(lock_path) as held,
+        pytest.raises(ExecutionStoreError, match="integrity"),
+    ):
+        store.append(resumed, state_lock=held)

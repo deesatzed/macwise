@@ -37,6 +37,7 @@ class ActionState(StrEnum):
     UNDO_IN_PROGRESS = "undo_in_progress"
     UNDONE = "undone"
     UNDO_FAILED = "undo_failed"
+    NOT_APPLIED = "not_applied"
 
 
 class VerificationState(StrEnum):
@@ -135,6 +136,14 @@ class ExecutionAction(BaseModel):
             self.verification is not VerificationState.VERIFIED or self.after is None
         ):
             raise ValueError("A verified action requires verified after-state evidence")
+        if self.state is ActionState.NOT_APPLIED and (
+            self.after is not None
+            or self.verification is not VerificationState.PENDING
+            or self.error is not None
+        ):
+            raise ValueError(
+                "A not-applied action requires pending verification and no after-state or error"
+            )
         return self
 
 
@@ -174,7 +183,8 @@ class ExecutionRun(BaseModel):
         ):
             raise ValueError("A succeeded run requires verified actions")
         if self.state is ExecutionState.UNDONE and any(
-            action.state is not ActionState.UNDONE for action in self.actions
+            action.state not in {ActionState.UNDONE, ActionState.NOT_APPLIED}
+            for action in self.actions
         ):
-            raise ValueError("An undone run requires every action to be undone")
+            raise ValueError("An undone run requires every action to be undone or not applied")
         return self

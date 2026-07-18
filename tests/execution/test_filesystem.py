@@ -3,7 +3,11 @@ from pathlib import Path
 
 import pytest
 
-from macwise.execution.filesystem import FilesystemActionError, TrashFilesystemAdapter
+from macwise.execution.filesystem import (
+    FilesystemActionError,
+    TrashFilesystemAdapter,
+    application_identity_digest,
+)
 from macwise.models import (
     ActionObservation,
     ActionState,
@@ -28,7 +32,7 @@ def prepared_action(source: Path, destination: Path) -> ExecutionAction:
             exists=True,
             device=source_stat.st_dev,
             inode=source_stat.st_ino,
-            identity_digest="a" * 64,
+            identity_digest=application_identity_digest(source),
         ),
         inverse=InverseIntent(
             kind=InverseKind.RESTORE_FROM_TRASH,
@@ -46,6 +50,25 @@ def synthetic_bundle(tmp_path: Path) -> tuple[Path, Path, Path]:
     trash.mkdir()
     destination = trash / "Synthetic.app.macwise-test"
     return applications, trash, destination
+
+
+def test_trash_move_refuses_changed_bundle_metadata_with_same_inode(tmp_path: Path) -> None:
+    applications, trash, destination = synthetic_bundle(tmp_path)
+    source = applications / "Synthetic.app"
+    contents = source / "Contents"
+    contents.mkdir()
+    plist = contents / "Info.plist"
+    plist.write_text("original")
+    action = prepared_action(source, destination)
+    original_inode = source.stat().st_ino
+    plist.write_text("changed")
+
+    adapter = TrashFilesystemAdapter(source_roots=(applications,), trash_root=trash)
+    with pytest.raises(FilesystemActionError, match="identity changed"):
+        adapter.apply(action)
+
+    assert source.stat().st_ino == original_inode
+    assert not destination.exists()
 
 
 def test_descriptor_relative_trash_move_and_reverse_preserve_exact_inode(

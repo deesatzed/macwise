@@ -104,3 +104,22 @@ def test_execution_models_have_no_generic_command_or_argv_field() -> None:
     }
 
     assert not {"command", "shell", "executable", "argv"} & public_fields
+
+
+@pytest.mark.parametrize(
+    "updates",
+    (
+        {"after": ActionObservation(exists=True)},
+        {"verification": VerificationState.VERIFIED},
+        {"error": "not actually untouched"},
+    ),
+)
+def test_not_applied_action_requires_untouched_pending_truth(updates: dict[str, object]) -> None:
+    with pytest.raises(ValidationError, match="not-applied"):
+        ExecutionAction.model_validate(
+            {
+                **action().model_dump(),
+                "state": ActionState.NOT_APPLIED,
+                **updates,
+            }
+        )

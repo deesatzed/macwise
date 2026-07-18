@@ -10,6 +10,7 @@ from macwise.models import (
     ActionObservation,
     ActionState,
     AuditDocument,
+    CollectorState,
     EntityType,
     ExecutionAction,
     InverseIntent,
@@ -38,6 +39,32 @@ class PreparedExecution:
 
     plan_digest: str
     actions: tuple[ExecutionAction, ...]
+
+
+def _require_relevant_collectors(plan: PlanDocument, audit: AuditDocument) -> None:
+    required = {"usage", "backups", "overlap"}
+    kinds = {action.kind for action in plan.actions}
+    if PlanActionKind.MOVE_APPLICATION_TO_TRASH in kinds:
+        required.add("applications")
+    if kinds & {
+        PlanActionKind.HOMEBREW_UNINSTALL_FORMULA,
+        PlanActionKind.HOMEBREW_UNINSTALL_CASK,
+        PlanActionKind.STOP_HOMEBREW_SERVICE,
+    }:
+        required.add("homebrew")
+    if kinds & {
+        PlanActionKind.DISABLE_LAUNCH_AGENT,
+        PlanActionKind.STOP_HOMEBREW_SERVICE,
+    }:
+        required.add("startup")
+    states = {item.collector: item.state for item in audit.collectors}
+    incomplete = sorted(
+        collector for collector in required if states.get(collector) is not CollectorState.COMPLETE
+    )
+    if incomplete:
+        raise RevalidationError(
+            "Action-relevant collector evidence is incomplete: " + ", ".join(incomplete)
+        )
 
 
 def _fresh_plan(plan: PlanDocument, audit: AuditDocument, trash_root: Path) -> PlanDocument:
@@ -186,6 +213,8 @@ def _startup_action(
         raise RevalidationError("The exact startup identity is missing, ambiguous, or changed.")
     startup = matching[0]
     if action.kind is PlanActionKind.DISABLE_LAUNCH_AGENT:
+        if startup.enabled is None or startup.running is None:
+            raise RevalidationError("The LaunchAgent enabled or running state is unknown.")
         if action.startup_source_path is None or startup.source_path != action.startup_source_path:
             raise RevalidationError("The LaunchAgent path changed after preview.")
         try:
@@ -210,6 +239,8 @@ def _startup_action(
             prior_enabled=startup.enabled,
         )
     else:
+        if startup.running is None:
+            raise RevalidationError("The Homebrew service running state is unknown.")
         if action.homebrew_token is None or startup.label != action.homebrew_token:
             raise RevalidationError("The Homebrew service token changed after preview.")
         before = ActionObservation(running=startup.running, enabled=startup.enabled)
@@ -252,6 +283,7 @@ def prepare_execution(
         raise RevalidationError("Apply requires a fresh plan schema 2 preview.")
     if plan.eligibility is not PlanEligibility.PREVIEW_READY or not plan.actions:
         raise RevalidationError("The active plan is blocked or contains no supported actions.")
+    _require_relevant_collectors(plan, audit)
 
     fresh = _fresh_plan(plan, audit, trash_root)
     _require_same_candidate_identity(plan, fresh)

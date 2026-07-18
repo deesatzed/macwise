@@ -4,6 +4,7 @@ import hashlib
 import os
 import platform
 import re
+import stat
 import sys
 from collections.abc import Callable, Sequence
 from datetime import UTC, datetime
@@ -16,10 +17,16 @@ from uuid import uuid4
 import typer
 
 from macwise import __version__
-from macwise.execution import MutationCommandAdapter, TrashFilesystemAdapter
+from macwise.execution import (
+    FilesystemActionError,
+    MutationCommandAdapter,
+    TrashFilesystemAdapter,
+    application_identity_digest,
+)
 from macwise.help_text import HELP
 from macwise.models import (
     ActionObservation,
+    ActionState,
     AuditDocument,
     ClaimBasis,
     EntityType,
@@ -124,6 +131,8 @@ class CLIExecutionService(Protocol):
 
     def active(self) -> ExecutionRun | None: ...
 
+    def undoable(self) -> ExecutionRun | None: ...
+
     def undo(self, *, approval: str) -> ExecutionRun: ...
 
 
@@ -139,7 +148,7 @@ def _trash_root_factory() -> Path:
     return Path.home() / ".Trash"
 
 
-def _filesystem_observation(path: Path) -> ActionObservation:
+def filesystem_observation(path: Path) -> ActionObservation:
     try:
         item = path.lstat()
     except FileNotFoundError:
@@ -147,8 +156,11 @@ def _filesystem_observation(path: Path) -> ActionObservation:
     except OSError:
         return ActionObservation(exists=None)
     identity = None
-    if path.suffix.casefold() == ".app":
-        identity = hashlib.sha256(f"{item.st_dev}:{item.st_ino}:{path}".encode()).hexdigest()
+    if stat.S_ISDIR(item.st_mode):
+        try:
+            identity = application_identity_digest(path)
+        except FilesystemActionError:
+            return ActionObservation(exists=None)
     return ActionObservation(
         exists=True,
         device=item.st_dev,
@@ -157,17 +169,63 @@ def _filesystem_observation(path: Path) -> ActionObservation:
     )
 
 
-def _execution_preparer(plan: PlanDocument, audit: AuditDocument) -> PreparedExecution:
-    return prepare_execution(
+def prepare_execution_for_cli(
+    plan: PlanDocument,
+    audit: AuditDocument,
+) -> PreparedExecution:
+    prepared = prepare_execution(
         plan,
         audit,
         trash_root=_trash_root_factory(),
-        filesystem_probe=_filesystem_observation,
+        filesystem_probe=filesystem_observation,
     )
+    allowed_roots = set(_application_roots())
+    if any(
+        action.kind is PlanActionKind.MOVE_APPLICATION_TO_TRASH
+        and (
+            action.inverse.destination_path is None
+            or Path(action.inverse.destination_path).parent not in allowed_roots
+        )
+        for action in prepared.actions
+    ):
+        raise RevalidationError(
+            "A manual application source is outside the live execution allowlist."
+        )
+    return prepared
+
+
+_execution_preparer: Callable[[PlanDocument, AuditDocument], PreparedExecution] = (
+    prepare_execution_for_cli
+)
 
 
 class LiveActionObserver:
     """Collect fresh command-action state through existing read-only collectors."""
+
+    @staticmethod
+    def collector_complete(audit: AuditDocument, collector: str) -> bool:
+        return any(
+            item.collector == collector and item.state.value == "complete"
+            for item in audit.collectors
+        )
+
+    @classmethod
+    def homebrew_installed(
+        cls,
+        audit: AuditDocument,
+        entity_type: EntityType,
+        token: str | None,
+    ) -> bool | None:
+        matches = tuple(
+            item
+            for item in audit.software
+            if item.entity_type is entity_type and item.name == token
+        )
+        if len(matches) == 1:
+            return True
+        if not matches and cls.collector_complete(audit, "homebrew"):
+            return False
+        return None
 
     @staticmethod
     def launchctl_state(
@@ -192,13 +250,21 @@ class LiveActionObserver:
             ReadCommand.LAUNCHCTL,
             ("print", f"gui/{uid}/{label}"),
         )
-        running = (
-            True
-            if printed.state is CommandState.COMPLETE
-            else False
-            if printed.state is CommandState.FAILED
-            else None
-        )
+        running: bool | None = True if printed.state is CommandState.COMPLETE else None
+        missing_text = f"{printed.stdout}\n{printed.stderr}".casefold()
+        if (
+            printed.state is CommandState.FAILED
+            and printed.return_code in {3, 113}
+            and any(
+                marker in missing_text
+                for marker in (
+                    "could not find service",
+                    "could not find specified service",
+                    "service not found",
+                )
+            )
+        ):
+            running = False
         return enabled, running
 
     def observe(self, action: ExecutionAction) -> ActionObservation:
@@ -212,13 +278,12 @@ class LiveActionObserver:
                 if action.kind is PlanActionKind.HOMEBREW_UNINSTALL_FORMULA
                 else EntityType.HOMEBREW_CASK
             )
-            matches = tuple(
-                item
-                for item in audit.software
-                if item.entity_type is expected and item.name == action.inverse.homebrew_token
-            )
             return ActionObservation(
-                installed=True if len(matches) == 1 else False if not matches else None
+                installed=self.homebrew_installed(
+                    audit,
+                    expected,
+                    action.inverse.homebrew_token,
+                )
             )
         if action.kind is PlanActionKind.STOP_HOMEBREW_SERVICE:
             matches = tuple(
@@ -277,6 +342,11 @@ def _execution_service_factory(plan_store: PlanStore) -> CLIExecutionService:
             uid=os.getuid(),
         ),
         action_observer=LiveActionObserver(),
+        filesystem_probe=filesystem_observation,
+        revalidator=lambda current_plan: prepare_execution_for_cli(
+            current_plan,
+            _audit(),
+        ),
         clock=lambda: datetime.now(UTC),
         run_id_factory=lambda: f"run:{uuid4().hex}",
     )
@@ -1271,7 +1341,7 @@ def undo(
     """Reverse the latest fully verified run after separate exact approval."""
     try:
         service = _execution_service_factory(_plan_store_factory())
-        active = service.active()
+        active = service.undoable()
     except (ExecutionStoreError, PlanStoreError):
         typer.echo("MacWise could not read recovery state safely.")
         typer.echo("No undo action was attempted.\n\nNext:\n  macwise doctor")
@@ -1280,16 +1350,52 @@ def undo(
         typer.echo("No MacWise execution manifest is available to undo.")
         typer.echo("No changes were made.\n\nNext:\n  macwise plan show")
         raise typer.Exit(2)
-    if active.state is not ExecutionState.SUCCEEDED:
+    undoable_states = {
+        ExecutionState.SUCCEEDED,
+        ExecutionState.PARTIAL,
+        ExecutionState.VERIFICATION_FAILED,
+        ExecutionState.UNDO_PARTIAL,
+        ExecutionState.IN_PROGRESS,
+        ExecutionState.UNDO_IN_PROGRESS,
+        ExecutionState.INTERRUPTED,
+    }
+    if active.state not in undoable_states:
         typer.echo(
             f"The active execution state is {_human_label(active.state.value)} and is not "
-            "a fully verified run ready for ordinary undo."
+            "a run with safely observed reverse actions."
         )
         typer.echo("No undo action was attempted.\n\nNext:\n  macwise doctor")
         raise typer.Exit(2)
 
     typer.echo("Undo review\n")
-    for action in reversed(active.actions):
+    recoverable_actions = tuple(
+        action
+        for action in reversed(active.actions)
+        if (
+            action.after is not None
+            and action.state
+            in {
+                ActionState.VERIFIED,
+                ActionState.FAILED,
+                ActionState.UNDO_FAILED,
+            }
+        )
+        or action.state in {ActionState.IN_PROGRESS, ActionState.UNDO_IN_PROGRESS}
+    )
+    if not recoverable_actions:
+        typer.echo("The active execution has no safely observed inverse action.")
+        typer.echo("No undo action was attempted.\n\nNext:\n  macwise doctor")
+        raise typer.Exit(2)
+    if active.state in {
+        ExecutionState.IN_PROGRESS,
+        ExecutionState.UNDO_IN_PROGRESS,
+        ExecutionState.INTERRUPTED,
+    }:
+        typer.echo(
+            "Fresh host evidence will first classify each interrupted action; ambiguous "
+            "state will remain journaled and stop recovery."
+        )
+    for action in recoverable_actions:
         typer.echo(f"- Reverse action {action.sequence}: {_human_label(action.inverse.kind.value)}")
     typer.echo("Homebrew reinstalls are best-effort and may not restore the captured version.")
     phrase = undo_approval_phrase(execution_digest(active))
@@ -1313,6 +1419,10 @@ def undo(
         typer.echo("Undo did not complete safely; recovery state was preserved.")
         typer.echo("Next: run macwise doctor before retrying or creating a new plan.")
         raise typer.Exit(2) from None
+    if result.state is ExecutionState.UNDO_PARTIAL:
+        typer.echo("Undo restored the safely observed actions, but ambiguity remains.")
+        typer.echo("Next: run macwise doctor before retrying or creating a new plan.")
+        raise typer.Exit(2)
     if result.state is not ExecutionState.UNDONE:
         typer.echo(f"Undo stopped with state: {_human_label(result.state.value)}.")
         typer.echo("Next: run macwise doctor before retrying.")
@@ -1328,6 +1438,50 @@ def doctor() -> None:
     typer.echo(f"Python: {platform.python_version()}")
     brew = "available" if resolve_executable(ReadCommand.BREW) else "not found (optional)"
     typer.echo(f"Homebrew: {brew}")
+    try:
+        service = _execution_service_factory(_plan_store_factory())
+        recovery = service.active()
+        historical = service.undoable()
+    except (ExecutionStoreError, PlanStoreError):
+        typer.echo("Execution recovery journal: unsafe or unreadable")
+    else:
+        if recovery is None:
+            typer.echo("Execution recovery journal: no active run")
+        else:
+            typer.echo(
+                "Execution recovery journal: "
+                f"{_human_label(recovery.state.value)} "
+                f"({safe_display_text(recovery.run_id)})"
+            )
+            for action in recovery.actions:
+                typer.echo(
+                    f"  Action {action.sequence}: {_human_label(action.state.value)} — "
+                    f"{_human_label(action.kind.value)}"
+                )
+            if recovery.state in {
+                ExecutionState.SUCCEEDED,
+                ExecutionState.PARTIAL,
+                ExecutionState.VERIFICATION_FAILED,
+                ExecutionState.UNDO_PARTIAL,
+            }:
+                typer.echo("  Recovery: run macwise undo to review safely observed inverses.")
+            elif recovery.state in {
+                ExecutionState.IN_PROGRESS,
+                ExecutionState.UNDO_IN_PROGRESS,
+                ExecutionState.INTERRUPTED,
+            }:
+                typer.echo(
+                    "  Recovery: run macwise undo to review bounded fresh-state "
+                    "classification; do not retry or create a new plan."
+                )
+            if historical is not None and (
+                historical.run_id,
+                historical.manifest_revision,
+            ) != (recovery.run_id, recovery.manifest_revision):
+                typer.echo(
+                    "  Historical recovery: an older run still has safely observed "
+                    "inverse actions; run macwise undo to review it."
+                )
     typer.echo("Collectors are read-only. Run macwise scan for a complete collection check.")
 
 

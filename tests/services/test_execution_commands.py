@@ -6,18 +6,24 @@ import pytest
 from macwise.execution import CommandActionError
 from macwise.models import (
     ActionObservation,
+    ActionState,
     AuditDocument,
+    CollectorState,
+    CollectorStatus,
     EntityType,
     ExecutionAction,
+    ExecutionRun,
     ExecutionState,
     InstallRole,
     InverseIntent,
+    InverseKind,
     PlanActionKind,
     SoftwareRecord,
     StartupKind,
     StartupRecord,
+    VerificationState,
 )
-from macwise.persistence import ExecutionStore, PlanStore, execution_digest
+from macwise.persistence import ExecutionStore, PlanStore, StateLock, execution_digest
 from macwise.services import (
     ExecutionService,
     ExecutionServiceError,
@@ -29,6 +35,15 @@ from macwise.services import (
 from macwise.services.planning import add_candidate
 
 NOW = datetime(2026, 7, 18, 5, 0, tzinfo=UTC)
+COMPLETE_COLLECTORS = tuple(
+    CollectorStatus(
+        collector=name,
+        state=CollectorState.COMPLETE,
+        collected_at=NOW,
+        records_count=1,
+    )
+    for name in ("applications", "homebrew", "usage", "startup", "backups", "overlap")
+)
 
 
 class NoTrashAdapter:
@@ -42,11 +57,14 @@ class NoTrashAdapter:
 class RecordingCommands:
     def __init__(self, events: list[str] | None = None) -> None:
         self.calls: list[tuple[str, str]] = []
+        self.fail_uninstall = False
         self.fail_install = False
         self.events = events
 
     def uninstall_formula(self, token: str) -> None:
         self.calls.append(("uninstall_formula", token))
+        if self.fail_uninstall:
+            raise CommandActionError("synthetic uninstall failure after invocation")
 
     def uninstall_cask(self, token: str) -> None:
         self.calls.append(("uninstall_cask", token))
@@ -71,8 +89,9 @@ class RecordingCommands:
         source_path: Path,
         *,
         was_running: bool,
+        expected_plist_sha256: str,
     ) -> None:
-        del source_path, was_running
+        del source_path, was_running, expected_plist_sha256
         self.calls.append(("disable_launch_agent", label))
         if self.events is not None:
             self.events.append("disable_launch_agent")
@@ -84,8 +103,18 @@ class RecordingCommands:
         *,
         was_enabled: bool,
         was_running: bool,
+        current_enabled: bool,
+        current_running: bool,
+        expected_plist_sha256: str,
     ) -> None:
-        del source_path, was_enabled, was_running
+        del (
+            source_path,
+            was_enabled,
+            was_running,
+            current_enabled,
+            current_running,
+            expected_plist_sha256,
+        )
         self.calls.append(("restore_launch_agent", label))
         if self.events is not None:
             self.events.append("restore_launch_agent")
@@ -182,6 +211,7 @@ def formula_execution(
         collected_at=NOW,
         software=(formula,),
         startup=startup,
+        collectors=COMPLETE_COLLECTORS,
     )
     plan = add_candidate(
         None,
@@ -335,8 +365,375 @@ def test_undo_command_failure_is_journaled_before_stopping(tmp_path: Path) -> No
 
     active = service.execution_store.active()
     assert active is not None
-    assert active.state is ExecutionState.UNDO_PARTIAL
-    assert active.actions[0].state.value == "undo_failed"
+    assert active.state is ExecutionState.INTERRUPTED
+    assert active.actions[0].state is ActionState.UNDO_IN_PROGRESS
+
+    commands.fail_install = False
+    recovered = service.undo(
+        approval=undo_approval_phrase(execution_digest(active)),
+    )
+    assert recovered.state is ExecutionState.UNDONE
+
+
+def test_command_failure_after_invocation_is_partial_and_blocks_replay(
+    tmp_path: Path,
+) -> None:
+    service, commands, prepared = formula_execution(tmp_path)
+    commands.fail_uninstall = True
+
+    with pytest.raises(ExecutionServiceError, match="approved action"):
+        service.apply(
+            prepared,
+            approval=apply_approval_phrase(prepared.plan_digest),
+        )
+    active = service.execution_store.active()
+    assert active is not None
+    assert active.state is ExecutionState.PARTIAL
+    assert active.actions[0].after == ActionObservation(installed=False)
+    assert commands.calls == [("uninstall_formula", "ripgrep")]
+    with pytest.raises(ExecutionServiceError, match="already executed"):
+        service.apply(
+            prepared,
+            approval=apply_approval_phrase(prepared.plan_digest),
+        )
+
+    recovered = service.undo(
+        approval=undo_approval_phrase(execution_digest(active)),
+    )
+    assert recovered.state is ExecutionState.UNDONE
+    assert commands.calls[-1] == ("install_formula", "ripgrep")
+
+
+def test_unavailable_post_command_evidence_remains_interrupted_and_classifiable(
+    tmp_path: Path,
+) -> None:
+    service, commands, prepared = formula_execution(tmp_path)
+    commands.fail_uninstall = True
+
+    class ObserverUnavailableAfterMutation:
+        calls = 0
+
+        def observe(self, action: ExecutionAction) -> ActionObservation:
+            del action
+            self.calls += 1
+            if self.calls == 1:
+                return ActionObservation(installed=True)
+            raise RuntimeError("synthetic observer unavailable")
+
+    service.action_observer = ObserverUnavailableAfterMutation()
+
+    with pytest.raises(ExecutionServiceError, match="approved action"):
+        service.apply(prepared, approval=apply_approval_phrase(prepared.plan_digest))
+
+    active = service.execution_store.active()
+    assert active is not None
+    assert active.state is ExecutionState.INTERRUPTED
+    assert active.actions[0].state is ActionState.IN_PROGRESS
+    assert active.actions[0].verification.value == "unknown"
+    assert service.undoable() == active
+
+
+def test_typed_unknown_post_command_evidence_remains_interrupted(tmp_path: Path) -> None:
+    service, commands, prepared = formula_execution(tmp_path, verify=False)
+
+    class TypedUnknownAfterMutation:
+        calls = 0
+
+        def observe(self, action: ExecutionAction) -> ActionObservation:
+            del action
+            self.calls += 1
+            return (
+                ActionObservation(installed=True)
+                if self.calls == 1
+                else ActionObservation(installed=None)
+            )
+
+    service.action_observer = TypedUnknownAfterMutation()
+
+    with pytest.raises(ExecutionServiceError, match="approved action"):
+        service.apply(prepared, approval=apply_approval_phrase(prepared.plan_digest))
+
+    active = service.execution_store.active()
+    assert active is not None
+    assert active.state is ExecutionState.INTERRUPTED
+    assert active.actions[0].state is ActionState.IN_PROGRESS
+    assert active.actions[0].after is None
+    assert commands.calls == [("uninstall_formula", "ripgrep")]
+
+
+def test_typed_unknown_service_evidence_remains_interrupted(tmp_path: Path) -> None:
+    service, commands, prepared = formula_execution(tmp_path, include_service=True)
+
+    class TypedUnknownServiceAfterMutation:
+        calls = 0
+
+        def observe(self, action: ExecutionAction) -> ActionObservation:
+            del action
+            self.calls += 1
+            return (
+                ActionObservation(running=True)
+                if self.calls == 1
+                else ActionObservation(running=None)
+            )
+
+    service.action_observer = TypedUnknownServiceAfterMutation()
+
+    with pytest.raises(ExecutionServiceError, match="approved action"):
+        service.apply(prepared, approval=apply_approval_phrase(prepared.plan_digest))
+
+    active = service.execution_store.active()
+    assert active is not None
+    assert active.state is ExecutionState.INTERRUPTED
+    assert active.actions[0].state is ActionState.IN_PROGRESS
+    assert commands.calls == [("stop_service", "ripgrep")]
+
+
+def test_launch_agent_unknown_decisive_field_is_not_recoverable_evidence() -> None:
+    action = ExecutionAction(
+        plan_action_id="action:launch",
+        sequence=1,
+        subject_id="application:example",
+        kind=PlanActionKind.DISABLE_LAUNCH_AGENT,
+        state=ActionState.IN_PROGRESS,
+        verification=VerificationState.UNKNOWN,
+        before=ActionObservation(
+            exists=True,
+            running=True,
+            enabled=True,
+            plist_sha256="a" * 64,
+        ),
+        inverse=InverseIntent(
+            kind=InverseKind.ENABLE_LAUNCH_AGENT,
+            startup_id="startup:example",
+            startup_label="com.example.agent",
+            startup_source_path="/Users/example/Library/LaunchAgents/com.example.agent.plist",
+            plist_sha256="a" * 64,
+            prior_running=True,
+            prior_enabled=True,
+        ),
+    )
+
+    assert not ExecutionService._observation_is_authoritative(  # pyright: ignore[reportPrivateUsage]
+        action,
+        ActionObservation(
+            exists=True,
+            running=None,
+            enabled=False,
+            plist_sha256="a" * 64,
+        ),
+    )
+
+
+def test_state_lock_contention_is_a_bounded_execution_error(tmp_path: Path) -> None:
+    service, _commands, prepared = formula_execution(tmp_path)
+
+    with (
+        StateLock(service.state_lock_path),
+        pytest.raises(ExecutionServiceError, match="approved action"),
+    ):
+        service.apply(prepared, approval=apply_approval_phrase(prepared.plan_digest))
+
+
+def test_successful_recovery_marks_never_attempted_tail_not_applied(tmp_path: Path) -> None:
+    state = tmp_path / "state"
+    lock_path = state / "macwise.lock"
+    plan_store = PlanStore(state / "macwise.db", lock_path=lock_path)
+    execution_store = ExecutionStore(state / "executions.db", lock_path=lock_path)
+    commands = RecordingCommands()
+    commands.calls.append(("uninstall_formula", "ripgrep"))
+    service = ExecutionService(
+        plan_store=plan_store,
+        execution_store=execution_store,
+        state_lock_path=lock_path,
+        trash_adapter=NoTrashAdapter(),
+        command_adapter=commands,
+        action_observer=CommandObserver(commands),
+        clock=lambda: NOW,
+        run_id_factory=lambda: "unused",
+    )
+    base = ExecutionAction(
+        plan_action_id="action:one",
+        sequence=1,
+        subject_id="homebrew_formula:ripgrep",
+        kind=PlanActionKind.HOMEBREW_UNINSTALL_FORMULA,
+        state=ActionState.VERIFIED,
+        verification=VerificationState.VERIFIED,
+        before=ActionObservation(installed=True),
+        after=ActionObservation(installed=False),
+        inverse=InverseIntent(
+            kind=InverseKind.HOMEBREW_INSTALL_FORMULA,
+            homebrew_token="ripgrep",
+        ),
+    )
+    failed = base.model_copy(
+        update={
+            "plan_action_id": "action:two",
+            "sequence": 2,
+            "state": ActionState.FAILED,
+            "verification": VerificationState.FAILED,
+        }
+    )
+    pending = base.model_copy(
+        update={
+            "plan_action_id": "action:three",
+            "sequence": 3,
+            "state": ActionState.PENDING,
+            "verification": VerificationState.PENDING,
+            "after": None,
+        }
+    )
+    partial = ExecutionRun(
+        run_id="run:pending-tail",
+        manifest_revision=1,
+        plan_id="plan:pending-tail",
+        plan_revision=1,
+        plan_digest="a" * 64,
+        approval_fingerprint="A" * 16,
+        created_at=NOW,
+        updated_at=NOW,
+        state=ExecutionState.PARTIAL,
+        actions=(base, failed, pending),
+    )
+    with StateLock(lock_path) as held:
+        execution_store.append(partial, state_lock=held)
+
+    recovered = service.undo(approval=undo_approval_phrase(execution_digest(partial)))
+
+    assert recovered.state is ExecutionState.UNDONE
+    assert [action.state for action in recovered.actions] == [
+        ActionState.UNDONE,
+        ActionState.UNDONE,
+        ActionState.NOT_APPLIED,
+    ]
+
+
+@pytest.mark.parametrize("mutation_happened", (False, True))
+def test_interrupted_apply_is_classified_from_fresh_evidence_before_undo(
+    tmp_path: Path,
+    mutation_happened: bool,
+) -> None:
+    service, commands, prepared = formula_execution(tmp_path)
+    plan = service.plan_store.active()
+    assert plan is not None
+    created = ExecutionRun(
+        run_id="run:interrupted-apply",
+        manifest_revision=1,
+        plan_id=plan.plan_id,
+        plan_revision=plan.revision,
+        plan_digest=prepared.plan_digest,
+        approval_fingerprint=prepared.plan_digest[:16].upper(),
+        created_at=NOW,
+        updated_at=NOW,
+        state=ExecutionState.PREPARED,
+        actions=prepared.actions,
+    )
+    in_progress_action = prepared.actions[0].model_copy(update={"state": ActionState.IN_PROGRESS})
+    interrupted = created.model_copy(
+        update={
+            "manifest_revision": 2,
+            "state": ExecutionState.IN_PROGRESS,
+            "actions": (in_progress_action,),
+        }
+    )
+    with StateLock(service.state_lock_path) as held:
+        service.execution_store.append(created, state_lock=held)
+        service.execution_store.append(interrupted, state_lock=held)
+    if mutation_happened:
+        commands.calls.append(("uninstall_formula", "ripgrep"))
+
+    recovered = service.undo(
+        approval=undo_approval_phrase(execution_digest(interrupted)),
+    )
+
+    assert recovered.state is ExecutionState.UNDONE
+    assert recovered.actions[0].state is ActionState.UNDONE
+    assert commands.calls == (
+        [("uninstall_formula", "ripgrep"), ("install_formula", "ripgrep")]
+        if mutation_happened
+        else []
+    )
+
+
+def test_interrupted_undo_is_classified_and_safely_retried(tmp_path: Path) -> None:
+    service, commands, prepared = formula_execution(tmp_path)
+    applied = service.apply(prepared, approval=apply_approval_phrase(prepared.plan_digest))
+    undoing_action = applied.actions[0].model_copy(update={"state": ActionState.UNDO_IN_PROGRESS})
+    interrupted = applied.model_copy(
+        update={
+            "manifest_revision": applied.manifest_revision + 1,
+            "state": ExecutionState.UNDO_IN_PROGRESS,
+            "actions": (undoing_action,),
+        }
+    )
+    with StateLock(service.state_lock_path) as held:
+        service.execution_store.append(interrupted, state_lock=held)
+
+    recovered = service.undo(
+        approval=undo_approval_phrase(execution_digest(interrupted)),
+    )
+
+    assert recovered.state is ExecutionState.UNDONE
+    assert commands.calls == [
+        ("uninstall_formula", "ripgrep"),
+        ("install_formula", "ripgrep"),
+    ]
+
+
+def test_multi_action_failure_stops_after_preserving_prior_verified_action(
+    tmp_path: Path,
+) -> None:
+    service, commands, prepared = formula_execution(tmp_path, include_service=True)
+    commands.fail_uninstall = True
+
+    with pytest.raises(ExecutionServiceError, match="approved action"):
+        service.apply(
+            prepared,
+            approval=apply_approval_phrase(prepared.plan_digest),
+        )
+
+    active = service.execution_store.active()
+    assert active is not None
+    assert active.state is ExecutionState.PARTIAL
+    assert [action.state for action in active.actions] == [
+        ActionState.VERIFIED,
+        ActionState.FAILED,
+    ]
+    assert commands.calls == [
+        ("stop_service", "ripgrep"),
+        ("uninstall_formula", "ripgrep"),
+    ]
+
+    recovered = service.undo(
+        approval=undo_approval_phrase(execution_digest(active)),
+    )
+
+    assert recovered.state is ExecutionState.UNDONE
+    assert recovered.actions[0].state is ActionState.UNDONE
+    assert recovered.actions[1].state is ActionState.UNDONE
+    assert ("install_formula", "ripgrep") in commands.calls
+    assert commands.calls[-1] == ("start_service", "ripgrep")
+
+
+def test_verification_failed_action_can_separately_undo_as_verified_noop(
+    tmp_path: Path,
+) -> None:
+    service, commands, prepared = formula_execution(tmp_path, verify=False)
+    with pytest.raises(ExecutionServiceError, match="approved action"):
+        service.apply(
+            prepared,
+            approval=apply_approval_phrase(prepared.plan_digest),
+        )
+    active = service.execution_store.active()
+    assert active is not None
+    assert active.state is ExecutionState.VERIFICATION_FAILED
+    assert active.actions[0].after == ActionObservation(installed=True)
+
+    recovered = service.undo(
+        approval=undo_approval_phrase(execution_digest(active)),
+    )
+
+    assert recovered.state is ExecutionState.UNDONE
+    assert commands.calls == [("uninstall_formula", "ripgrep")]
 
 
 def test_launch_agent_is_disabled_before_trash_and_restored_after_trash_undo(
@@ -373,6 +770,7 @@ def test_launch_agent_is_disabled_before_trash_and_restored_after_trash_undo(
         collected_at=NOW,
         software=(record,),
         startup=(startup,),
+        collectors=COMPLETE_COLLECTORS,
     )
     plan = add_candidate(
         None,
