@@ -38,6 +38,9 @@
 - Each command's help starts in plain English, says when it is useful, states read-only or mutating behavior, gives two or three realistic examples, and suggests a likely next command.
 - Errors explain what happened and provide a concrete recovery command. Missing evidence is never described as proof of non-use.
 - Terminal output remains useful without Codex or an AI provider.
+- Product scores remain deterministic and decomposable: opportunity never grades the Mac or
+  rewards removal, usefulness never claims personalized correctness, and every component exposes
+  its count, reason, maximum, and limitation.
 
 ## Performance and Reliability
 

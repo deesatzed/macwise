@@ -61,7 +61,9 @@ What would you like to do?
 6. See what uses the most space
 7. Ask what an app does
 8. Create a safe cleanup plan
-9. Help
+9. Assess findings and usefulness
+10. Review undo recovery
+11. Help
 ```
 
 Do not require users to memorize commands.
@@ -72,6 +74,7 @@ Use a small, understandable hierarchy:
 
 ```bash
 macwise scan
+macwise score
 macwise review
 macwise explain <name>
 macwise compare <name> [<name>...]

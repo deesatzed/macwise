@@ -6,6 +6,9 @@ MacWise follows Semantic Versioning. Release candidates may still change while p
 
 ### Added
 
+- Read-only `macwise score` terminal, JSON, and Markdown scorecards with separate transparent
+  Opportunity Profile and MacWise Usefulness Score components.
+- Aggregate-only real-Mac scorecard evaluation plus sanitized README and landing-page examples.
 - Responsive static launch page with sanitized storage, explanation, overlap, safety, and
   installation examples.
 - Truth-oriented documentation contracts for required launch assets, release-status language,
@@ -46,6 +49,7 @@ MacWise follows Semantic Versioning. Release candidates may still change while p
 - Reworked the README, getting-started guide, and demo around a novice first-run journey,
   explicit evidence sources, bounded output, and the difference between a verified candidate
   and a published release.
+- Added scorecard access to the guided menu without changing cleanup authority or audit schema 4.
 
 ## [1.0.0rc1] - 2026-07-18
 

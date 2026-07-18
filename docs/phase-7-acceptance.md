@@ -16,6 +16,7 @@ pipx as an alternative, and defers Homebrew distribution to a later milestone.
 | 9-12 | Plan, preview, apply, and undo safely | Immutable planning, approval, synthetic mutation, verification, and recovery suites pass | Live user software mutation is not claimed. |
 | 13-14 | Set up and use Codex | Plugin setup/recovery and eight read-only tool proofs pass | No hosted model-quality claim. |
 | 15 | Receive useful help/errors | Root, nested, refusal, and recovery help contracts pass | None local. |
+| 16 | Assess whether findings and output are useful | Separate deterministic Opportunity Profile and MacWise Usefulness Score expose component counts, reasons, and limitations | Scores describe evidence and structure, not personalized outcomes. |
 
 ## Release evidence
 
@@ -36,6 +37,11 @@ pipx as an alternative, and defers Homebrew distribution to a later milestone.
 - Hosted run `29646278423` passed all nine jobs after the final real-Mac UX corrections. Launch
   documentation commit `991a608` then passed all nine Linux/macOS 15/macOS 26 and Python
   3.12-3.14 jobs in run `29652271086`, including privacy contracts and package builds.
+- A private real-Mac score produced a 70/100 Opportunity Profile and 86/100 Usefulness Score in
+  25.94 seconds. Aggregate cross-checks confirmed 28 startup records, 4 comparison-worthy overlap
+  relations out of 6, 22 applications at least 500 MiB out of 69 measured, 53 unknown-purpose
+  records, zero supported non-use findings, and a stale-backup warning. No name or path entered
+  `docs/scorecard-evaluation.md` or the public examples.
 
 ## Claim validation
 

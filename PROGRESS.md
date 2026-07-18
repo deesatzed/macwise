@@ -219,3 +219,16 @@ None required for local implementation. PyPI account configuration is required i
   read-only collectors, and all 10 launch contracts passed. Hosted run `29652271086` then passed
   all nine Linux/macOS 15/macOS 26 and Python 3.12-3.14 jobs. No tag, PyPI package, GitHub Release,
   GitHub Pages deployment, Homebrew tap, or shared online database was published.
+- 2026-07-18 scorecard RED/GREEN: missing score-model, scoring-service, command, help, guided-menu,
+  and public-doc contracts failed before immutable models, capped pure scoring, aggregate-only
+  terminal/JSON/Markdown output, explicit file safeguards, and the guided score route passed.
+  Regression tests prove unknown usage earns no non-use points and complementary pairs earn no
+  consolidation opportunity.
+- 2026-07-18 private scorecard evaluation: one real read-only audit completed and scored in 25.94
+  seconds at Opportunity 70/100 and Usefulness 86/100. Aggregate focused-command cross-checks
+  confirmed 28 startup records, 4 comparison-worthy of 6 overlap relations, 22 applications at
+  least 500 MiB of 69 measured, 53 unknown-purpose records, zero supported non-use findings, and a
+  stale-backup warning. Only counts, scores, reasons, and limitations entered repository docs.
+- 2026-07-18 scorecard local gate: 405 tests passed in 35.10 seconds; all 109 files passed Ruff
+  formatting, Ruff lint passed, Pyright reported zero errors, workflow YAML parsed, wheel and sdist
+  built, repository privacy/link contracts passed, and `git diff --check` was clean.
