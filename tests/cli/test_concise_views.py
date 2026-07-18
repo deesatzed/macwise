@@ -48,6 +48,7 @@ def expanded_audit(base: AuditDocument) -> AuditDocument:
             entity_type=EntityType.HOMEBREW_FORMULA,
             name=f"formula-{index:02d}",
             display_name=f"Formula {index:02d}",
+            size_bytes=100 * 1024**3,
         )
         for index in range(25)
     )
@@ -130,6 +131,7 @@ def test_largest_view_is_bounded_and_uses_readable_sizes(
 
     assert result.exit_code == 0, result.stdout
     assert "25.0 GiB" in result.stdout
+    assert "Formula" not in result.stdout
     assert "- App 00: 1.0 GiB" not in result.stdout
     assert "macwise review largest --all" in result.stdout
 

@@ -955,7 +955,11 @@ def review_largest(
     ] = False,
 ) -> None:
     measured = sorted(
-        (item for item in _audit().software if item.size_bytes is not None),
+        (
+            item
+            for item in _audit().software
+            if item.entity_type is EntityType.APPLICATION and item.size_bytes is not None
+        ),
         key=lambda item: item.size_bytes or 0,
         reverse=True,
     )
