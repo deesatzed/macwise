@@ -30,8 +30,9 @@ What would you like to do?
 6. See what uses the most space
 7. Ask what an app does
 8. Create a safe cleanup plan
-9. Review undo recovery
-10. Help
+9. Assess findings and usefulness
+10. Review undo recovery
+11. Help
 ```
 
 Every menu choice has a deterministic command. Inventories are concise by default and tell you
@@ -128,6 +129,43 @@ The built-in catalog supplies general roles and overlap knowledge for recognized
 versioned with the app rather than silently updated online. A shared updateable knowledge database
 is planned for a later phase and is not part of this release candidate.
 
+### Measure whether the result is useful
+
+Run one additional read-only summary:
+
+```bash
+macwise score
+```
+
+It reports two separate metrics:
+
+- **Opportunity Profile:** how much review-worthy startup, overlap, storage, possible non-use,
+  unknown-purpose, and backup evidence MacWise found. A high score does not grade this Mac as bad.
+- **MacWise Usefulness Score:** evidence coverage, decision yield, explanation structure, safety
+  integrity, and review efficiency. It does not prove personalized correctness or outcomes.
+
+A private real-Mac evaluation produced this sanitized aggregate result:
+
+```text
+Opportunity Profile: 70/100
+  Startup attention       20/20
+  Tool overlap            16/20
+  Storage review          15/20
+  Possible non-use         0/15
+  Knowledge gaps          15/15
+  Backup attention         4/10
+
+MacWise Usefulness Score: 86/100
+  Evidence coverage       16/25
+  Decision yield          25/25
+  Explanation quality     15/20
+  Safety integrity        20/20
+  Review efficiency       10/10
+```
+
+The zero possible-non-use score is important: MacWise did not convert missing evidence into an
+unused-software claim. See the aggregate-only [scorecard evaluation](docs/scorecard-evaluation.md).
+
 ## Safety promises
 
 - Scan, explain, review, compare, storage, startup, backups, and doctor are read-only.
@@ -169,6 +207,7 @@ macwise review unknown
 macwise review largest
 macwise storage
 macwise scan --format json
+macwise score
 macwise explain Docker
 macwise compare Docker podman
 macwise startup

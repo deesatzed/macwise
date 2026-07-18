@@ -43,7 +43,7 @@ def test_noninteractive_guided_menu_never_prompts(monkeypatch: pytest.MonkeyPatc
     result = runner.invoke(cli.app)
 
     assert result.exit_code == 0
-    assert "Choose 1-10" not in result.stdout
+    assert "Choose 1-11" not in result.stdout
     assert "Run macwise --help to see direct commands." in result.stdout
 
 
@@ -65,12 +65,26 @@ def test_interactive_choice_eight_routes_to_real_plan_view_without_scanning(
     assert "macwise plan add NAME" in result.stdout
 
 
-def test_interactive_choice_nine_exposes_undo_without_auto_approval(
+def test_interactive_choice_nine_routes_to_scorecard(
+    sample_audit: AuditDocument,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(cli, "_is_interactive", lambda: True)
+    monkeypatch.setattr(cli, "_service_factory", lambda: GuidedService(sample_audit))
+
+    result = runner.invoke(cli.app, input="9\n")
+
+    assert result.exit_code == 0, result.stdout
+    assert "Opportunity Profile" in result.stdout
+    assert "MacWise Usefulness Score" in result.stdout
+
+
+def test_interactive_choice_ten_exposes_undo_without_auto_approval(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.setattr(cli, "_is_interactive", lambda: True)
 
-    result = runner.invoke(cli.app, input="9\n")
+    result = runner.invoke(cli.app, input="10\n")
 
     assert result.exit_code == 0, result.stdout
     assert "macwise undo" in result.stdout

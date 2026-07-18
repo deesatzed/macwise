@@ -97,8 +97,9 @@ What would you like to do?
 6. See what uses the most space
 7. Ask what an app does
 8. Create a safe cleanup plan
-9. Review undo recovery
-10. Help
+9. Assess findings and usefulness
+10. Review undo recovery
+11. Help
 """
 
 
@@ -1766,6 +1767,8 @@ def _guided_action(choice: int, ctx: typer.Context) -> None:
     elif choice == 8:
         plan_root(ctx)
     elif choice == 9:
+        score(OutputFormat.TERMINAL, None, False)
+    elif choice == 10:
         typer.echo("Undo recovery requires a separate approval.")
         typer.echo("Run macwise undo to review the active manifest and exact reverse actions.")
     else:
@@ -1790,9 +1793,9 @@ def guided(
     if not _is_interactive():
         typer.echo("Run macwise --help to see direct commands.")
         return
-    choice = typer.prompt("Choose 1-10", type=int)
-    if choice not in range(1, 11):
-        typer.echo("Choose a number from 1 through 10.")
+    choice = typer.prompt("Choose 1-11", type=int)
+    if choice not in range(1, 12):
+        typer.echo("Choose a number from 1 through 11.")
         raise typer.Exit(2)
     _guided_action(choice, ctx)
 

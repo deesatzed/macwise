@@ -51,6 +51,7 @@ def test_required_public_repository_files_exist() -> None:
         "docs/threat-model.md",
         "docs/getting-started.md",
         "docs/demo.md",
+        "docs/scorecard-evaluation.md",
         "docs/index.html",
         "docs/assets/macwise.css",
         "docs/release-checklist.md",
@@ -97,6 +98,10 @@ def test_readme_starts_with_the_required_novice_sections_in_order() -> None:
     assert "not yet published to pypi" in readme.lower()
     assert "docs/index.html" in readme
     assert "how macwise knows" in readme.lower()
+    assert "opportunity profile" in readme.lower()
+    assert "macwise usefulness score" in readme.lower()
+    assert "does not grade this mac" in readme.lower()
+    assert "does not prove personalized correctness" in readme.lower()
 
 
 def test_landing_page_has_launch_content_without_remote_assets_or_scripts() -> None:
@@ -109,6 +114,10 @@ def test_landing_page_has_launch_content_without_remote_assets_or_scripts() -> N
         "How MacWise knows",
         "1.0.0rc1",
         "Hosted CI passes",
+        "Opportunity Profile",
+        "MacWise Usefulness Score",
+        "does not grade this Mac",
+        "does not prove personalized correctness",
     ):
         assert required in page
     assert '<meta name="viewport"' in page

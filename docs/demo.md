@@ -19,6 +19,30 @@ Collectors are read-only. Run macwise scan for a complete collection check.
 
 The operating-system and Python values are examples, not minimum or preferred versions.
 
+## Score the audit, not the person or Mac
+
+```text
+$ macwise score
+MacWise scorecard
+
+Opportunity Profile: 44/100
+This measures review-worthy evidence. A high score does not grade this Mac as bad.
+
+- Startup attention: 8/20 (5 observed)
+- Tool overlap: 8/20 (2 observed)
+- Storage review: 10/20 (5 observed)
+- Possible non-use: 0/15 (0 observed)
+- Knowledge gaps: 8/15 (8 observed)
+- Backup attention: 10/10 (3 observed)
+
+MacWise Usefulness Score: 78/100
+This measures the audit result. It does not prove personalized correctness.
+```
+
+These fictional values demonstrate interpretation. Each real component also prints why points
+were awarded, its limitation, and the next focused commands. A zero possible-non-use component
+means no item met the cautious evidence requirement; it is not converted into a hidden guess.
+
 ## Review storage without APFS noise
 
 ```text
