@@ -63,7 +63,7 @@ Phase 5 is locally accepted: MacWise now has exact approval, fresh locked revali
 
 ## Decision Links
 
-- D-001 through D-030 are in `DECISIONS.md`.
+- D-001 through D-031 are in `DECISIONS.md`.
 
 ## Current Milestone
 
@@ -71,9 +71,11 @@ Phase 6 bundled Codex skill, one-command setup, and typed read-only local integr
 
 ## Next Actions
 
-1. Design and plan MW-500 typed read-only Codex integration without granting the AI layer direct mutation authority.
-2. Re-run hosted Linux/macOS CI once a Git remote/runner is authorized and available; do not treat the workflow definition as a run result.
-3. Keep public Homebrew/release proof deferred until tap/artifact authority exists.
+1. Implement the approved MW-500 typed contracts and read-only application facade test-first.
+2. Bundle the `$macwise` plugin and safe personal-marketplace setup, then prove STDIO MCP and conversational review.
+3. Run Phase 6 review, clean-install, and acceptance gates before beginning MW-600.
+4. Re-run hosted Linux/macOS CI once a Git remote/runner is authorized and available; do not treat the workflow definition as a run result.
+5. Keep public Homebrew/release proof deferred until tap/artifact authority exists.
 
 ## Blockers
 

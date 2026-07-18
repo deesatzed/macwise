@@ -33,17 +33,20 @@ The Python distribution contains a versioned plugin payload with:
 `macwise setup codex` will:
 
 1. verify macOS, the installed MacWise payload, and a compatible `codex` executable;
-2. materialize the exact packaged plugin in a versioned user-scoped MacWise data
-   directory using symlink-safe, atomic filesystem operations;
-3. register a dedicated MacWise local marketplace through supported Codex commands;
-4. install or update the MacWise plugin through the supported Codex plugin command;
+2. materialize the exact packaged plugin at the standard personal plugin location,
+   `~/plugins/macwise`, using symlink-safe, atomic filesystem operations;
+3. atomically add or update only MacWise's entry in the automatically discovered
+   personal marketplace at `~/.agents/plugins/marketplace.json`, preserving its name,
+   display metadata, entry order, and every unrelated plugin;
+4. install or update MacWise with `codex plugin add macwise@<marketplace-name>`;
 5. verify that Codex reports the plugin as installed and give one plain-language next
    step: start a new Codex session and type `$macwise`;
 6. remain idempotent for the same version and preserve the previously working plugin if
    any step fails.
 
 Setup receives explicit authority only to change MacWise-owned payload files and the
-dedicated Codex plugin registration. It will not parse and rewrite unrelated Codex TOML,
+MacWise personal-marketplace entry. An existing same-name entry with a different source
+is an ownership conflict and causes a safe refusal. Setup will not edit Codex TOML,
 use unsafe permission bypasses, contact a network service, or collect host audit data.
 Subprocesses use fixed executables, argument vectors, timeouts, bounded output, and no
 shell. Tests use isolated homes and fake Codex runners; they never change the developer's
@@ -128,4 +131,3 @@ Implementation is test-first and must prove:
   daemons, scheduled scans, or automatic plugin publication.
 - A second AI provider, standalone AI mode, or web research inside the local server.
 - Phase 7 Homebrew tap publication, GitHub release, signing, or production deployment.
-
