@@ -59,7 +59,7 @@ Phases 1-6 are locally accepted. The public repository exists and hosted run `29
 | Harden and accept MW-400 reversible cleanup | Done | Codex | Independent review findings were adjudicated and resolved except the explicitly rejected full-digest display change; 292 tests and all local artifact gates pass. `docs/phase-5-acceptance.md` records proof and limitations. |
 | Design MW-500 Codex integration | Done | Codex | Approved native plugin plus strictly read-only STDIO MCP design is saved under `docs/plans/`; D-031 pins the protocol and preserves the standalone mutation boundary. |
 | Build MW-500 Codex integration | Done | Codex | Eight typed read-only tools, native plugin/skill payload, one-command setup, bounded STDIO server, clean-wheel call proof, and review hardening pass 361 tests on Python 3.12/3.13. |
-| Complete Phase 7 local RC | Done | Codex | `1.0.0rc1` artifacts, UV/pipx packaging, release workflow, security/privacy review, and local acceptance are complete; external publication remains gated. |
+| Complete Phase 7 local RC | Done | Codex | `1.0.0rc1` artifacts, UV/pipx packaging, release workflow, security/privacy review, clean-clone UV install, and real read-only run-through are complete; external publication remains gated. |
 | Prepare external distribution proof | Done | Codex | The manual public smoke now verifies isolated UV-tool installation plus PyPI/GitHub checksum identity; Homebrew distribution is deferred. |
 
 ## Decision Links
@@ -68,7 +68,7 @@ Phases 1-6 are locally accepted. The public repository exists and hosted run `29
 
 ## Current Milestone
 
-UV-first `1.0.0rc1` candidate transition is in progress; public publication and public UV-tool proof remain explicitly gated.
+UV-first `1.0.0rc1` candidate transition is locally verified; public publication and public UV-tool proof remain explicitly gated.
 
 ## Next Actions
 
@@ -194,3 +194,7 @@ None required for local implementation. PyPI account configuration is required i
 - 2026-07-18 hosted-CI repair accepted by run `29641643615`: all nine Linux/macOS 15/macOS 26 jobs passed on Python 3.12, 3.13, and 3.14; the current Homebrew candidate audit, exact local-source install, installed-version test, and cleanup passed on macOS 26 in 8m34s.
 - 2026-07-18 D-035 scope decision: `uv tool install macwise` became the primary first-release UX, pipx remained an alternative, and Homebrew distribution moved to a later separately accepted milestone to reduce cross-repository drift.
 - 2026-07-18 deferred-formula drift check: the candidate formula checksum changed when packaged README content changed, directly demonstrating cross-channel drift. With user approval, only `packaging/homebrew/` and its repository-level formula tests were removed; all Homebrew inventory, analysis, service, planning, apply/undo, and safety code/tests remain in scope.
+- 2026-07-18 UV-first local gate: 374 tests passed in 37.54s; Ruff format/lint, Pyright, wheel/sdist build, repository contracts, and `git diff --check` passed. Four removed tests belonged only to the deferred Homebrew formula distribution surface.
+- 2026-07-18 clean-clone proof: `/tmp/macwise-cleanclone.pv260p/repo` cloned commit `632eb587c34265cf2adb5543fa401ecbdd9cb72a`, matched `origin/main`, and was clean. `uv build` produced `1.0.0rc1` wheel/sdist; isolated `UV_TOOL_DIR`/`UV_TOOL_BIN_DIR` installation under Python 3.12 installed 38 packages and the `macwise` executable without touching global UV tool state.
+- 2026-07-18 novice command proof from the clean clone: installed `macwise --version`, root help, no-argument guided menu, scan help, Codex setup help, and Homebrew review help all exited 0. A real read-only schema-4 scan completed with 325 software records (69 applications, 27 casks, 229 formulae), 28 startup records, 28 volumes, 325 findings, 6 overlaps, and 21 guarded recommendations; no inventory was committed.
+- 2026-07-18 real Homebrew proof from the clean clone: the Homebrew collector completed with 256 records and zero limitations, and `macwise review brew` exited 0 with a 745-line local report redirected to temporary private output. `macwise doctor` also exited 0. Names, paths, and inventory remain only under the temporary clone root.
