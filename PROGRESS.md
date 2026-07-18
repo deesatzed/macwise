@@ -81,6 +81,10 @@ Local `1.0.0rc1` handoff complete; public publication, hosted CI/release, and pu
 
 Local Phase 7 work is complete. Public completion is truly blocked by authority and external infrastructure: no publication authorization, no hosted run, no configured publisher/tap ownership proof, and Xcode 26.4 cannot satisfy Homebrew's Xcode 27 audit prerequisite.
 
+Live verification on 2026-07-18 found the intended GitHub repository, PyPI project, and
+Homebrew tap endpoints all return 404. `gh` is authenticated as `deesatzed`, but no
+remote exists and credentials alone do not authorize repository creation or publication.
+
 ## Questions for User
 
 None required. Tap ownership and publication credentials are deferred until they become necessary for release.

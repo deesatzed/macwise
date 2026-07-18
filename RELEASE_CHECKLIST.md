@@ -38,6 +38,9 @@ Homebrew audit is also blocked by Xcode 26.4 while Homebrew requires 27.0.
 3. PyPI trusted-publishing environment and tap ownership are not confirmed.
 4. Public artifacts do not exist, so public pipx/Homebrew commands cannot be tested.
 5. Local strict Homebrew audit requires Xcode 27.0; this host has 26.4.
+6. Live endpoint check on 2026-07-18 returned 404 for the target GitHub repository,
+   PyPI project, and Homebrew tap repository. GitHub CLI is authenticated as `deesatzed`,
+   but authentication is not publication authorization.
 
 ## Accepted Risks
 

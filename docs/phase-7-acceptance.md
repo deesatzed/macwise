@@ -54,3 +54,9 @@ workflow. External publication and hosted behavior are not complete.
 claim requires authorization, hosted CI/release results, trusted-publisher/tap ownership,
 strict formula audit/install, and clean public install proofs listed in
 `RELEASE_CHECKLIST.md`.
+
+On 2026-07-18, direct checks found no public `deesatzed/macwise` repository, no PyPI
+`macwise` project, and no `deesatzed/homebrew-tap` repository; all three endpoints
+returned 404. The local GitHub CLI is authenticated as `deesatzed`, but creating those
+external surfaces, pushing, configuring trusted publishing, and releasing require an
+explicit publication decision.
