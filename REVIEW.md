@@ -8,16 +8,16 @@ tests, public documentation, and durable project state.
 
 ## Summary Judgment
 
-Needs final evidence. The implementation is suitable to commit after the post-review full gate,
-but the goal must not be marked complete until current hosted CI and a rendered desktop/mobile
-landing-page inspection exist.
+Proceed. The post-review full gate, isolated final wheel, real-Mac checkup, all nine hosted CI
+jobs, and user-supplied current desktop PDF inspection pass. The user explicitly waived the
+separate mobile export after accepting the desktop page visually.
 
 ## Findings
 
 | Severity | Category | Finding | Why It Matters | Required Fix |
 |---|---|---|---|---|
 | Important | UX | The first implementation ended after one priority. | A user would need another slow collection to review a second result. | Resolved: loop over priorities, reuse one audit, and finish only when the user enters `0`. |
-| Important | Verification | The in-app browser is unavailable, so the changed landing page has no current rendered desktop/mobile proof. | Longer first-run text could clip even when HTML contracts pass. | Obtain a current rendered inspection before declaring the goal complete. |
+| Important | Verification | The in-app browser was unavailable for three retries. | Longer first-run text could clip even when HTML contracts pass. | Resolved: the user opened the current page and supplied a desktop PDF; Poppler rendering and visual inspection found no clipping or overlap. The user explicitly waived a separate mobile export. |
 | Minor | UX | Real aggregate output initially exceeded an ordinary terminal width. | Wrapped lines are easier to scan and avoid horizontal scrolling. | Resolved: renderer and regression test cap lines at 96 characters. |
 
 ## Correctness
@@ -66,10 +66,8 @@ knowledge database, telemetry, GUI, or real cleanup action was added.
 
 ## Required Fixes Before Done
 
-1. Rerun the full local verification gate after the multi-priority loop fix.
-2. Rebuild and reinstall the exact wheel; exercise the interactive safe-stop journey.
-3. Commit and push, then require hosted CI success.
-4. Obtain current desktop and mobile rendered landing-page proof.
+None. The full local gate, exact-wheel check, interactive safe-stop journey, push, hosted CI,
+desktop PDF inspection, and explicit mobile-export waiver are recorded.
 
 ## Optional Improvements
 

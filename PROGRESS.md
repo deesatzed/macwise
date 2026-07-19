@@ -252,5 +252,11 @@ None required for local implementation. PyPI account configuration is required i
   final wheel reported `1.0.0rc1`; its real read-only checkup showed five aggregate priorities,
   86/100 report confidence, explicit fresh/not-saved language, a largest-evidence-gap explanation,
   a 95-character maximum line, and an explicit no-change statement. No item names, paths, or
-  inventory were retained in repository files. Current desktop/mobile landing-page render proof
-  remains pending because the in-app browser reported no available browser.
+  inventory were retained in repository files.
+- 2026-07-19 MW-603 landing-page acceptance: the user opened the current local page successfully,
+  described it as looking very good, and supplied a one-page macOS PDF export. Poppler rendered
+  the 1445-by-6175-point export to a 2208-by-9435 PNG; visual inspection found the current
+  recommended-checkup wording, updated score labels, complete sections, consistent hierarchy,
+  and no clipping or overlap. The user explicitly waived a separate mobile export as unimportant.
+  Hosted run `29690088780` passed all nine Linux/macOS and Python 3.12-3.14 jobs on commit
+  `a2fe775`.
