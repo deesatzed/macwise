@@ -21,7 +21,7 @@ class GuidedService:
         return self.audit
 
 
-def test_interactive_guided_scan_routes_to_the_same_audit_service(
+def test_interactive_guided_recommended_checkup_routes_to_the_same_audit_service(
     sample_audit: AuditDocument,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -29,12 +29,13 @@ def test_interactive_guided_scan_routes_to_the_same_audit_service(
     monkeypatch.setattr(cli, "_service_factory", lambda: service)
     monkeypatch.setattr(cli, "_is_interactive", lambda: True)
 
-    result = runner.invoke(cli.app, input="1\n")
+    result = runner.invoke(cli.app, input="1\n0\n")
 
     assert result.exit_code == 0, result.stdout
     assert service.called is True
     assert "What would you like to do?" in result.stdout
-    assert "Example App" in result.stdout
+    assert "Fresh read-only checkup" in result.stdout
+    assert "Recommended" in result.stdout
 
 
 def test_noninteractive_guided_menu_never_prompts(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -44,7 +45,7 @@ def test_noninteractive_guided_menu_never_prompts(monkeypatch: pytest.MonkeyPatc
 
     assert result.exit_code == 0
     assert "Choose 1-11" not in result.stdout
-    assert "Run macwise --help to see direct commands." in result.stdout
+    assert "Run macwise checkup for the recommended read-only starting point." in result.stdout
 
 
 def test_interactive_choice_eight_routes_to_real_plan_view_without_scanning(
@@ -75,8 +76,8 @@ def test_interactive_choice_nine_routes_to_scorecard(
     result = runner.invoke(cli.app, input="9\n")
 
     assert result.exit_code == 0, result.stdout
-    assert "Opportunity Profile" in result.stdout
-    assert "MacWise Usefulness Score" in result.stdout
+    assert "Review opportunities found:" in result.stdout
+    assert "Confidence in this report:" in result.stdout
 
 
 def test_interactive_choice_ten_exposes_undo_without_auto_approval(

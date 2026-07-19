@@ -43,8 +43,21 @@ HELP: dict[str, str] = {
         "Understand the software installed on this Mac and decide what deserves attention.",
         "you want guidance and do not know which MacWise command to choose.",
         "Running the guided menu does not remove or change anything.",
-        ("macwise", "macwise scan", "macwise review apps"),
-        ("Run macwise scan for a read-only inventory.", "Run macwise help to see all commands."),
+        ("macwise", "macwise checkup", "macwise scan"),
+        (
+            "Run macwise checkup for the recommended first step.",
+            "Run macwise help to see all commands.",
+        ),
+    ),
+    "checkup": _help(
+        "Runs the recommended first-time checkup and shows the few findings worth reviewing first.",
+        "you want one short starting summary without learning MacWise commands.",
+        READ_ONLY,
+        ("macwise checkup", "macwise"),
+        (
+            "Choose one numbered finding in the guided menu.",
+            "Run macwise scan only when you need the complete inventory.",
+        ),
     ),
     "scan": _help(
         "Creates a read-only inventory of applications, Homebrew software, and storage volumes.",
@@ -58,7 +71,7 @@ HELP: dict[str, str] = {
         ("Run macwise review apps.", "Run macwise storage."),
     ),
     "score": _help(
-        "Scores review opportunities and the usefulness of the current read-only audit with transparent components.",
+        "Collects fresh read-only evidence, then scores review opportunities and report confidence with transparent components.",
         "you want a short, evidence-linked summary of what deserves review and how complete the result is.",
         AUDIT_FILE,
         (

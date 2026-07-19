@@ -52,6 +52,7 @@ def test_required_public_repository_files_exist() -> None:
         "docs/getting-started.md",
         "docs/demo.md",
         "docs/scorecard-evaluation.md",
+        "docs/simple-ux-acceptance.md",
         "docs/index.html",
         "docs/assets/macwise.css",
         "docs/release-checklist.md",
@@ -102,6 +103,10 @@ def test_readme_starts_with_the_required_novice_sections_in_order() -> None:
     assert "macwise usefulness score" in readme.lower()
     assert "does not grade this mac" in readme.lower()
     assert "does not prove personalized correctness" in readme.lower()
+    assert "1. Check up this Mac (Recommended)" in readme
+    assert "macwise checkup" in readme
+    assert "`uv` is a tool that installs" in readme.lower()
+    assert "fresh evidence" in readme.lower()
 
 
 def test_landing_page_has_launch_content_without_remote_assets_or_scripts() -> None:
@@ -114,12 +119,14 @@ def test_landing_page_has_launch_content_without_remote_assets_or_scripts() -> N
         "How MacWise knows",
         "1.0.0rc1",
         "Hosted CI passes",
-        "Opportunity Profile",
-        "MacWise Usefulness Score",
+        "Review opportunities found",
+        "Confidence in this report",
         "does not grade this Mac",
         "does not prove personalized correctness",
     ):
         assert required in page
+    assert "Check up this Mac (Recommended)" in page
+    assert "macwise checkup" in page
     assert '<meta name="viewport"' in page
     assert "<main" in page
     assert "<script" not in page.lower()

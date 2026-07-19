@@ -3,6 +3,22 @@
 from macwise.models import MacWiseScorecard, ScoreComponent
 
 
+def _opportunity_level(score: int) -> str:
+    if score >= 70:
+        return "High"
+    if score >= 35:
+        return "Moderate"
+    return "Low"
+
+
+def _largest_missing_evidence(scorecard: MacWiseScorecard) -> str:
+    weakest = min(
+        scorecard.usefulness_components,
+        key=lambda item: (item.score / item.maximum, item.key),
+    )
+    return f"{weakest.label}. {weakest.limitations[0]}"
+
+
 def render_score_json(scorecard: MacWiseScorecard) -> str:
     """Return deterministic structured scorecard JSON."""
     return f"{scorecard.model_dump_json(indent=2)}\n"
@@ -23,8 +39,9 @@ def render_score_terminal(scorecard: MacWiseScorecard) -> str:
     lines = [
         "MacWise scorecard",
         "",
-        f"Opportunity Profile: {scorecard.opportunity_score}/100",
-        "This measures review-worthy evidence. A high score does not grade this Mac as bad.",
+        f"Review opportunities found: {_opportunity_level(scorecard.opportunity_score)} "
+        f"({scorecard.opportunity_score}/100 detail score)",
+        "This counts supported topics worth reviewing. It does not grade this Mac or its owner.",
         "",
     ]
     for component in scorecard.opportunity_components:
@@ -32,8 +49,9 @@ def render_score_terminal(scorecard: MacWiseScorecard) -> str:
     lines.extend(
         [
             "",
-            f"MacWise Usefulness Score: {scorecard.usefulness_score}/100",
-            "This measures the audit result. It does not prove personalized correctness.",
+            f"Confidence in this report: {scorecard.usefulness_score}/100",
+            "This measures evidence coverage and explanation structure. It does not prove personalized correctness.",
+            f"Largest missing evidence: {_largest_missing_evidence(scorecard)}",
             "",
         ]
     )
@@ -79,14 +97,16 @@ def render_score_markdown(scorecard: MacWiseScorecard) -> str:
     lines = [
         "# MacWise scorecard",
         "",
-        f"## Opportunity Profile: {scorecard.opportunity_score}/100",
+        f"## Review opportunities found: {_opportunity_level(scorecard.opportunity_score)} ({scorecard.opportunity_score}/100 detail score)",
         "",
-        "This measures review-worthy evidence. A high score does not grade this Mac as bad.",
+        "This counts supported topics worth reviewing. It does not grade this Mac or its owner.",
         "",
         *_markdown_components(scorecard.opportunity_components),
-        f"## MacWise Usefulness Score: {scorecard.usefulness_score}/100",
+        f"## Confidence in this report: {scorecard.usefulness_score}/100",
         "",
-        "This measures the audit result. It does not prove personalized correctness.",
+        "This measures evidence coverage and explanation structure. It does not prove personalized correctness.",
+        "",
+        f"Largest missing evidence: {_largest_missing_evidence(scorecard)}",
         "",
         *_markdown_components(scorecard.usefulness_components),
         "## Important limitations",

@@ -12,7 +12,7 @@ def test_no_arguments_shows_guided_choices_without_blocking() -> None:
     assert "MacWise" in result.stdout
     assert "What would you like to do?" in result.stdout
     expected_choices = (
-        "1. Scan this Mac",
+        "1. Check up this Mac (Recommended)",
         "2. Review installed apps",
         "3. Review Homebrew software",
         "4. See what starts automatically",

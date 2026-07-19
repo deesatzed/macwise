@@ -53,7 +53,7 @@ MacWise
 
 What would you like to do?
 
-1. Scan this Mac
+1. Check up this Mac (Recommended)
 2. Review installed apps
 3. Review Homebrew software
 4. See what starts automatically
@@ -73,6 +73,7 @@ Do not require users to memorize commands.
 Use a small, understandable hierarchy:
 
 ```bash
+macwise checkup
 macwise scan
 macwise score
 macwise review

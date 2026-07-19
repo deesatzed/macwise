@@ -17,6 +17,7 @@ pipx as an alternative, and defers Homebrew distribution to a later milestone.
 | 13-14 | Set up and use Codex | Plugin setup/recovery and eight read-only tool proofs pass | No hosted model-quality claim. |
 | 15 | Receive useful help/errors | Root, nested, refusal, and recovery help contracts pass | None local. |
 | 16 | Assess whether findings and output are useful | Separate deterministic Opportunity Profile and MacWise Usefulness Score expose component counts, reasons, and limitations | Scores describe evidence and structure, not personalized outcomes. |
+| 17 | Give a novice one clear starting journey | `macwise checkup` performs one fresh read-only collection, shows at most five evidence-linked priorities, supports guided unknown-item review and plan preview, and ends with an explicit session/no-change summary | Public artifact and hosted proof remain pending until MW-603 closes. |
 
 ## Release evidence
 

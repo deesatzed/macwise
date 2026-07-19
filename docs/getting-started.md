@@ -12,6 +12,11 @@ macwise
 If `uv` is not installed, follow the official installation instructions at
 <https://docs.astral.sh/uv/getting-started/installation/>. Existing pipx users may use
 `pipx install macwise` instead. Homebrew distribution is deferred to a later milestone.
+`uv` is a tool that installs command-line apps in their own managed environments so their
+Python packages do not interfere with other apps.
+If Terminal says `uv: command not found`, `uv` is missing. Follow the linked official
+installation instructions, open a new Terminal window, and run the MacWise installation command
+again.
 Until `1.0.0rc1` is published, evaluate a trusted candidate checkout:
 
 ```zsh
@@ -22,8 +27,10 @@ uv run macwise doctor
 uv run macwise
 ```
 
-MacWise starts with a numbered menu. Choosing a read-only review never requires cleanup
-permission. Start with Scan this Mac, then ask about one unfamiliar item.
+MacWise starts with a numbered menu. Choose **1. Check up this Mac (Recommended)**. MacWise
+collects fresh evidence for that checkup, does not silently save it, and shows only the few
+supported findings worth reviewing first. Choosing a read-only review never requires cleanup
+permission.
 
 ## 2. Read the evidence labels
 
@@ -37,9 +44,10 @@ without reviewing and redacting them.
 
 ## 3. Score the result without grading the Mac
 
-Run `macwise score` after a scan. The Opportunity Profile measures how much supported evidence
+Run `macwise score` when you want the detailed math behind the summary. “Review opportunities
+found” (the Opportunity Profile) measures how much supported evidence
 deserves review. A high value does not mean the Mac is bad and does not reward removing software.
-The separate MacWise Usefulness Score measures coverage, decision yield, explanation structure,
+The separate “Confidence in this report” result (the MacWise Usefulness Score) measures coverage, decision yield, explanation structure,
 safety, and review efficiency. It does not prove personalized correctness.
 
 Every component shows its points, observed count, reason, and limitation. Use the suggested

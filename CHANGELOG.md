@@ -46,6 +46,12 @@ MacWise follows Semantic Versioning. Release candidates may still change while p
 
 ### Changed
 
+- Added `macwise checkup` as the recommended first-run path with a fresh bounded priority summary,
+  guided unknown-item review, optional cleanup-plan preview, and an explicit no-change session
+  summary.
+- Renamed the novice score presentation to “Review opportunities found” and “Confidence in this
+  report” while retaining the deterministic Opportunity Profile and MacWise Usefulness Score
+  models and JSON fields.
 - Reworked the README, getting-started guide, and demo around a novice first-run journey,
   explicit evidence sources, bounded output, and the difference between a verified candidate
   and a published release.

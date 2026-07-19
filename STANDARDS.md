@@ -34,6 +34,8 @@
 ## User Experience
 
 - `macwise` with no arguments opens a guided, novice-friendly experience.
+- `macwise checkup` is the single recommended first-run path; `scan` owns complete inventory and
+  explicit export, `score` owns transparent measurement, and `doctor` owns troubleshooting.
 - Public commands use the small hierarchy in `GOAL.md`; internal implementation names do not leak into ordinary help.
 - Each command's help starts in plain English, says when it is useful, states read-only or mutating behavior, gives two or three realistic examples, and suggests a likely next command.
 - Errors explain what happened and provide a concrete recovery command. Missing evidence is never described as proof of non-use.

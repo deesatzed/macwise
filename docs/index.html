@@ -44,7 +44,7 @@
 
 What would you like to do?
 
-<span class="number">1.</span> Scan this Mac
+<span class="number">1.</span> Check up this Mac (Recommended)
 <span class="number">2.</span> Review installed apps
 <span class="number">3.</span> Review Homebrew software
 <span class="number">4.</span> See what starts automatically
@@ -105,14 +105,14 @@ Dockyard: daemonless workflow</code></pre>
             <p class="eyebrow">Measure the result</p>
             <h2>Two scores. Two different questions.</h2>
           </div>
-          <p>The Opportunity Profile measures review-worthy evidence. The MacWise Usefulness
-            Score measures how well the audit converted evidence into clear, guarded guidance.
+          <p>“Review opportunities found” (the Opportunity Profile) measures review-worthy evidence.
+            “Confidence in this report” (the MacWise Usefulness Score) measures how well the audit converted evidence into clear, guarded guidance.
             Keeping them separate prevents “more things to remove” from looking like success.</p>
         </div>
         <div class="score-grid">
           <article class="score-card opportunity-card">
             <div class="score-card-head">
-              <div><p class="card-label">This Mac · sanitized aggregate</p><h3>Opportunity Profile</h3></div>
+              <div><p class="card-label">This Mac · sanitized aggregate</p><h3>Review opportunities found</h3></div>
               <strong><span>70</span>/100</strong>
             </div>
             <div class="metric"><span>Startup attention</span><b>20/20</b></div>
@@ -126,7 +126,7 @@ Dockyard: daemonless workflow</code></pre>
           </article>
           <article class="score-card usefulness-card">
             <div class="score-card-head">
-              <div><p class="card-label">Quality of this audit</p><h3>MacWise Usefulness Score</h3></div>
+              <div><p class="card-label">Quality of this audit</p><h3>Confidence in this report</h3></div>
               <strong><span>86</span>/100</strong>
             </div>
             <div class="metric"><span>Evidence coverage</span><b>16/25</b></div>
@@ -193,13 +193,12 @@ Dockyard: daemonless workflow</code></pre>
             <pre><code>git clone https://github.com/deesatzed/macwise.git
 cd macwise
 uv sync --locked --all-groups
-uv run macwise doctor
-uv run macwise</code></pre>
+uv run macwise checkup</code></pre>
           </article>
           <article class="future-install">
             <p class="card-label">After publication</p>
             <pre><code>uv tool install macwise
-macwise</code></pre>
+macwise checkup</code></pre>
             <p><code>pipx install macwise</code> will remain an alternative. Homebrew distribution
               is intentionally deferred.</p>
           </article>

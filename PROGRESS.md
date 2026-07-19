@@ -235,3 +235,22 @@ None required for local implementation. PyPI account configuration is required i
 - 2026-07-18 scorecard clean-clone/hosted proof: public GitHub clone `3953348` was clean, locked UV
   sync installed `1.0.0rc1`, score help rendered, and 21 score/model/privacy contracts passed.
   Hosted run `29653569296` passed all nine Linux/macOS 15/macOS 26 and Python 3.12-3.14 jobs.
+- 2026-07-19 MW-603 design: accepted `GOAL_SIMPLE_UX.md` is implemented through a distinct
+  `macwise checkup` entry point so scan/export, detailed scoring, and diagnostics keep their
+  established responsibilities. D-039 records one fresh in-memory audit per guided session.
+- 2026-07-19 MW-603 RED/GREEN: missing checkup models/service/command, recommended menu route,
+  bounded evidence cards, report-confidence language, unknown-item choices, session-only user
+  context, and plan-preview handoff each failed focused tests before implementation. The current
+  focused gates pass 20 checkup/guided/planning tests, 11 scoring tests, and 112 CLI/repository
+  tests; full and artifact-level verification remain pending.
+- 2026-07-19 MW-603 local gate: 415 tests passed in 36.28 seconds; all 115 files passed
+  formatting, Ruff lint passed, Pyright reported zero errors, wheel/sdist build passed, and
+  `git diff --check` was clean. The adversarial review caught and resolved single-priority session
+  exit and over-wide focused output; one audit now supports repeated choices and terminal lines
+  are capped at 96 characters.
+- 2026-07-19 MW-603 installed-wheel/real-Mac proof: an isolated Python 3.12 UV tool install of the
+  final wheel reported `1.0.0rc1`; its real read-only checkup showed five aggregate priorities,
+  86/100 report confidence, explicit fresh/not-saved language, a largest-evidence-gap explanation,
+  a 95-character maximum line, and an explicit no-change statement. No item names, paths, or
+  inventory were retained in repository files. Current desktop/mobile landing-page render proof
+  remains pending because the in-app browser reported no available browser.

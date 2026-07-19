@@ -33,11 +33,12 @@ def test_score_terminal_is_read_only_explains_both_scores_and_next_steps(
     result = RUNNER.invoke(cli.app, ["score"])
 
     assert result.exit_code == 0, result.stdout
-    assert "Opportunity Profile" in result.stdout
-    assert "MacWise Usefulness Score" in result.stdout
+    assert "Review opportunities found:" in result.stdout
+    assert "Confidence in this report:" in result.stdout
     assert "Evidence coverage" in result.stdout
     assert "does not grade this Mac" in result.stdout
     assert "does not prove personalized correctness" in result.stdout
+    assert "Largest missing evidence:" in result.stdout
     assert "This command is read-only" in result.stdout
     assert "macwise startup" in result.stdout
 
@@ -55,8 +56,8 @@ def test_score_supports_all_public_formats(score_cli: None, output_format: str) 
         assert "Example App" not in result.stdout
         assert "/Applications" not in result.stdout
     else:
-        assert "Opportunity Profile" in result.stdout
-        assert "MacWise Usefulness Score" in result.stdout
+        assert "Review opportunities found:" in result.stdout
+        assert "Confidence in this report:" in result.stdout
 
 
 def test_score_writes_only_to_explicit_new_output_and_refuses_overwrite(

@@ -13,6 +13,7 @@ from macwise.models.analysis import (
     stable_startup_id,
 )
 from macwise.models.audit import AuditDocument, CollectorState, CollectorStatus
+from macwise.models.checkup import CheckupPriority, CheckupSummary
 from macwise.models.evidence import Evidence, Reliability
 from macwise.models.execution import (
     ActionObservation,
@@ -57,6 +58,8 @@ __all__ = [
     "AuditDocument",
     "BackupStatus",
     "CatalogAssessment",
+    "CheckupPriority",
+    "CheckupSummary",
     "ClaimBasis",
     "CollectorState",
     "CollectorStatus",

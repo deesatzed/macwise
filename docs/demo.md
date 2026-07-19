@@ -4,20 +4,30 @@ This transcript uses fictional products and paths. It demonstrates the shape of 
 MacWise output without publishing a real person's software inventory. Exact wording varies with
 the evidence available on each Mac.
 
-## Check collection health
+## Start with the recommended checkup
 
 ```text
-$ macwise doctor
-MacWise doctor
+$ macwise checkup
+Fresh read-only checkup
+Collected: 2026-07-19T14:00:00+00:00
+This is fresh evidence collected for this command. It was not silently saved.
 
-Operating system: Darwin 27.0.0
-Python: 3.13.4
-Homebrew: available
-Execution recovery journal: no active run
-Collectors are read-only. Run macwise scan for a complete collection check.
+What deserves attention first
+
+1. Review software that starts automatically (5 observed)
+   Why: Found 5 startup items; 2 appeared idle and 4 had a matched owner.
+   Evidence: Launch-item and Homebrew-service records visible to read-only collectors.
+   Possible benefit: Reviewing them can clarify unwanted background activity.
+   What this does not prove: A startup item is not automatically unnecessary or slow.
+   Safest next step: macwise startup
+
+Confidence in this report: 78/100
+Largest missing evidence: Evidence coverage is incomplete.
+
+MacWise changed nothing on this Mac.
 ```
 
-The operating-system and Python values are examples, not minimum or preferred versions.
+The timestamp and counts are fictional. The real checkup shows at most five priority domains.
 
 ## Score the audit, not the person or Mac
 
@@ -25,8 +35,8 @@ The operating-system and Python values are examples, not minimum or preferred ve
 $ macwise score
 MacWise scorecard
 
-Opportunity Profile: 44/100
-This measures review-worthy evidence. A high score does not grade this Mac as bad.
+Review opportunities found: Moderate (44/100 detail score)
+This counts supported topics worth reviewing. It does not grade this Mac or its owner.
 
 - Startup attention: 8/20 (5 observed)
 - Tool overlap: 8/20 (2 observed)
@@ -35,8 +45,9 @@ This measures review-worthy evidence. A high score does not grade this Mac as ba
 - Knowledge gaps: 8/15 (8 observed)
 - Backup attention: 10/10 (3 observed)
 
-MacWise Usefulness Score: 78/100
-This measures the audit result. It does not prove personalized correctness.
+Confidence in this report: 78/100
+This measures evidence coverage and explanation structure. It does not prove personalized correctness.
+Largest missing evidence: Evidence coverage is incomplete.
 ```
 
 These fictional values demonstrate interpretation. Each real component also prints why points

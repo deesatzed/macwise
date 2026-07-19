@@ -1,37 +1,78 @@
-# Phase 6 Independent Review Adjudication
+# REVIEW.md
 
-Date: 2026-07-18
+## Review Scope
 
-Verdict: **Accepted after fixes.** The independent review initially returned Needs Fixes
-with four Important findings and one Minor disclosure finding. Each was accepted and
-resolved test-first; none was rejected.
+Adversarial review of the `GOAL_SIMPLE_UX.md` implementation diff: checkup models,
+prioritization, terminal rendering, guided unknown-item and planning flows, score language,
+tests, public documentation, and durable project state.
 
-| Finding | Classification | Resolution |
-|---|---|---|
-| No compatibility preflight before writes | Accepted / Resolved | Setup verifies CLI identity and add/remove JSON capabilities before creating managed directories. |
-| Interrupted stage/backup state was not recovered | Accepted / Resolved | Reruns validate complete marker-owned transaction trees, restore the prior backup, remove owned staging state, and refuse ambiguous state. |
-| Any nonempty JSON was treated as success | Accepted / Resolved | Add/remove require exact positive booleans; a separate plugin-list query must match selector, version, and installed state. |
-| Missing software size was encoded as fact | Accepted / Resolved | Missing size is an explicit `Unknown`, the false fact is omitted, and status is `PARTIAL`. |
-| Setup disclosure omitted Codex registration | Accepted / Resolved | Help describes registration add/update and rollback restoration/removal. |
+## Summary Judgment
 
-Self-review also added matching-manifest ownership and fresh compensation-order
-regressions. The installed-wheel test now calls `audit_mac` over real STDIO JSON-RPC.
+Needs final evidence. The implementation is suitable to commit after the post-review full gate,
+but the goal must not be marked complete until current hosted CI and a rendered desktop/mobile
+landing-page inspection exist.
 
-Remaining boundaries: no live personal plugin installation or model-driven Codex
-session was run, and concurrent third-party marketplace modification is not simulated.
+## Findings
 
-## Phase 7 release-readiness adjudication
+| Severity | Category | Finding | Why It Matters | Required Fix |
+|---|---|---|---|---|
+| Important | UX | The first implementation ended after one priority. | A user would need another slow collection to review a second result. | Resolved: loop over priorities, reuse one audit, and finish only when the user enters `0`. |
+| Important | Verification | The in-app browser is unavailable, so the changed landing page has no current rendered desktop/mobile proof. | Longer first-run text could clip even when HTML contracts pass. | Obtain a current rendered inspection before declaring the goal complete. |
+| Minor | UX | Real aggregate output initially exceeded an ordinary terminal width. | Wrapped lines are easier to scan and avoid horizontal scrolling. | Resolved: renderer and regression test cap lines at 96 characters. |
 
-The release-readiness and adversarial self-review found four Important candidate gaps;
-all were accepted and resolved before the final matrix:
+## Correctness
 
-| Finding | Resolution |
-|---|---|
-| The default sdist included tests, planning controls, and the formula itself, making the formula hash drift and exposing non-runtime files. | The sdist now has an explicit minimal public include set; artifact-content and formula-hash tests rebuild it. |
-| The first Homebrew dependency-closure check ignored optional extras, omitting the MCP JWT crypto chain. | The checker traverses requested extras and the formula now includes cryptography, cffi, and pycparser with locked URLs/hashes. |
-| Release workflow used an unpinned ephemeral Twine tool. | Twine is a constrained locked development dependency and the workflow invokes it through `uv --frozen`. |
-| Python 3.13 coverage exposed unclosed SQLite inspection connections in tests. | Test connections now combine transaction and explicit closing contexts; the focused suite passes with ResourceWarnings fatal. |
+The prioritizer is pure and deterministic, caps the summary at five supported domains, preserves
+the audit collection timestamp, and reuses the same in-memory audit for guided follow-up. Plan
+creation calls the existing typed planning service and never invokes apply.
 
-No Critical/Important local candidate finding remains open. External Homebrew build
-behavior, hosted workflows, publisher/tap configuration, and public install commands
-remain blocking evidence gaps rather than accepted passes.
+## Security and Privacy
+
+No network provider, telemetry, upload, shell execution, or new mutation adapter was added.
+Unknown software remains unknown. The direct checkup is aggregate-only; item names appear only
+after an interactive local choice. Existing planning, apply, and undo boundaries remain intact.
+
+## Tests
+
+New tests cover immutable models, allowed next commands, deterministic prioritization, bounded
+output, fresh-evidence language, one-audit reuse, safe stop, unknown facts, session-only context,
+plan preview, and score wording. The final full gate must be rerun after the review-loop fix.
+
+## Maintainability
+
+Collection, prioritization, and rendering remain separated. The command allowlist in the checkup
+model prevents future priority cards from becoming arbitrary command suggestions.
+
+## Performance
+
+The guided loop reuses one audit and avoids repeated 18–20 second host collection. No additional
+collectors or network calls were introduced.
+
+## UI/UX Impact
+
+The menu has one visibly recommended first step. Each card contains reason, evidence, possible
+benefit, non-claim, and safest next action. Users can inspect multiple priorities, stop with `0`,
+or create a non-applied plan preview from the unknown-item path.
+
+## Regression Risk
+
+Moderate CLI presentation risk; low collector/execution risk. Structured scan and score JSON
+schemas are unchanged. Existing command names remain available.
+
+## Scope Creep Check
+
+No PyPI publication, GitHub Release, GitHub Pages deployment, Homebrew distribution, online
+knowledge database, telemetry, GUI, or real cleanup action was added.
+
+## Required Fixes Before Done
+
+1. Rerun the full local verification gate after the multi-priority loop fix.
+2. Rebuild and reinstall the exact wheel; exercise the interactive safe-stop journey.
+3. Commit and push, then require hosted CI success.
+4. Obtain current desktop and mobile rendered landing-page proof.
+
+## Optional Improvements
+
+- Revisit domain ranking with user research after release; the deterministic current ordering is
+  safe but not yet validated as personalized priority.
+- Add the deferred shared knowledge source in its separately approved later phase.

@@ -22,7 +22,7 @@ MacWise
 
 What would you like to do?
 
-1. Scan this Mac
+1. Check up this Mac (Recommended)
 2. Review installed apps
 3. Review Homebrew software
 4. See what starts automatically
@@ -47,6 +47,12 @@ uv tool install macwise
 macwise
 ```
 
+`uv` is a tool that installs command-line apps in their own managed environments so their
+Python packages do not interfere with other apps.
+If Terminal says `uv: command not found`, `uv` is missing; follow the official
+[uv installation instructions](https://docs.astral.sh/uv/getting-started/installation/), then
+run the MacWise installation command again.
+
 If you already use pipx, this will remain a supported alternative after publication:
 
 ```bash
@@ -70,12 +76,17 @@ created.
 
 ## Guided usage
 
-Start with a read-only health check and scan:
+Start with one fresh, read-only checkup:
 
 ```bash
-macwise doctor
-macwise scan
+macwise checkup
 ```
+
+It collects fresh evidence for that command, does not silently save the inventory, and shows
+three to five review priorities when enough supported evidence exists. Each priority explains
+why it may matter, the possible benefit, what the evidence does not prove, and the safest next
+step. Run `macwise doctor` only for troubleshooting and `macwise scan` when you need the complete
+inventory or an explicitly saved report.
 
 Then ask focused questions instead of reading hundreds of lines:
 
@@ -139,9 +150,9 @@ macwise score
 
 It reports two separate metrics:
 
-- **Opportunity Profile:** how much review-worthy startup, overlap, storage, possible non-use,
+- **Review opportunities found** (the detailed **Opportunity Profile**): how much review-worthy startup, overlap, storage, possible non-use,
   unknown-purpose, and backup evidence MacWise found. A high score does not grade this Mac as bad.
-- **MacWise Usefulness Score:** evidence coverage, decision yield, explanation structure, safety
+- **Confidence in this report** (the detailed **MacWise Usefulness Score**): evidence coverage, decision yield, explanation structure, safety
   integrity, and review efficiency. It does not prove personalized correctness or outcomes.
 
 A private real-Mac evaluation produced this sanitized aggregate result:

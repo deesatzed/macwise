@@ -37,6 +37,7 @@ from macwise.models import (
     ActionObservation,
     ActionState,
     AuditDocument,
+    CheckupSummary,
     ClaimBasis,
     EntityType,
     ExecutionAction,
@@ -62,6 +63,8 @@ from macwise.persistence import (
     execution_digest,
 )
 from macwise.reporting import (
+    render_checkup_focus,
+    render_checkup_terminal,
     render_json,
     render_markdown,
     render_score_json,
@@ -77,6 +80,7 @@ from macwise.services import (
     RevalidationError,
     add_candidate,
     apply_approval_phrase,
+    build_checkup,
     prepare_execution,
     require_approval,
     score_audit,
@@ -89,7 +93,7 @@ GUIDED_MENU = """MacWise
 
 What would you like to do?
 
-1. Scan this Mac
+1. Check up this Mac (Recommended)
 2. Review installed apps
 3. Review Homebrew software
 4. See what starts automatically
@@ -864,6 +868,128 @@ def scan(
     _write_or_print(_render(audit, output_format), output, force)
 
 
+@app.command(help=HELP["checkup"])
+def checkup() -> None:
+    """Collect and render one fresh, bounded, read-only starting summary."""
+    audit = _audit()
+    summary = build_checkup(audit, now=_now())
+    typer.echo(render_checkup_terminal(summary), nl=False)
+
+
+def _verified_local_facts(record: SoftwareRecord) -> None:
+    typer.echo("\nVerified local facts")
+    typer.echo(f"- Name: {safe_display_text(record.display_name)}")
+    typer.echo(f"- Type: {_human_label(record.entity_type.value)}")
+    typer.echo(f"- Version: {safe_display_text(record.version or 'unknown')}")
+    typer.echo(f"- Location: {safe_display_text(record.install_path or 'unknown')}")
+    typer.echo(f"- Measured size: {_bytes(record.size_bytes)}")
+
+
+def _unknown_records(audit: AuditDocument) -> tuple[SoftwareRecord, ...]:
+    assessed_ids = {item.subject_id for item in audit.catalog_assessments if item.roles}
+    return tuple(
+        item for item in audit.software if not item.description and item.id not in assessed_ids
+    )
+
+
+def _guided_unknown_item(audit: AuditDocument) -> bool:
+    records = _unknown_records(audit)[:5]
+    if not records:
+        typer.echo("\nNo unknown-purpose items remain in this audit.")
+        return False
+    typer.echo("\nUnknown-item choices\n")
+    for index, record in enumerate(records, start=1):
+        typer.echo(f"{index}. {_record_label(record)}")
+    typer.echo("0. Go back without choosing an item")
+    selected = int(typer.prompt(f"Choose 0-{len(records)}", type=int))
+    if selected not in range(0, len(records) + 1):
+        typer.echo(f"Choose a number from 0 through {len(records)}.")
+        raise typer.Exit(2)
+    if selected == 0:
+        typer.echo("The items remain unknown. No changes were made.")
+        return False
+    record = records[selected - 1]
+    typer.echo("\nWhat would you like to do?")
+    typer.echo("1. Show verified local facts")
+    typer.echo("2. Tell MacWise what you use it for (this session only)")
+    typer.echo("3. Leave it unknown")
+    typer.echo("4. Add it to a possible cleanup plan")
+    typer.echo("0. Return to the checkup summary")
+    action = int(typer.prompt("Choose 0-4", type=int))
+    if action == 0:
+        typer.echo("The item remains unknown. No changes were made.")
+    elif action == 1:
+        _verified_local_facts(record)
+    elif action == 2:
+        context = typer.prompt("What do you use it for?").strip()
+        if not context:
+            typer.echo("No context was recorded. The item remains unknown.")
+        else:
+            typer.echo(f"User-confirmed for this session: {safe_display_text(context)}")
+            typer.echo("This context was not saved and was not treated as verified evidence.")
+    elif action == 3:
+        typer.echo("The item remains unknown. Unknown does not mean unused or removable.")
+    elif action == 4:
+        _add_record_to_plan(audit, record)
+        typer.echo("A plan was created, but it was not applied.")
+        typer.echo("Review it later with: macwise plan show")
+        typer.echo("MacWise changed no installed software.")
+        typer.echo("MacWise did not search the web or upload this inventory.")
+        return True
+    else:
+        typer.echo("Choose a number from 0 through 4.")
+        raise typer.Exit(2)
+    typer.echo("MacWise did not search the web or upload this inventory.")
+    return False
+
+
+def _echo_checkup_focus(
+    summary: CheckupSummary,
+    selected: int,
+    audit: AuditDocument,
+) -> bool:
+    priority = summary.priorities[selected - 1]
+    typer.echo(f"\n{render_checkup_focus(priority)}", nl=False)
+    if priority.key == "knowledge_gaps":
+        return _guided_unknown_item(audit)
+    return False
+
+
+def _guided_checkup() -> None:
+    audit = _audit()
+    summary = build_checkup(audit, now=_now())
+    typer.echo(render_checkup_terminal(summary), nl=False)
+    reviewed: set[int] = set()
+    plan_created = False
+    if summary.priorities:
+        while True:
+            typer.echo("\nChoose a finding number to review, or 0 to finish safely.")
+            selected = int(
+                typer.prompt(
+                    f"Choose 0-{len(summary.priorities)}",
+                    type=int,
+                )
+            )
+            if selected not in range(0, len(summary.priorities) + 1):
+                typer.echo(f"Choose a number from 0 through {len(summary.priorities)}.")
+                raise typer.Exit(2)
+            if selected == 0:
+                break
+            plan_created = _echo_checkup_focus(summary, selected, audit) or plan_created
+            reviewed.add(selected)
+    typer.echo("\nSession summary\n")
+    reviewed_count = len(reviewed)
+    reviewed_label = "priority" if reviewed_count == 1 else "priorities"
+    typer.echo(f"Reviewed: {reviewed_count} {reviewed_label}")
+    typer.echo(f"Still uncertain: {len(summary.priorities) - reviewed_count} priorities")
+    if plan_created:
+        typer.echo("A cleanup plan preview was created, but it was not applied.")
+    else:
+        typer.echo("No cleanup plan was created or applied.")
+    typer.echo("You can stop here safely.")
+    typer.echo("MacWise changed nothing on this Mac.")
+
+
 @app.command(help=HELP["score"])
 def score(
     output_format: Annotated[
@@ -1436,13 +1562,22 @@ def plan_add(
         ),
     ] = False,
 ) -> None:
+    audit = _audit()
+    record = _resolve_record(audit, name)
+    _add_record_to_plan(audit, record, include_startup=include_startup)
+
+
+def _add_record_to_plan(
+    audit: AuditDocument,
+    record: SoftwareRecord,
+    *,
+    include_startup: bool = False,
+) -> None:
     store = _plan_store_factory()
     try:
         current = store.active()
     except PlanStoreError:
         _plan_store_failure(writing=False)
-    audit = _audit()
-    record = _resolve_record(audit, name)
     result = add_candidate(
         current,
         audit,
@@ -1751,7 +1886,7 @@ def help_command(ctx: typer.Context) -> None:
 
 def _guided_action(choice: int, ctx: typer.Context) -> None:
     if choice == 1:
-        scan()
+        _guided_checkup()
     elif choice == 2:
         review_apps()
     elif choice == 3:
@@ -1791,6 +1926,7 @@ def guided(
         return
     typer.echo(GUIDED_MENU)
     if not _is_interactive():
+        typer.echo("Run macwise checkup for the recommended read-only starting point.")
         typer.echo("Run macwise --help to see direct commands.")
         return
     choice = typer.prompt("Choose 1-11", type=int)
