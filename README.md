@@ -158,7 +158,7 @@ It reports two separate metrics:
 A private real-Mac evaluation produced this sanitized aggregate result:
 
 ```text
-Opportunity Profile: 70/100
+Review opportunities found: High (70/100 detail score)
   Startup attention       20/20
   Tool overlap            16/20
   Storage review          15/20
@@ -166,7 +166,7 @@ Opportunity Profile: 70/100
   Knowledge gaps          15/15
   Backup attention         4/10
 
-MacWise Usefulness Score: 86/100
+Confidence in this report: 86/100
   Evidence coverage       16/25
   Decision yield          25/25
   Explanation quality     15/20
