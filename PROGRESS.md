@@ -67,7 +67,7 @@ started, no evaluator result exists yet, and the paid human pilot remains separa
 | Complete Phase 7 local RC | Done | Codex | `1.0.0rc1` artifacts, UV/pipx packaging, release workflow, security/privacy review, clean-clone UV install, and real read-only run-through are complete; external publication remains gated. |
 | Prepare external distribution proof | Done | Codex | The manual public smoke now verifies isolated UV-tool installation plus PyPI/GitHub checksum identity; Homebrew distribution is deferred. |
 | Design MW-604 independent evaluation lab | Done | Codex | The design selects an isolated, separately packaged evaluator with independent receipts, predeclared oracles, frozen hard gates, exact macOS tuples, development/acceptance/fresh-holdout roles, mutation adequacy, and no misleading master score. |
-| Build MW-604 independent evaluation lab | In progress | Codex | Isolated evaluator boundary, immutable content-addressed capsules, public-fixture disclosure gate, standalone CLI, and locked toolchain are verified; oracle, claim, metric, mutation, action, version, and real-Mac work remain. |
+| Build MW-604 independent evaluation lab | In progress | Codex | Isolated evaluator boundary, immutable content-addressed capsules, public-fixture disclosure gate, frozen safety policy/contract, standalone CLI, and locked toolchain are verified; claim, metric, mutation, action, version, and real-Mac work remain. |
 
 ## Decision Links
 
@@ -292,3 +292,8 @@ aggregate-data-return approval; it does not block the local evaluator build.
   markers without rewriting evidence. A repository-wide privacy test caught a secret-shaped test
   fixture; the fixture now exercises parsed JSON detection without resembling a public credential.
   Evaluator tests, format/lint, Pyright, and repository privacy checks pass.
+- 2026-07-20 MW-604 Task 4 RED/GREEN: missing oracle/policy modules and freeze script produced
+  the expected test failures. The evaluator now loads eight closed versioned policy invariants,
+  rejects unknown or severity-weakened expectations, records traceable policy mismatches, and
+  content-locks policy input through an atomic digest script. Policy tests prove a modified input
+  fails `--check`; evaluator format/lint, Pyright, and frozen-contract verification pass.
