@@ -6,6 +6,7 @@ from typing import Annotated
 import typer
 
 from macwise_eval import __version__
+from macwise_eval.capture import capture_private_capsule
 from macwise_eval.evaluate import evaluate as evaluate_capsule
 from macwise_eval.io import verify_receipts
 from macwise_eval.models import CapsuleManifest, ScenarioOracle
@@ -61,6 +62,21 @@ def _empty_output_directory(path: Path) -> None:
             raise ValueError("output directory must be empty")
     else:
         path.mkdir(parents=True)
+
+
+@app.command()
+def capture(
+    private_output: Annotated[Path, typer.Option("--private-output")],
+) -> None:
+    """Capture read-only reference evidence locally; it is never uploaded or made public."""
+    try:
+        result = capture_private_capsule(private_output)
+    except (OSError, ValueError) as error:
+        typer.echo(f"Reference capture could not run: {error}")
+        raise typer.Exit(code=2) from None
+    typer.echo(
+        f"Saved {result.observation_count} observation categories to the private output directory."
+    )
 
 
 @app.command()
