@@ -80,6 +80,12 @@ This file records durable architecture, UX, safety, privacy, dependency, and rel
 | D-034 | 2026-07-18 | CI Compatibility | Test Python 3.12, 3.13, and 3.14 across Linux, macOS 15, and the current GitHub-hosted macOS 26 image; run Homebrew candidate and public-install proof on macOS 26 while retaining local macOS 27 evidence separately. | The package declares Python 3.12+ and must cover the current interpreter and hosted macOS without confusing GitHub image availability with the developer Mac's newer OS. | Test only oldest versions; use only moving `latest` labels; attach the developer Mac as a self-hosted runner. | Accepted |
 | D-035 | 2026-07-18 | Public Release | Make `uv tool install macwise` the primary first-release UX, retain pipx as an alternative, and defer Homebrew distribution to a separately accepted later milestone. | A single PyPI authority reduces beginner friction and cross-repository drift while preserving a future Homebrew path after public demand and maintenance ownership exist. | Publish UV, pipx, and Homebrew together; pipx-only release; Homebrew-first release. | Accepted; supersedes D-033's two-channel requirement and D-034's Homebrew release gate only. |
 
+## MW-600 Decisions
+
+| ID | Date | Category | Decision | Rationale | Alternatives Considered | Status |
+|---|---|---|---|---|---|---|
+| D-042 | 2026-07-20 | Evaluation integrity | Derive evaluator policy outcomes from independently parsed serialized product claims; remove caller-supplied policy-outcome flags. | A command-line assertion that a policy passed is not evidence. Seeded mutants must travel through the same parser/detector boundary used for saved product output. | Caller-provided status flags; product-owned safety status fields; trust product exit code. | Accepted |
+
 ## Initial Default Decisions
 
 - MIT license unless a later legal decision selects Apache-2.0.

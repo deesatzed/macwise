@@ -26,7 +26,11 @@ def test_action_lab_accepts_a_complete_verified_temporary_round_trip() -> None:
 def test_action_lab_rejects_a_receipt_when_recovery_or_undo_is_not_proven() -> None:
     receipt = passing_receipt()
     receipt["interrupted_recovery"] = {"state": "interrupted", "source_exists": False}
-    receipt["after_undo"] = {"source_exists": True, "trash_exists": True, "payload_sha256": "b" * 64}
+    receipt["after_undo"] = {
+        "source_exists": True,
+        "trash_exists": True,
+        "payload_sha256": "b" * 64,
+    }
 
     result = evaluate_action_lab(receipt)
 

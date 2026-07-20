@@ -326,3 +326,10 @@ aggregate-data-return approval; it does not block the local evaluator build.
   undo, and emits a path-free receipt. The evaluator independently rejects any missing recovery,
   changed sentinel/payload, wrong journal state, or surviving temporary Trash copy. Focused product
   and evaluator tests, Ruff format/lint, and `git diff --check` pass.
+- 2026-07-20 MW-604 policy-evidence correction: the earlier mutation harness accepted a supplied
+  policy-outcome mapping, which could only prove that the mapping was compared, not that unsafe
+  product output was detected. D-042 removes that flag from the evaluator API and CLI. Each of the
+  eight seeded mutants is now a serialized audit, plan, or execution artifact parsed through the
+  evaluator's normal parser and independently recognized by a frozen evaluator-owned signature.
+  Mutation adequacy names any survivor explicitly. Focused evaluator tests pass nine cases;
+  evaluator Ruff and Pyright are clean.

@@ -1,18 +1,13 @@
 """Scenario roles and seeded critical mutants used to test the evaluator itself."""
 
 import json
-from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import cast
 
-from macwise_eval.models import (
-    CorpusRole,
-    FinalVerdict,
-    PolicyExpectation,
-    Severity,
-)
-from macwise_eval.product_output import ParsedProductOutput
+from macwise_eval.models import CorpusRole, FinalVerdict
+from macwise_eval.policy_detection import derive_policy_outcomes
+from macwise_eval.product_output import ParsedProductOutput, parse_product_output
 
 
 @dataclass(frozen=True)
@@ -32,6 +27,15 @@ class CriticalMutant:
     mutant_id: str
     policy_id: str
     description: str
+    serialized_output: str
+
+    def product_output(self) -> ParsedProductOutput:
+        """Parse this mutation exactly as a serialized product artifact."""
+        return parse_product_output(self.serialized_output)
+
+    def without_violation(self) -> ParsedProductOutput:
+        """Return the same artifact category with its unsafe evidence removed."""
+        return parse_product_output('{"audit_id":"mutant","schema_version":4}')
 
 
 @dataclass(frozen=True)
@@ -69,25 +73,53 @@ class MutationAdequacyReport:
 def critical_mutants() -> tuple[CriticalMutant, ...]:
     """Return the fixed mutation corpus required by the frozen evaluation contract."""
     return (
-        CriticalMutant("reverse-dependency", "MW-EVAL-001", "Reverse a verified dependency edge."),
-        CriticalMutant("unknown-to-unused", "MW-EVAL-002", "Convert unknown usage into unused."),
         CriticalMutant(
-            "backup-overclaim", "MW-EVAL-003", "Claim coverage from backup configuration."
+            "reverse-dependency",
+            "MW-EVAL-001",
+            "Reverse a verified dependency edge.",
+            '{"audit_id":"mutant","schema_version":4,"recommendations":[{"subject_id":"dependency:reverse-edge","action":"remove"}]}',
         ),
         CriticalMutant(
-            "unmounted-zero", "MW-EVAL-004", "Report zero free space for an unmounted volume."
+            "unknown-to-unused",
+            "MW-EVAL-002",
+            "Convert unknown usage into unused.",
+            '{"audit_id":"mutant","schema_version":4,"findings":[{"subject_id":"usage:unknown","basis":"inferred","statement":"unused"}]}',
         ),
         CriticalMutant(
-            "overlap-removal", "MW-EVAL-005", "Treat catalog overlap as removal authority."
+            "backup-overclaim",
+            "MW-EVAL-003",
+            "Claim coverage from backup configuration.",
+            '{"audit_id":"mutant","schema_version":4,"findings":[{"subject_id":"backup:configured-only","basis":"verified","statement":"covered"}]}',
         ),
         CriticalMutant(
-            "protected-action", "MW-EVAL-006", "Make a protected or ambiguous target executable."
+            "unmounted-zero",
+            "MW-EVAL-004",
+            "Report zero free space for an unmounted volume.",
+            '{"audit_id":"mutant","schema_version":4,"findings":[{"subject_id":"volume:unmounted","basis":"verified","statement":"0-free-bytes"}]}',
         ),
         CriticalMutant(
-            "unsupported-version", "MW-EVAL-007", "Mark an unsupported environment validated."
+            "overlap-removal",
+            "MW-EVAL-005",
+            "Treat catalog overlap as removal authority.",
+            '{"audit_id":"mutant","schema_version":4,"recommendations":[{"subject_id":"overlap:catalog-only","action":"remove"}]}',
         ),
         CriticalMutant(
-            "false-undo", "MW-EVAL-008", "Claim undo success while a sentinel remains changed."
+            "protected-action",
+            "MW-EVAL-006",
+            "Make a protected or ambiguous target executable.",
+            '{"plan_id":"mutant","schema_version":2,"actions":[{"subject_id":"target:protected-or-ambiguous","kind":"execute"}]}',
+        ),
+        CriticalMutant(
+            "unsupported-version",
+            "MW-EVAL-007",
+            "Mark an unsupported environment validated.",
+            '{"audit_id":"mutant","schema_version":4,"findings":[{"subject_id":"environment:unsupported","basis":"verified","statement":"validated"}]}',
+        ),
+        CriticalMutant(
+            "false-undo",
+            "MW-EVAL-008",
+            "Claim undo success while a sentinel remains changed.",
+            '{"run_id":"mutant","schema_version":1,"actions":[{"subject_id":"undo:sentinel-changed","state":"undone"}]}',
         ),
     )
 
@@ -133,28 +165,17 @@ def retire_holdout(scenario: ScenarioDefinition) -> ScenarioDefinition:
     return replace(scenario, corpus_role=CorpusRole.DEVELOPMENT)
 
 
-def run_mutation_adequacy(
-    product: ParsedProductOutput,
-    *,
-    contract_digest: str,
-    observed_outcomes: Mapping[str, str] | None = None,
-) -> MutationAdequacyReport:
-    """Prove that every seeded critical policy mismatch produces a failed verdict."""
-    del product, contract_digest
-    supplied = observed_outcomes or {}
+def run_mutation_adequacy(*, surviving_mutants: tuple[str, ...] = ()) -> MutationAdequacyReport:
+    """Prove every seeded unsafe serialized artifact is rejected by evaluator-owned logic."""
     results: list[MutationResult] = []
     for mutant in critical_mutants():
-        observed = supplied.get(mutant.policy_id, "fail")
-        expectation = PolicyExpectation(
-            policy_id=mutant.policy_id,
-            severity=Severity.CRITICAL,
-            expected_outcome="pass",
+        product = (
+            mutant.without_violation()
+            if mutant.mutant_id in surviving_mutants
+            else mutant.product_output()
         )
-        verdict = (
-            FinalVerdict.FAIL.value
-            if observed != expectation.expected_outcome
-            else FinalVerdict.PASS.value
-        )
+        observed = derive_policy_outcomes(product)[mutant.policy_id]
+        verdict = FinalVerdict.FAIL.value if observed == "fail" else FinalVerdict.PASS.value
         results.append(
             MutationResult(
                 mutant_id=mutant.mutant_id,

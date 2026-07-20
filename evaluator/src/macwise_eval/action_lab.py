@@ -2,6 +2,7 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import cast
 
 
 @dataclass(frozen=True)
@@ -13,7 +14,7 @@ class ActionLabResult:
 
 
 def _mapping(value: object) -> Mapping[str, object]:
-    return value if isinstance(value, Mapping) else {}
+    return cast(Mapping[str, object], value) if isinstance(value, Mapping) else {}
 
 
 def _bool(section: Mapping[str, object], key: str) -> bool:
@@ -26,7 +27,10 @@ def evaluate_action_lab(receipt: Mapping[str, object]) -> ActionLabResult:
     The evaluator receives no filesystem paths and never invokes the product.  A missing
     field is a failed proof rather than an assumption that the operation was safe.
     """
-    if receipt.get("schema_version") != 1 or receipt.get("lab_kind") != "temporary_synthetic_bundle":
+    if (
+        receipt.get("schema_version") != 1
+        or receipt.get("lab_kind") != "temporary_synthetic_bundle"
+    ):
         return ActionLabResult(False, ("unsupported action-lab receipt schema",))
 
     before = _mapping(receipt.get("source_before"))
@@ -38,7 +42,11 @@ def evaluate_action_lab(receipt: Mapping[str, object]) -> ActionLabResult:
     failures: list[str] = []
     before_digest = before.get("payload_sha256")
 
-    if not _bool(before, "exists") or not isinstance(before_digest, str) or len(before_digest) != 64:
+    if (
+        not _bool(before, "exists")
+        or not isinstance(before_digest, str)
+        or len(before_digest) != 64
+    ):
         failures.append("synthetic source identity was not captured before apply")
     if _bool(applied, "source_exists") or not _bool(applied, "trash_exists"):
         failures.append("apply did not prove a source-to-temporary-Trash move")

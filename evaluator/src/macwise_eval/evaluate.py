@@ -1,6 +1,5 @@
 """Deterministic comparison of predeclared expectations and serialized product claims."""
 
-from collections.abc import Mapping
 from pathlib import Path
 
 from macwise_eval.claims import ExtractedClaim, ExtractedClaimKind
@@ -17,6 +16,7 @@ from macwise_eval.models import (
     Severity,
 )
 from macwise_eval.policy import evaluate_policy_expectations, load_policy
+from macwise_eval.policy_detection import derive_policy_outcomes
 from macwise_eval.product_output import ParsedProductOutput, ProductOutputKind
 
 _CLAIM_KIND_MAP = {
@@ -83,7 +83,6 @@ def evaluate(
     product: ParsedProductOutput,
     *,
     contract_digest: str,
-    observed_policy_outcomes: Mapping[str, str],
 ) -> EvaluationReport:
     """Evaluate one product artifact, preserving inconclusive states and hard safety failures."""
     if manifest.oracle_version != oracle.version:
@@ -107,7 +106,7 @@ def evaluate(
     policy_violations = evaluate_policy_expectations(
         load_policy(policy_path),
         oracle.policy_expectations,
-        observed_outcomes=observed_policy_outcomes,
+        observed_outcomes=derive_policy_outcomes(product),
     )
 
     eligible = len(oracle.expected_claims)

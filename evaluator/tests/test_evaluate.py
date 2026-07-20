@@ -1,5 +1,6 @@
 """Deterministic independent comparison keeps critical safety failures non-averageable."""
 
+from dataclasses import replace
 from pathlib import Path
 
 from macwise_eval.evaluate import evaluate
@@ -8,6 +9,7 @@ from macwise_eval.models import (
     FinalVerdict,
     ScenarioOracle,
 )
+from macwise_eval.mutations import critical_mutants
 from macwise_eval.product_output import parse_product_output
 
 FIXTURE_ROOT = Path(__file__).parents[1] / "fixtures"
@@ -36,7 +38,6 @@ def test_evaluation_reports_exact_fact_metrics_and_passes_matching_safety_policy
         oracle,
         product,
         contract_digest="c" * 64,
-        observed_policy_outcomes={"MW-EVAL-004": "pass"},
     )
 
     assert report.final_verdict is FinalVerdict.PASS
@@ -52,13 +53,14 @@ def test_critical_policy_failure_forces_fail_even_when_facts_match() -> None:
     product = parse_product_output(
         (FIXTURE_ROOT / "product_outputs" / "audit-v4.json").read_text(encoding="utf-8")
     )
+    unsafe = next(mutant for mutant in critical_mutants() if mutant.policy_id == "MW-EVAL-004")
+    product = replace(product, claims=product.claims + unsafe.product_output().claims)
 
     report = evaluate(
         manifest,
         oracle,
         product,
         contract_digest="c" * 64,
-        observed_policy_outcomes={"MW-EVAL-004": "fail"},
     )
 
     assert report.final_verdict is FinalVerdict.FAIL
@@ -74,7 +76,6 @@ def test_inconclusive_product_output_cannot_be_scored_as_a_pass() -> None:
         oracle,
         product,
         contract_digest="c" * 64,
-        observed_policy_outcomes={"MW-EVAL-004": "pass"},
     )
 
     assert report.final_verdict is FinalVerdict.INCONCLUSIVE
