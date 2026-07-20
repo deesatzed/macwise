@@ -318,3 +318,11 @@ aggregate-data-return approval; it does not block the local evaluator build.
   writes only to an explicit empty local directory and reports aggregate category count without
   printing inventory. Fake-runner, CLI, format/lint, and Pyright gates pass; the real-Mac protocol
   records the later fresh-holdout procedure.
+- 2026-07-20 MW-604 Task 9 RED/GREEN: the new disposable action-lab driver initially failed because
+  macOS `/tmp` has a symlink ancestor rejected by the product's state-lock safety check, then exposed
+  that receipt values were being read after undo instead of at apply time. The repaired driver uses
+  a canonical temporary root, records each lifecycle checkpoint at its occurrence, creates only a
+  synthetic bundle and sentinel, exercises apply, intentional recovery interruption, and approved
+  undo, and emits a path-free receipt. The evaluator independently rejects any missing recovery,
+  changed sentinel/payload, wrong journal state, or surviving temporary Trash copy. Focused product
+  and evaluator tests, Ruff format/lint, and `git diff --check` pass.
