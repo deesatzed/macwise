@@ -246,17 +246,22 @@ def test_public_truth_defines_automatic_checkup_identification_boundary() -> Non
     simple_ux = (ROOT / "GOAL_SIMPLE_UX.md").read_text(encoding="utf-8")
     queue = (ROOT / "TASK_QUEUE.md").read_text(encoding="utf-8")
     progress = (ROOT / "PROGRESS.md").read_text(encoding="utf-8")
+    d041 = next(line for line in decisions.splitlines() if line.startswith("| D-041 "))
 
-    assert "D-041" in decisions
-    assert "checkup-only" in decisions.lower()
-    assert "public identification" in decisions.lower()
-    assert "inventory upload" in decisions.lower()
-    assert "account" in decisions.lower()
-    assert "telemetry" in decisions.lower()
-    assert "background update" in decisions.lower()
-    assert "--offline" in decisions
-    assert "not authoritative for cleanup" in decisions.lower()
+    assert "checkup-only" in d041.lower()
+    assert "public identification" in d041.lower()
+    assert "inventory upload" in d041.lower()
+    assert "account" in d041.lower()
+    assert "telemetry" in d041.lower()
+    assert "background update" in d041.lower()
+    assert "--offline" in d041
+    assert "not authoritative for cleanup" in d041.lower()
+    assert "D-022" in d041
+    assert "deterministic and exact-match" in d041.lower()
+    assert "macwise-eval" in d041
+    assert "network-free" in d041.lower()
     assert "automatic checkup-only public identification" in simple_ux.lower()
+    assert "normal checkup automatically tries identification" in simple_ux.lower()
     assert "--offline" in simple_ux
     assert "not authoritative for cleanup" in simple_ux.lower()
     assert "MW-606" in queue

@@ -76,10 +76,11 @@ The implementation and tests must close all of these gaps:
 6. **Understandable usefulness result:** Explain that this measures confidence in the report’s
    coverage and structure, not the user or the health of the Mac. Identify the largest missing
    evidence that prevented a higher result.
-7. **Useful identification flow:** An item needing identification must show verified local facts
-   and may receive automatic checkup-only public identification. That lookup sends one app identity
-   at a time, offers `--offline`, never uploads an inventory, and never invents a purpose. Public
-   facts are not authoritative for cleanup.
+7. **Useful identification flow:** An item needing identification must show verified local facts.
+   A normal checkup automatically tries identification unless `--offline` is used or public
+   information is unavailable. That checkup-only lookup sends one app identity at a time, never
+   uploads an inventory, and never invents a purpose. Public facts are not authoritative for
+   cleanup.
 8. **Guided cleanup planning:** A user can move from an explained finding to “add to possible
    cleanup plan” through numbered choices. Planning stays read-only. Apply and undo retain their
    existing separate exact approvals and fresh revalidation.
