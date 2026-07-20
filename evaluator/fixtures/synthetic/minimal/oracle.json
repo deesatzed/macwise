@@ -5,7 +5,7 @@
       "expected_value": 168577466368,
       "kind": "fact",
       "required": true,
-      "subject": "volume:/"
+      "subject": "volume:root"
     }
   ],
   "policy_expectations": [

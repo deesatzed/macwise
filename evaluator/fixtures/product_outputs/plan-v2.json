@@ -1,0 +1,16 @@
+{
+  "actions": [
+    {
+      "kind": "move_application_to_trash",
+      "subject_id": "app:synthetic"
+    }
+  ],
+  "checks": [
+    {
+      "outcome": "pass",
+      "subject_id": "app:synthetic"
+    }
+  ],
+  "plan_id": "plan:synthetic",
+  "schema_version": 2
+}

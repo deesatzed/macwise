@@ -1,0 +1,10 @@
+{
+  "actions": [
+    {
+      "state": "undone",
+      "subject_id": "app:synthetic"
+    }
+  ],
+  "run_id": "run:synthetic",
+  "schema_version": 1
+}

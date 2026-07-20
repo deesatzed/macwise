@@ -1,0 +1,23 @@
+{
+  "audit_id": "audit:synthetic-storage",
+  "collected_at": "2026-07-20T12:00:00Z",
+  "findings": [
+    {
+      "basis": "inferred",
+      "limitations": [
+        "Mounted free space does not prove reclaimable storage."
+      ],
+      "statement": "Storage review is worthwhile.",
+      "subject_id": "volume:root"
+    }
+  ],
+  "recommendations": [],
+  "schema_version": 4,
+  "volumes": [
+    {
+      "free_bytes": 168577466368,
+      "id": "volume:root",
+      "mount_point": "/"
+    }
+  ]
+}

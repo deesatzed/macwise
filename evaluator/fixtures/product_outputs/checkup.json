@@ -1,0 +1,18 @@
+{
+  "changed_mac": false,
+  "collected_at": "2026-07-20T12:00:00Z",
+  "largest_missing_evidence": "Usage evidence is incomplete.",
+  "priorities": [
+    {
+      "benefit": "Reviewing storage can clarify where space is used.",
+      "evidence": "Mounted free-space evidence.",
+      "key": "storage_review",
+      "limitation": "Bundle size is not reclaimable-space proof.",
+      "next_command": "macwise review largest",
+      "observed_count": 1,
+      "reason": "One large application needs review.",
+      "title": "Review storage"
+    }
+  ],
+  "report_confidence": 80
+}
