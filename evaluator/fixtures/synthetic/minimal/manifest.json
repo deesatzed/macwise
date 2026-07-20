@@ -1,0 +1,33 @@
+{
+  "audit_schema_version": 4,
+  "captured_at": "2026-07-20T12:00:00Z",
+  "capsule_id": "synthetic-minimal-storage-001",
+  "corpus_role": "development",
+  "disclosure": "public",
+  "environment": {
+    "architecture": "arm64",
+    "darwin_version": "27.0.0",
+    "macos_build": "24A123",
+    "macos_product_version": "27.0.0",
+    "tools": [
+      {
+        "name": "python",
+        "version": "3.12.11"
+      }
+    ]
+  },
+  "macwise_version": "1.0.0rc1",
+  "oracle_version": "1",
+  "provenance": "synthetic",
+  "receipts": [
+    {
+      "collected_at": "2026-07-20T12:00:00Z",
+      "receipt_id": "storage-reference",
+      "relative_path": "reference.json",
+      "sha256": "0ea43313c60946e284f8633814c3ae906df37fb57612ffd3a182f0921f208f2c",
+      "source": "synthetic-statvfs"
+    }
+  ],
+  "reviewed_sanitized": true,
+  "schema_version": 1
+}
