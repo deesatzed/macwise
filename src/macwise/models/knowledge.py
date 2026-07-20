@@ -115,21 +115,40 @@ class PublicPurposeClaim(BaseModel):
         try:
             target = ip_address(host.strip("[]"))
         except ValueError:
+            normalized_host = host.casefold().rstrip(".")
+            if (
+                normalized_host == "localhost"
+                or normalized_host.endswith(".local")
+                or normalized_host.endswith(".internal")
+                or "." not in normalized_host
+            ):
+                raise ValueError("source_url must use a public hostname") from None
+            # Publisher-domain authenticity needs provider identity proof, not URL shape alone.
+            # DNS resolution and rebinding defenses belong to the Task 5 provider/network layer.
             return value
         if not target.is_global:
             raise ValueError("source_url literal IP target must be globally routable")
         return value
 
     @model_validator(mode="after")
-    def require_current_lifetime(self) -> "PublicPurposeClaim":
+    def require_valid_lifetime(self) -> "PublicPurposeClaim":
+        if self.expires_at <= self.retrieved_at:
+            raise ValueError("expires_at must be after retrieved_at")
         current_time = datetime.now(UTC)
         if self.retrieved_at > current_time:
             raise ValueError("retrieved_at cannot be in the future")
-        if self.expires_at <= current_time:
-            raise ValueError("expires_at must be in the future")
-        if self.expires_at <= self.retrieved_at:
-            raise ValueError("expires_at must be after retrieved_at")
+        if self.source_type is PublicSourceType.APP_STORE:
+            app_store_host = (self.source_url.host or "").casefold().rstrip(".")
+            if app_store_host not in {"apps.apple.com", "itunes.apple.com"}:
+                raise ValueError("app_store claims must use a known Apple App Store host")
         return self
+
+    def is_fresh(self, now: datetime) -> bool:
+        """Whether this historical claim can be used at the supplied instant."""
+
+        if now.tzinfo is None or now.utcoffset() is None:
+            raise ValueError("now must be timezone-aware")
+        return self.expires_at > now
 
 
 class PublicLookupResult(BaseModel):
@@ -155,4 +174,10 @@ class PublicLookupResult(BaseModel):
             raise ValueError("only resolved results can carry a claim")
         if self.claim is not None and self.claim.identity != self.identity:
             raise ValueError("claim identity must match lookup identity")
+        if (
+            self.status is LookupStatus.RESOLVED
+            and self.claim is not None
+            and not self.claim.is_fresh(datetime.now(UTC))
+        ):
+            raise ValueError("resolved results cannot carry expired claims")
         return self
