@@ -67,7 +67,7 @@ started, no evaluator result exists yet, and the paid human pilot remains separa
 | Complete Phase 7 local RC | Done | Codex | `1.0.0rc1` artifacts, UV/pipx packaging, release workflow, security/privacy review, clean-clone UV install, and real read-only run-through are complete; external publication remains gated. |
 | Prepare external distribution proof | Done | Codex | The manual public smoke now verifies isolated UV-tool installation plus PyPI/GitHub checksum identity; Homebrew distribution is deferred. |
 | Design MW-604 independent evaluation lab | Done | Codex | The design selects an isolated, separately packaged evaluator with independent receipts, predeclared oracles, frozen hard gates, exact macOS tuples, development/acceptance/fresh-holdout roles, mutation adequacy, and no misleading master score. |
-| Build MW-604 independent evaluation lab | In progress | Codex | Isolated evaluator project, no-import/no-execution boundary, standalone CLI, and locked toolchain are verified; capsule, privacy, oracle, and scoring work remain. |
+| Build MW-604 independent evaluation lab | In progress | Codex | Isolated evaluator boundary, immutable content-addressed capsules, public-fixture disclosure gate, standalone CLI, and locked toolchain are verified; oracle, claim, metric, mutation, action, version, and real-Mac work remain. |
 
 ## Decision Links
 
@@ -284,3 +284,11 @@ aggregate-data-return approval; it does not block the local evaluator build.
   evaluator --check`, evaluator tests, version smoke, Ruff format/lint, and Pyright all pass.
   Exact evaluator commands now use `--directory evaluator` so paths resolve against the isolated
   project rather than the product checkout.
+- 2026-07-20 MW-604 Tasks 2-3 RED/GREEN: missing evaluator models/I-O and privacy scanner caused
+  the intended collection failures. Strict frozen capsule, receipt, oracle, verdict, metric, and
+  report models now validate provenance, disclosure, exact environment tuples, unique identifiers,
+  contained paths, SHA-256 receipts, and explicit denominators. The disclosure gate detects
+  private-path, hostname, serial-shaped, secret-shaped, control, prompt-shaped, and inventory
+  markers without rewriting evidence. A repository-wide privacy test caught a secret-shaped test
+  fixture; the fixture now exercises parsed JSON detection without resembling a public credential.
+  Evaluator tests, format/lint, Pyright, and repository privacy checks pass.
