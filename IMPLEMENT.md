@@ -64,6 +64,14 @@ Bundle the `$macwise` skill, implement one-command setup, expose typed read-only
 
 Prove `pipx` and Homebrew installations from clean environments, add release automation/demo/security review, audit public content for privacy, and cut a 1.0 release candidate after all acceptance evidence exists.
 
+### Phase 8 — Independent Evaluation Lab
+
+Build the separately packaged `macwise-eval` side application defined by `GOAL_EVAL.md`. Keep it
+logically independent from MacWise implementation code, compare serialized product outputs with
+independent receipts and predeclared scenario oracles, freeze the evaluator contract, test its
+mutation adequacy, replay exact macOS environment tuples, and prove disposable action/undo safety.
+Prepare—but do not run or fund—the separately authorized blinded human pilot.
+
 ## Atomic Task Format
 
 Each task records:
@@ -89,6 +97,9 @@ Each task records:
 | Cleanup causes data loss | Separate planning from execution, preserve data, use Trash, require approval, write rollback manifests, verify and support undo. |
 | Interactive UX breaks automation | Detect TTY; keep every guided choice available as a deterministic subcommand and structured output. |
 | Public release leaks local details | Use only synthetic fixtures and run privacy/secret scans before publishing. |
+| Product and evaluator agree because they share the same mistake | Prohibit product imports and execution in the evaluator, use independent receipts and predeclared oracles, disclose correlated sources, and mutation-test the evaluator. |
+| One aggregate score hides a dangerous recommendation | Report independent axes and make any critical policy violation force a failed release verdict. |
+| macOS-version drift is mistaken for compatibility | Key evidence by product version, build, Darwin version, architecture, and tool versions; unknown tuples degrade conservatively. |
 
 ## Open Decisions
 

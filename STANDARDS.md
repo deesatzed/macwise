@@ -30,6 +30,11 @@
 - Tests must not uninstall, disable, unload, launch, or delete software on the development Mac.
 - Every claimed passing gate requires a fresh command and recorded result.
 - CI must run formatting/lint, type checking, tests, build/package checks, and a secret/privacy scan.
+- External evaluation must keep product logic and evaluator logic separate, predeclare expected
+  outcomes, disclose shared evidence sources, retain exact environment tuples, and use hard safety
+  gates that cannot be averaged away.
+- An evaluator is not accepted merely because its own tests pass; critical seeded mutants must be
+  detected and identified by the expected policy.
 
 ## User Experience
 

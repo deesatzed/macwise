@@ -2,7 +2,9 @@
 
 ## Status Overview
 
-Phases 1-6 are locally accepted. The public repository exists and hosted run `29641643615` passed Linux, macOS 15, macOS 26, Python 3.12-3.14, and the then-current Homebrew candidate proof. The approved first-release UX is now `uv tool install macwise`, with pipx as an alternative and Homebrew distribution deferred. Public PyPI/GitHub release execution remains open.
+Phases 1-6 and the simple first-run UX are locally accepted. Public release execution remains
+open. Phase 8 independent-evaluation design is accepted in `GOAL_EVAL.md`; implementation has not
+started, no evaluator result exists yet, and the paid human pilot remains separately gated.
 
 ## Current Assumptions
 
@@ -13,6 +15,9 @@ Phases 1-6 are locally accepted. The public repository exists and hosted run `29
 - Package publication and production release require explicit authority/credentials; Homebrew tap work is outside the first-release milestone.
 - The approved Phase 3 goal authorizes a versioned exact-match role catalog and guarded read-only recommendations; unknown relationships remain unknown, and removal authorization stays deferred to planning/execution phases.
 - The active autonomous goal approves the Phase 4 assumption that one exact unsafe candidate may be persisted as blocked for review; ambiguous names still refuse, and no plan grants execution authority.
+- `GOAL_EVAL.md` supplements rather than supersedes `GOAL.md`; the evaluator begins as an isolated
+  subproject, may consume only serialized product output, and must retain private real-Mac evidence
+  outside Git.
 
 ## Task Tracker
 
@@ -61,21 +66,24 @@ Phases 1-6 are locally accepted. The public repository exists and hosted run `29
 | Build MW-500 Codex integration | Done | Codex | Eight typed read-only tools, native plugin/skill payload, one-command setup, bounded STDIO server, clean-wheel call proof, and review hardening pass 361 tests on Python 3.12/3.13. |
 | Complete Phase 7 local RC | Done | Codex | `1.0.0rc1` artifacts, UV/pipx packaging, release workflow, security/privacy review, clean-clone UV install, and real read-only run-through are complete; external publication remains gated. |
 | Prepare external distribution proof | Done | Codex | The manual public smoke now verifies isolated UV-tool installation plus PyPI/GitHub checksum identity; Homebrew distribution is deferred. |
+| Design MW-604 independent evaluation lab | Done | Codex | The design selects an isolated, separately packaged evaluator with independent receipts, predeclared oracles, frozen hard gates, exact macOS tuples, development/acceptance/fresh-holdout roles, mutation adequacy, and no misleading master score. |
+| Build MW-604 independent evaluation lab | Ready | Codex | Execute `GOAL_EVAL.md` using the accepted design and TDD plan; no evaluator implementation or result exists yet. |
 
 ## Decision Links
 
-- D-001 through D-036 are in `DECISIONS.md`.
+- D-001 through D-040 are in `DECISIONS.md`.
 
 ## Current Milestone
 
-UV-first `1.0.0rc1` candidate UX correction and autonomous clean-clone verification are complete; public publication and public UV-tool proof remain explicitly gated.
+UV-first `1.0.0rc1` candidate UX correction and autonomous clean-clone verification are complete.
+MW-604 is the next local evidence milestone; public publication remains separately gated.
 
 ## Next Actions
 
-1. Confirm exact-head hosted CI for the corrected UX commit.
-2. Configure the GitHub `pypi` environment and PyPI pending trusted publisher.
-3. Run the exact RC release workflow, then verify public UV-tool installation.
-4. Update acceptance from external evidence; never infer those results from local structure.
+1. Execute `GOAL_EVAL.md` from Task 1, preserving the evaluator/product independence boundary.
+2. Freeze the evaluator contract before judging the final MacWise build.
+3. Run fixture, mutation, hosted-macOS, disposable-action, and private current-Mac evidence gates.
+4. Separately configure PyPI trusted publishing and run the RC release only when authorized.
 
 ## Blockers
 
@@ -86,6 +94,9 @@ public UV-tool proof. The absent Homebrew tap is intentional deferred scope, not
 ## Questions for User
 
 None required for local implementation. PyPI account configuration is required immediately before publication.
+
+The later paid evaluation pilot requires explicit recruitment, consent, compensation-budget, and
+aggregate-data-return approval; it does not block the local evaluator build.
 
 ## Verification Log
 
@@ -260,3 +271,10 @@ None required for local implementation. PyPI account configuration is required i
   and no clipping or overlap. The user explicitly waived a separate mobile export as unimportant.
   Hosted run `29690088780` passed all nine Linux/macOS and Python 3.12-3.14 jobs on commit
   `a2fe775`.
+- 2026-07-20 MW-604 methodology design: selected a separately packaged evaluator subproject over
+  product-internal assertions or an immediate remote-repository split. `GOAL_EVAL.md` and the
+  design/implementation plans require independent receipts, predeclared oracles, frozen policy,
+  multi-axis reporting, hard critical gates, mutation adequacy, exact macOS environment tuples,
+  anti-overfitting corpus roles, disposable action verification, private real-Mac evidence, and a
+  separately authorized later human pilot. No evaluator code, paid test, upload, or real host
+  mutation has occurred.
