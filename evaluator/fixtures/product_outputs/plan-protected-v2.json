@@ -1,0 +1,11 @@
+{
+  "actions": [],
+  "checks": [
+    {
+      "outcome": "blocked",
+      "subject_id": "app:protected"
+    }
+  ],
+  "plan_id": "plan:protected-synthetic",
+  "schema_version": 2
+}

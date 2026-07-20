@@ -46,6 +46,21 @@ def test_checkup_plan_and_execution_outputs_keep_typed_claims_and_pointers() -> 
     assert any(claim.kind is ExtractedClaimKind.UNDO for claim in execution.claims)
 
 
+def test_protected_plan_fixture_serializes_a_blocked_check_without_an_executable_action() -> None:
+    protected = parse_product_output(
+        (FIXTURES / "plan-protected-v2.json").read_text(encoding="utf-8")
+    )
+
+    assert protected.kind is ProductOutputKind.PLAN
+    assert not any(claim.kind is ExtractedClaimKind.ACTION for claim in protected.claims)
+    assert any(
+        claim.kind is ExtractedClaimKind.GUIDANCE
+        and claim.subject == "app:protected"
+        and claim.value == "blocked"
+        for claim in protected.claims
+    )
+
+
 def test_malformed_or_future_document_is_inconclusive_not_a_product_failure() -> None:
     malformed = parse_product_output("[]")
     future = parse_product_output(json.dumps({"schema_version": 99, "audit_id": "future"}))
