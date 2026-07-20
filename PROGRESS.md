@@ -355,3 +355,8 @@ aggregate-data-return approval; it does not block the local evaluator build.
   driver now resolves the host temporary root before creating its disposable state, preserving the
   no-symlink safety property on macOS and portability elsewhere. The focused regression passes
   locally; the follow-up hosted run is queued at the time of this record.
+- 2026-07-20 MW-604 threshold gate RED/GREEN: acceptance evidence was initially missing. The new
+  evaluator-owned synthesis records all eight predeclared thresholds separately—zero critical
+  violations, zero destructive-unknown guidance, protected refusal, undo restoration, precision,
+  recall, top-three retrieval, and critical abstention. A zero denominator is INCONCLUSIVE and a
+  single critical violation is FAIL; no master score exists. Focused tests, Ruff, and Pyright pass.
