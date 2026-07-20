@@ -70,10 +70,17 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _canonical_temporary_root() -> Path:
+    """Resolve the host temporary directory before product state-lock validation."""
+    return Path(tempfile.gettempdir()).resolve(strict=True)
+
+
 def _exercise() -> dict[str, object]:
-    # /tmp is a symlink on macOS.  The product deliberately rejects state paths
-    # beneath symlink ancestors, so use the canonical temporary root instead.
-    with tempfile.TemporaryDirectory(prefix="eval-action-lab-", dir="/private/tmp") as temporary:
+    # /tmp is a symlink on macOS. The product deliberately rejects state paths
+    # beneath symlink ancestors, so resolve it on every host before creating state.
+    with tempfile.TemporaryDirectory(
+        prefix="eval-action-lab-", dir=_canonical_temporary_root()
+    ) as temporary:
         root = Path(temporary)
         applications = root / "Applications"
         trash = root / "TemporaryTrash"
