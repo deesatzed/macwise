@@ -21,6 +21,7 @@ audits/
 
 # Private independent-evaluation receipts and derived reports never enter Git.
 evaluator/private/
+evaluator/evaluator/private/
 
 # macOS and editors
 .DS_Store

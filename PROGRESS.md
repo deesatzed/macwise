@@ -337,3 +337,10 @@ aggregate-data-return approval; it does not block the local evaluator build.
   macOS product and build versions through a shell-free, allowlisted `sw_vers` query rather than
   leaving the build as `unknown`. A failed query remains visibly `unknown`; it does not inherit a
   validated status. The fixed-command test and the complete evaluator suite pass.
+- 2026-07-20 MW-604 private live holdout: a fresh ignored local capsule collected five independent
+  reference categories, followed by a close-in-time read-only product audit. The tracked aggregate
+  records only schema/counts and the exact macOS 27.0 build 26A5378n/Darwin 27.0.0/arm64/Python
+  3.13.13 tuple. It is explicitly INCONCLUSIVE because no predeclared private oracle exists; this
+  is a capture proof, not an accuracy, safety, or population claim. An initial relative output path
+  was resolved under the evaluator working directory; its ignored location is now covered and the
+  accepted capture used an absolute ignored path.
