@@ -67,7 +67,7 @@ started, no evaluator result exists yet, and the paid human pilot remains separa
 | Complete Phase 7 local RC | Done | Codex | `1.0.0rc1` artifacts, UV/pipx packaging, release workflow, security/privacy review, clean-clone UV install, and real read-only run-through are complete; external publication remains gated. |
 | Prepare external distribution proof | Done | Codex | The manual public smoke now verifies isolated UV-tool installation plus PyPI/GitHub checksum identity; Homebrew distribution is deferred. |
 | Design MW-604 independent evaluation lab | Done | Codex | The design selects an isolated, separately packaged evaluator with independent receipts, predeclared oracles, frozen hard gates, exact macOS tuples, development/acceptance/fresh-holdout roles, mutation adequacy, and no misleading master score. |
-| Build MW-604 independent evaluation lab | Ready | Codex | Execute `GOAL_EVAL.md` using the accepted design and TDD plan; no evaluator implementation or result exists yet. |
+| Build MW-604 independent evaluation lab | In progress | Codex | Isolated evaluator project, no-import/no-execution boundary, standalone CLI, and locked toolchain are verified; capsule, privacy, oracle, and scoring work remain. |
 
 ## Decision Links
 
@@ -278,3 +278,9 @@ aggregate-data-return approval; it does not block the local evaluator build.
   anti-overfitting corpus roles, disposable action verification, private real-Mac evidence, and a
   separately authorized later human pilot. No evaluator code, paid test, upload, or real host
   mutation has occurred.
+- 2026-07-20 MW-604 Task 1 RED/GREEN: the initial evaluator test failed because
+  `macwise_eval` did not exist. A standalone nested project now exposes `macwise-eval` without
+  importing or executing product code; AST/text boundary tests pass. `uv lock --directory
+  evaluator --check`, evaluator tests, version smoke, Ruff format/lint, and Pyright all pass.
+  Exact evaluator commands now use `--directory evaluator` so paths resolve against the isolated
+  project rather than the product checkout.

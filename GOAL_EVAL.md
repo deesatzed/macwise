@@ -160,11 +160,11 @@ money, or claim the pilot ran without separate explicit user authorization.
 Run and record fresh evidence for:
 
 ```bash
-uv lock --project evaluator --check
-uv run --project evaluator pytest evaluator/tests -q
-uv run --project evaluator ruff format --check evaluator
-uv run --project evaluator ruff check evaluator
-uv run --project evaluator pyright evaluator/src evaluator/tests
+uv lock --directory evaluator --check
+uv run --directory evaluator pytest tests -q
+uv run --directory evaluator ruff format --check .
+uv run --directory evaluator ruff check .
+uv run --directory evaluator pyright
 uv run pytest
 uv run ruff format --check .
 uv run ruff check .

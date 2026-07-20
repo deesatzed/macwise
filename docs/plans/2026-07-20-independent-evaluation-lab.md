@@ -29,7 +29,7 @@ GitHub Actions macOS runners.
 1. Write a failing repository test that walks evaluator imports and rejects `macwise`,
    `src/macwise`, relative path insertion, subprocess calls to `macwise`, and imports outside the
    evaluator package.
-2. Run `uv run --project evaluator pytest evaluator/tests/test_independence.py -q` and observe the
+2. Run `uv run --directory evaluator pytest tests/test_independence.py -q` and observe the
    missing-project failure.
 3. Add the minimal standalone project, `macwise-eval` entry point, strict tool configuration, and
    ignored private artifact directory `evaluator/private/`.
@@ -292,9 +292,10 @@ GitHub Actions macOS runners.
 
 **Steps:**
 
-1. Run `uv lock --project evaluator --check`.
-2. Run `uv run --project evaluator pytest evaluator/tests -q`.
-3. Run evaluator Ruff format/lint and strict Pyright checks.
+1. Run `uv lock --directory evaluator --check`.
+2. Run `uv run --directory evaluator pytest tests -q`.
+3. Run `uv run --directory evaluator ruff format --check .`,
+   `uv run --directory evaluator ruff check .`, and `uv run --directory evaluator pyright`.
 4. Run `uv run pytest`, root Ruff/Pyright, `uv build`, privacy contracts, frozen-contract
    verification, mutation adequacy, scenario replay, private live-Mac evaluation, and
    `git diff --check`.
