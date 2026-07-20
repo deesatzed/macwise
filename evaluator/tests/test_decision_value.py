@@ -2,8 +2,9 @@
 
 from pathlib import Path
 
+from macwise_eval.claims import ExtractedClaim, ExtractedClaimKind
 from macwise_eval.decision_value import top_three_priority_retrieval
-from macwise_eval.product_output import parse_product_output
+from macwise_eval.product_output import ParsedProductOutput, ProductOutputKind, parse_product_output
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "product_outputs"
 
@@ -37,3 +38,25 @@ def test_protected_target_refusal_counts_only_a_blocked_check_without_actions() 
 
     assert result.numerator == 1
     assert result.denominator == 1
+
+
+def test_protected_target_refusal_rejects_a_blocked_check_paired_with_an_action() -> None:
+    from macwise_eval.decision_value import protected_target_refusal
+
+    product = ParsedProductOutput(
+        kind=ProductOutputKind.PLAN,
+        schema_version=2,
+        claims=(
+            ExtractedClaim(
+                "blocked", ExtractedClaimKind.GUIDANCE, "app:protected", "blocked", "/checks/0"
+            ),
+            ExtractedClaim(
+                "action", ExtractedClaimKind.ACTION, "app:protected", "move", "/actions/0"
+            ),
+        ),
+        limitations=(),
+    )
+
+    result = protected_target_refusal(product, protected_subject="app:protected")
+
+    assert result.numerator == 0
