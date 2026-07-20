@@ -16,9 +16,9 @@
     }
   ],
   "required_uncertainties": [
-    "Application size is not reclaimable-space proof."
+    "Mounted free space does not prove reclaimable storage."
   ],
   "scenario_id": "minimal-storage",
   "schema_version": 1,
-  "version": "1"
+  "version": "2"
 }

@@ -77,6 +77,33 @@ def _claim_verdict(
     )
 
 
+def _uncertainty_verdicts(
+    required: tuple[str, ...], observed: tuple[ExtractedClaim, ...], receipt_ids: tuple[str, ...]
+) -> tuple[ClaimVerdict, ...]:
+    """Require predeclared uncertainty language before a calibrated pass is possible."""
+    results: list[ClaimVerdict] = []
+    for index, statement in enumerate(required):
+        matched = tuple(
+            claim
+            for claim in observed
+            if claim.kind is ExtractedClaimKind.UNCERTAINTY and claim.value == statement
+        )
+        results.append(
+            ClaimVerdict(
+                claim_id=f"uncertainty:{index}",
+                kind=ClaimVerdictKind.CORRECT if matched else ClaimVerdictKind.MISSING,
+                reason=(
+                    "The required uncertainty is present in serialized product output."
+                    if matched
+                    else "A predeclared required uncertainty is absent from product output."
+                ),
+                product_pointers=tuple(claim.pointer for claim in matched),
+                receipt_ids=receipt_ids,
+            )
+        )
+    return tuple(results)
+
+
 def evaluate(
     manifest: CapsuleManifest,
     oracle: ScenarioOracle,
@@ -101,7 +128,7 @@ def evaluate(
     receipt_ids = tuple(receipt.receipt_id for receipt in manifest.receipts)
     claim_verdicts = tuple(
         _claim_verdict(expected, product.claims, receipt_ids) for expected in oracle.expected_claims
-    )
+    ) + _uncertainty_verdicts(oracle.required_uncertainties, product.claims, receipt_ids)
     policy_path = Path(__file__).parents[2] / "policies" / "v1" / "safety.toml"
     policy_violations = evaluate_policy_expectations(
         load_policy(policy_path),
@@ -110,7 +137,8 @@ def evaluate(
     )
 
     eligible = len(oracle.expected_claims)
-    correct = sum(verdict.kind is ClaimVerdictKind.CORRECT for verdict in claim_verdicts)
+    factual_verdicts = claim_verdicts[:eligible]
+    correct = sum(verdict.kind is ClaimVerdictKind.CORRECT for verdict in factual_verdicts)
     axes = ()
     if eligible:
         axes = (

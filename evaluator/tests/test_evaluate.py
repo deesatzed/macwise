@@ -80,3 +80,20 @@ def test_inconclusive_product_output_cannot_be_scored_as_a_pass() -> None:
 
     assert report.final_verdict is FinalVerdict.INCONCLUSIVE
     assert report.axes == ()
+
+
+def test_missing_required_uncertainty_is_a_calibration_failure() -> None:
+    manifest, oracle = load_fixture_models()
+    product = parse_product_output(
+        (FIXTURE_ROOT / "product_outputs" / "audit-v4.json").read_text(encoding="utf-8")
+    )
+    product = replace(
+        product,
+        claims=tuple(claim for claim in product.claims if claim.kind.value != "uncertainty"),
+    )
+
+    report = evaluate(manifest, oracle, product, contract_digest="c" * 64)
+
+    assert report.final_verdict is FinalVerdict.FAIL
+    assert any(verdict.claim_id == "uncertainty:0" for verdict in report.claim_verdicts)
+    assert any(verdict.kind.value == "missing" for verdict in report.claim_verdicts)

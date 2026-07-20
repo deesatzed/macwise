@@ -368,3 +368,9 @@ aggregate-data-return approval; it does not block the local evaluator build.
   no policy mismatch, and contract digest `f892c3b15e13b82f5864e850028f58815b8203fadf2859a044b941053185d5f7`.
   The temporary action driver and independent receipt judge also returned PASS. This is explicitly
   one canonical replay, not a substitute for the remaining scenario-family evidence.
+- 2026-07-20 MW-604 calibration correction: a new required-uncertainty test exposed that the
+  evaluator recorded calibration expectations but never enforced them. It now creates a traceable
+  verdict for every required uncertainty and fails when one is absent, without contaminating factual
+  precision/recall denominators. This also exposed a synthetic storage oracle wording mismatch;
+  D-043 versions that oracle to the independently defensible mounted-free-space limitation before
+  any subsequent replay. Focused tests, Ruff, and Pyright pass.
