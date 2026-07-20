@@ -76,9 +76,10 @@ The implementation and tests must close all of these gaps:
 6. **Understandable usefulness result:** Explain that this measures confidence in the report’s
    coverage and structure, not the user or the health of the Mac. Identify the largest missing
    evidence that prevented a higher result.
-7. **Useful unknown-item flow:** An unknown item must lead to safe choices: show verified local
-   facts, accept user-supplied purpose, leave it unknown, or describe an optional future research
-   path. The first release must not silently web-search, upload inventories, or invent a purpose.
+7. **Useful identification flow:** An item needing identification must show verified local facts
+   and may receive automatic checkup-only public identification. That lookup sends one app identity
+   at a time, offers `--offline`, never uploads an inventory, and never invents a purpose. Public
+   facts are not authoritative for cleanup.
 8. **Guided cleanup planning:** A user can move from an explained finding to “add to possible
    cleanup plan” through numbered choices. Planning stays read-only. Apply and undo retain their
    existing separate exact approvals and fresh revalidation.
@@ -164,7 +165,8 @@ Save a sanitized acceptance artifact under `docs/` and update `PROGRESS.md`, `TA
 - publishing to PyPI or creating a release tag
 - enabling GitHub Pages or production deployment
 - Homebrew distribution
-- live web search or automatic online enrichment
+- live web search or automatic online enrichment outside the privacy-bounded, automatic
+  checkup-only public identification feature recorded by D-041
 - the proposed Hugging Face/shared knowledge database
 - accounts, telemetry, analytics, or inventory uploads
 - GUI or native macOS application packaging
@@ -178,7 +180,9 @@ Save a sanitized acceptance artifact under `docs/` and update `PROGRESS.md`, `TA
    removability.
 3. Do not turn the Opportunity Profile into a health, cleanliness, performance, or user grade.
 4. Do not present the Usefulness Score as proof of personalized correctness or outcomes.
-5. Do not add an AI provider, network dependency, account, telemetry, or background updater.
+5. Do not add an AI provider, account, telemetry, inventory upload, or background update. D-041
+   permits only automatic checkup-only public identification with a visible `--offline` escape
+   hatch; public facts are not authoritative for cleanup.
 6. Do not silently save scans. Any saved file or persistent state must be explicit, bounded,
    documented, privacy-reviewed, and covered by migration/recovery tests.
 7. Keep noninteractive commands scriptable. Do not make automation parse interactive prose.

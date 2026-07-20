@@ -18,6 +18,9 @@ started, no evaluator result exists yet, and the paid human pilot remains separa
 - `GOAL_EVAL.md` supplements rather than supersedes `GOAL.md`; the evaluator begins as an isolated
   subproject, may consume only serialized product output, and must retain private real-Mac evidence
   outside Git.
+- D-041 authorizes automatic checkup-only public app identification, not general-purpose web
+  enrichment: it has an explicit `--offline` escape hatch, no inventory upload/account/telemetry/
+  background update, and no authority over cleanup conclusions. The evaluator remains network-free.
 
 ## Task Tracker
 
@@ -48,6 +51,7 @@ started, no evaluator result exists yet, and the paid human pilot remains separa
 | Build MW-200 role-aware overlap intelligence | Done | Codex | Schema 4, catalog, analyzer, compare/review/explain/report views, ambiguity propagation, and guarded guidance pass the 142-test gate. |
 | Adjudicate independent MW-200 review | Done | Codex | Three recommendations were Accepted and Resolved: ambiguity visibility, explicit actual-use comparison, and neutral-pair learning guidance. No critical finding remained. |
 | Run MW-200 acceptance | Done | Codex | `docs/phase-3-acceptance.md` records a local PASS from 142 tests on Python 3.12/3.13, quality/build/privacy/skill/clean-wheel gates, independent review, and aggregate-only real scans. |
+| Define MW-606 automatic app-identification boundary | Done | Codex | D-041 and the approved UX design limit public identification to interactive checkup, preserve `--offline`, prohibit inventory upload/account/telemetry/background update, and keep public facts non-authoritative for cleanup. Implementation remains ready, not complete. |
 | Design MW-300 cleanup planning | Done | Codex | Append-only SQLite revisions, typed non-executable intent, blocked-candidate review, preflight, and rollback-blueprint boundaries are saved under `docs/plans/`; D-024/D-025 record the choices. |
 | Build MW-300 cleanup planning | Done | Codex | Immutable plan models, pure preview construction, append-only SQLite revisions, persistent CLI review, hostile-input defenses, and zero-host-mutation tests pass the 186-test gate. |
 | Adjudicate independent MW-300 review | Done | Codex | Four recommendations were Accepted and Resolved test-first: read-only zero-version display, ancestor-symlink rejection, optimistic active-plan concurrency, and one-to-one action/rollback integrity. No critical finding remained. |

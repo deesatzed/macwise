@@ -241,6 +241,29 @@ def test_ci_runs_tests_lint_types_format_build_and_privacy_check() -> None:
     assert "macos" in workflow
 
 
+def test_public_truth_defines_automatic_checkup_identification_boundary() -> None:
+    decisions = (ROOT / "DECISIONS.md").read_text(encoding="utf-8")
+    simple_ux = (ROOT / "GOAL_SIMPLE_UX.md").read_text(encoding="utf-8")
+    queue = (ROOT / "TASK_QUEUE.md").read_text(encoding="utf-8")
+    progress = (ROOT / "PROGRESS.md").read_text(encoding="utf-8")
+
+    assert "D-041" in decisions
+    assert "checkup-only" in decisions.lower()
+    assert "public identification" in decisions.lower()
+    assert "inventory upload" in decisions.lower()
+    assert "account" in decisions.lower()
+    assert "telemetry" in decisions.lower()
+    assert "background update" in decisions.lower()
+    assert "--offline" in decisions
+    assert "not authoritative for cleanup" in decisions.lower()
+    assert "automatic checkup-only public identification" in simple_ux.lower()
+    assert "--offline" in simple_ux
+    assert "not authoritative for cleanup" in simple_ux.lower()
+    assert "MW-606" in queue
+    assert "ready" in queue.partition("MW-606")[2].splitlines()[0]
+    assert "MW-606" in progress
+
+
 def test_public_candidates_contain_no_current_machine_identity_or_secret_shapes() -> None:
     current_home = str(Path.home())
     current_hostname = socket.gethostname()
