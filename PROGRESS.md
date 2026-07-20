@@ -350,3 +350,8 @@ aggregate-data-return approval; it does not block the local evaluator build.
   prohibits recruitment, compensation, uploads, real actions, and release claims pending explicit
   later approval. Local `uv sync --directory evaluator --locked`, evaluator version smoke, and
   workflow YAML parsing pass; hosted evidence requires a pushed branch and completed run.
+- 2026-07-20 MW-604 hosted correction: evaluator jobs passed on hosted macOS 15 and 26. The broader
+  first CI run exposed the action lab's macOS-specific `/private/tmp` assumption on Linux. The
+  driver now resolves the host temporary root before creating its disposable state, preserving the
+  no-symlink safety property on macOS and portability elsewhere. The focused regression passes
+  locally; the follow-up hosted run is queued at the time of this record.
