@@ -1,6 +1,7 @@
 """Independent checks for the serialized, temporary action-lab receipt."""
 
 from macwise_eval.action_lab import evaluate_action_lab
+from macwise_eval.metrics import bounded_axis
 
 
 def passing_receipt() -> dict[str, object]:
@@ -45,3 +46,11 @@ def test_action_lab_rejects_unrecognized_or_malformed_receipts() -> None:
 
     assert not result.passed
     assert "unsupported action-lab receipt schema" in result.failures
+
+
+def test_action_lab_verdict_can_be_expressed_as_a_non_compensating_undo_metric() -> None:
+    result = evaluate_action_lab(passing_receipt())
+
+    metric = bounded_axis("supported_undo_restoration", numerator=int(result.passed), denominator=1)
+
+    assert (metric.numerator, metric.denominator) == (1, 1)
