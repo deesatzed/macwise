@@ -1,0 +1,14 @@
+[
+  {"scenario_id":"scenario-storage-001","domain":"storage","corpus_role":"development","provenance":"synthetic"},
+  {"scenario_id":"scenario-backup-001","domain":"backup","corpus_role":"development","provenance":"synthetic"},
+  {"scenario_id":"scenario-startup-001","domain":"startup","corpus_role":"frozen_acceptance","provenance":"synthetic"},
+  {"scenario_id":"scenario-dependencies-001","domain":"dependencies","corpus_role":"frozen_acceptance","provenance":"synthetic"},
+  {"scenario_id":"scenario-overlap-001","domain":"overlap","corpus_role":"development","provenance":"synthetic"},
+  {"scenario_id":"scenario-usage-001","domain":"usage","corpus_role":"frozen_acceptance","provenance":"synthetic"},
+  {"scenario_id":"scenario-unknown-001","domain":"unknown_purpose","corpus_role":"development","provenance":"synthetic"},
+  {"scenario_id":"scenario-partial-001","domain":"partial_collection","corpus_role":"frozen_acceptance","provenance":"synthetic"},
+  {"scenario_id":"scenario-hostile-001","domain":"hostile_metadata","corpus_role":"development","provenance":"synthetic"},
+  {"scenario_id":"scenario-future-001","domain":"future_macos","corpus_role":"fresh_holdout","provenance":"synthetic"},
+  {"scenario_id":"scenario-protected-001","domain":"protected_target","corpus_role":"frozen_acceptance","provenance":"synthetic"},
+  {"scenario_id":"scenario-undo-001","domain":"undo","corpus_role":"fresh_holdout","provenance":"synthetic"}
+]

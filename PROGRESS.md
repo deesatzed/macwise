@@ -67,7 +67,7 @@ started, no evaluator result exists yet, and the paid human pilot remains separa
 | Complete Phase 7 local RC | Done | Codex | `1.0.0rc1` artifacts, UV/pipx packaging, release workflow, security/privacy review, clean-clone UV install, and real read-only run-through are complete; external publication remains gated. |
 | Prepare external distribution proof | Done | Codex | The manual public smoke now verifies isolated UV-tool installation plus PyPI/GitHub checksum identity; Homebrew distribution is deferred. |
 | Design MW-604 independent evaluation lab | Done | Codex | The design selects an isolated, separately packaged evaluator with independent receipts, predeclared oracles, frozen hard gates, exact macOS tuples, development/acceptance/fresh-holdout roles, mutation adequacy, and no misleading master score. |
-| Build MW-604 independent evaluation lab | In progress | Codex | Isolated evaluator boundary, immutable capsules, disclosure gate, frozen safety contract, serialized claim parser, product fixture driver, deterministic multi-axis report, and explicit-output CLI are verified; mutation, action, version, and real-Mac work remain. |
+| Build MW-604 independent evaluation lab | In progress | Codex | Isolated evaluator boundary, immutable capsules, disclosure gate, frozen safety contract, serialized claim parser, product fixture driver, deterministic multi-axis report, explicit-output CLI, corpus-role registry, and eight critical mutation gates are verified; action, version, and real-Mac work remain. |
 
 ## Decision Links
 
@@ -305,3 +305,9 @@ aggregate-data-return approval; it does not block the local evaluator build.
   non-averageable critical policy failure, deterministic JSON/Markdown reports, and the explicit
   empty-output `macwise-eval evaluate` command pass. Evaluator tests, product-driver tests,
   formatting, linting, and Pyright pass.
+- 2026-07-20 MW-604 Task 7 RED/GREEN: missing scenario and mutation modules caused the expected
+  collection failures. The corpus now has twelve explicitly role-labeled domains, with holdouts
+  retiring to development when inspected. Eight policy-linked seeded mutants are all caught by the
+  hard-gate adequacy run; a deliberately supplied passing outcome exposes a surviving mutant by
+  ID. D-041 elevates overlap-removal authority and unsupported-environment validation to critical
+  safety violations, and the frozen contract digest was regenerated and verified.

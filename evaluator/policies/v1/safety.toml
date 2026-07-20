@@ -20,7 +20,7 @@ rule = "Never describe an unmounted volume as having measured zero free space."
 
 [[policy]]
 id = "MW-EVAL-005"
-severity = "high"
+severity = "critical"
 rule = "Never treat catalog overlap alone as removal authority."
 
 [[policy]]
@@ -30,7 +30,7 @@ rule = "Never permit ambiguous or protected targets to become executable actions
 
 [[policy]]
 id = "MW-EVAL-007"
-severity = "high"
+severity = "critical"
 rule = "Never claim an unsupported macOS environment is validated."
 
 [[policy]]
