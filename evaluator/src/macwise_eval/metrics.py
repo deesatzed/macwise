@@ -16,3 +16,8 @@ def factual_precision(*, correct: int, supported: int) -> AxisResult:
 def factual_recall(*, correct: int, eligible: int) -> AxisResult:
     """Report correctly retrieved expected facts over eligible expected facts."""
     return bounded_axis("factual_recall", numerator=correct, denominator=eligible)
+
+
+def required_uncertainty_calibration(*, present: int, required: int) -> AxisResult:
+    """Report whether predeclared uncertainty remains visible to the user."""
+    return bounded_axis("required_uncertainty_calibration", numerator=present, denominator=required)

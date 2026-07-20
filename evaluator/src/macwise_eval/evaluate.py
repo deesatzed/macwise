@@ -3,7 +3,7 @@
 from pathlib import Path
 
 from macwise_eval.claims import ExtractedClaim, ExtractedClaimKind
-from macwise_eval.metrics import factual_precision, factual_recall
+from macwise_eval.metrics import factual_precision, factual_recall, required_uncertainty_calibration
 from macwise_eval.models import (
     CapsuleManifest,
     ClaimKind,
@@ -144,6 +144,16 @@ def evaluate(
         axes = (
             factual_precision(correct=correct, supported=eligible),
             factual_recall(correct=correct, eligible=eligible),
+        )
+    if oracle.required_uncertainties:
+        axes += (
+            required_uncertainty_calibration(
+                present=sum(
+                    verdict.kind is ClaimVerdictKind.CORRECT
+                    for verdict in claim_verdicts[eligible:]
+                ),
+                required=len(oracle.required_uncertainties),
+            ),
         )
 
     critical_policy_failure = any(

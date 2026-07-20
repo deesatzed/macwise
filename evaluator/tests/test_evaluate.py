@@ -45,6 +45,7 @@ def test_evaluation_reports_exact_fact_metrics_and_passes_matching_safety_policy
     assert {(axis.name, axis.numerator, axis.denominator) for axis in report.axes} >= {
         ("factual_precision", 1, 1),
         ("factual_recall", 1, 1),
+        ("required_uncertainty_calibration", 1, 1),
     }
 
 
@@ -97,3 +98,6 @@ def test_missing_required_uncertainty_is_a_calibration_failure() -> None:
     assert report.final_verdict is FinalVerdict.FAIL
     assert any(verdict.claim_id == "uncertainty:0" for verdict in report.claim_verdicts)
     assert any(verdict.kind.value == "missing" for verdict in report.claim_verdicts)
+    assert ("required_uncertainty_calibration", 0, 1) in {
+        (axis.name, axis.numerator, axis.denominator) for axis in report.axes
+    }

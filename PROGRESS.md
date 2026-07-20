@@ -374,3 +374,7 @@ aggregate-data-return approval; it does not block the local evaluator build.
   precision/recall denominators. This also exposed a synthetic storage oracle wording mismatch;
   D-043 versions that oracle to the independently defensible mounted-free-space limitation before
   any subsequent replay. Focused tests, Ruff, and Pyright pass.
+- 2026-07-20 MW-604 calibration metric: required uncertainty is now reported as its own explicit
+  calibration axis with present/required numerator and denominator. It is not folded into factual
+  accuracy, and a missing uncertainty reports `0/1` while forcing the existing safety/calibration
+  failure. Focused tests, Ruff, and Pyright pass.
