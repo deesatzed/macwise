@@ -333,3 +333,7 @@ aggregate-data-return approval; it does not block the local evaluator build.
   evaluator's normal parser and independently recognized by a frozen evaluator-owned signature.
   Mutation adequacy names any survivor explicitly. Focused evaluator tests pass nine cases;
   evaluator Ruff and Pyright are clean.
+- 2026-07-20 MW-604 environment correction: private reference capture now records the exact
+  macOS product and build versions through a shell-free, allowlisted `sw_vers` query rather than
+  leaving the build as `unknown`. A failed query remains visibly `unknown`; it does not inherit a
+  validated status. The fixed-command test and the complete evaluator suite pass.

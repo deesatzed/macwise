@@ -9,6 +9,7 @@ _ALLOWLIST = frozenset(
         "/bin/launchctl",
         "/opt/homebrew/bin/brew",
         "/usr/bin/printf",
+        "/usr/bin/sw_vers",
         "/usr/bin/tmutil",
         "/usr/local/bin/brew",
     }

@@ -36,3 +36,11 @@ def test_fixed_runner_uses_argument_vectors_and_bounded_output() -> None:
     assert result.stdout == "abcd"
     assert result.truncated is True
     assert result.error is None
+
+
+def test_fixed_runner_allows_the_read_only_macos_version_query() -> None:
+    runner = FixedCommandRunner(timeout_seconds=1, max_output_bytes=64)
+
+    result = runner.run("/usr/bin/sw_vers", "-buildVersion")
+
+    assert result.error is None

@@ -42,11 +42,21 @@ def _empty_private_directory(path: Path) -> None:
         path.mkdir(parents=True)
 
 
-def _environment() -> EnvironmentIdentity:
-    macos_version = platform.mac_ver()[0] or "unknown"
+def _single_line(result: object) -> str:
+    stdout = getattr(result, "stdout", "")
+    return (
+        stdout.strip().splitlines()[0] if isinstance(stdout, str) and stdout.strip() else "unknown"
+    )
+
+
+def _environment(runner: CommandRunner) -> EnvironmentIdentity:
+    macos_version = _single_line(runner.run("/usr/bin/sw_vers", "-productVersion"))
+    build = _single_line(runner.run("/usr/bin/sw_vers", "-buildVersion"))
     return EnvironmentIdentity(
-        macos_product_version=macos_version,
-        macos_build="unknown",
+        macos_product_version=macos_version
+        if macos_version != "unknown"
+        else (platform.mac_ver()[0] or "unknown"),
+        macos_build=build,
         darwin_version=platform.release() or "unknown",
         architecture=platform.machine() or "unknown",
         tools=(ToolVersion(name="python", version=platform.python_version()),),
@@ -104,14 +114,13 @@ def capture_private_capsule(
         disclosure=DisclosureClass.PRIVATE,
         corpus_role=CorpusRole.FRESH_HOLDOUT,
         captured_at=captured_at,
-        environment=_environment(),
+        environment=_environment(effective_runner),
         macwise_version="unrecorded",
         audit_schema_version=4,
         receipts=tuple(receipts),
         oracle_version="unassigned",
         limitations=(
             "This private reference capture must be paired with close-in-time product output.",
-            "macOS build is unknown until the reference environment collector records it.",
         ),
         reviewed_sanitized=False,
     )
