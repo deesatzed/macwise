@@ -363,3 +363,8 @@ aggregate-data-return approval; it does not block the local evaluator build.
 - 2026-07-20 MW-604 clean evaluator install: a fresh disposable UV tool environment built the
   isolated evaluator and ran `--version`, `capture --help`, and `evaluate --help` successfully.
   The proof is local only; publication remains explicitly out of scope.
+- 2026-07-20 MW-604 canonical execution: the standalone evaluator replayed the frozen synthetic
+  storage capsule against a serialized audit and returned PASS with factual precision/recall 1/1,
+  no policy mismatch, and contract digest `f892c3b15e13b82f5864e850028f58815b8203fadf2859a044b941053185d5f7`.
+  The temporary action driver and independent receipt judge also returned PASS. This is explicitly
+  one canonical replay, not a substitute for the remaining scenario-family evidence.
