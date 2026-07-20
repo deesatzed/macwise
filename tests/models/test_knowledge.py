@@ -15,7 +15,7 @@ from macwise.models.knowledge import (
     PublicSourceType,
 )
 
-NOW = datetime(2026, 7, 20, tzinfo=UTC)
+NOW = datetime.now(UTC)
 
 
 def identity() -> LookupIdentity:
@@ -94,6 +94,32 @@ def test_public_purpose_claim_rejects_unsafe_or_invalid_metadata(field: str, val
 def test_public_purpose_claim_rejects_expiry_at_creation() -> None:
     with pytest.raises(ValidationError):
         claim(expires_at=NOW - timedelta(minutes=1))
+
+
+@pytest.mark.parametrize(
+    "source_url",
+    [
+        "https://user:password@example.com/focus",
+        "https://example.com/%0Ainjected",
+        "https://example.com/%00injected",
+        "https://127.0.0.1/focus",
+        "https://10.0.0.1/focus",
+        "https://169.254.169.254/focus",
+        "https://192.0.2.1/focus",
+        "https://[::1]/focus",
+        "https://[fc00::1]/focus",
+        "https://[fe80::1]/focus",
+    ],
+)
+def test_public_purpose_claim_rejects_unsafe_https_targets(source_url: str) -> None:
+    with pytest.raises(ValidationError):
+        claim(source_url=source_url)
+
+
+def test_public_purpose_claim_allows_a_public_https_source() -> None:
+    assert str(claim(source_url="https://93.184.216.34/focus").source_url) == (
+        "https://93.184.216.34/focus"
+    )
 
 
 @pytest.mark.parametrize("forbidden_field", ["path", "usage", "startup", "plan", "inventory"])

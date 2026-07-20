@@ -1,7 +1,9 @@
 """Strict, non-authoritative public application-identification contracts."""
 
+import re
 from datetime import UTC, datetime
 from enum import StrEnum
+from ipaddress import ip_address
 
 from pydantic import (
     AwareDatetime,
@@ -54,6 +56,9 @@ def _reject_control_text(value: str | None) -> str | None:
     return value
 
 
+_PERCENT_ENCODED_CONTROL = re.compile(r"%(?:0[0-9a-f]|1[0-9a-f]|7f)", re.IGNORECASE)
+
+
 class LookupIdentity(BaseModel):
     """The only application fields that a public provider may receive."""
 
@@ -90,11 +95,29 @@ class PublicPurposeClaim(BaseModel):
     def reject_control_text(cls, value: str) -> str:
         return _reject_control_text(value) or ""
 
+    @field_validator("source_url", mode="before")
+    @classmethod
+    def reject_encoded_control_text(cls, value: object) -> object:
+        if _PERCENT_ENCODED_CONTROL.search(str(value)):
+            raise ValueError("source_url must not contain percent-encoded control text")
+        return value
+
     @field_validator("source_url")
     @classmethod
     def require_https(cls, value: HttpUrl) -> HttpUrl:
         if value.scheme != "https":
             raise ValueError("source_url must use HTTPS")
+        if value.username is not None or value.password is not None:
+            raise ValueError("source_url must not contain userinfo")
+        host = value.host
+        if host is None:
+            raise ValueError("source_url must contain a host")
+        try:
+            target = ip_address(host.strip("[]"))
+        except ValueError:
+            return value
+        if not target.is_global:
+            raise ValueError("source_url literal IP target must be globally routable")
         return value
 
     @model_validator(mode="after")
