@@ -24,3 +24,16 @@ def test_top_three_retrieval_is_inconclusive_without_designated_oracle_prioritie
     result = top_three_priority_retrieval(product, designated=())
 
     assert result is None
+
+
+def test_protected_target_refusal_counts_only_a_blocked_check_without_actions() -> None:
+    from macwise_eval.decision_value import protected_target_refusal
+
+    product = parse_product_output(
+        (FIXTURES / "plan-protected-v2.json").read_text(encoding="utf-8")
+    )
+
+    result = protected_target_refusal(product, protected_subject="app:protected")
+
+    assert result.numerator == 1
+    assert result.denominator == 1
