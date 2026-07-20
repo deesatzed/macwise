@@ -360,3 +360,6 @@ aggregate-data-return approval; it does not block the local evaluator build.
   violations, zero destructive-unknown guidance, protected refusal, undo restoration, precision,
   recall, top-three retrieval, and critical abstention. A zero denominator is INCONCLUSIVE and a
   single critical violation is FAIL; no master score exists. Focused tests, Ruff, and Pyright pass.
+- 2026-07-20 MW-604 clean evaluator install: a fresh disposable UV tool environment built the
+  isolated evaluator and ran `--version`, `capture --help`, and `evaluate --help` successfully.
+  The proof is local only; publication remains explicitly out of scope.
