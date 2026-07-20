@@ -50,3 +50,38 @@ jobs:
 
       - name: Build wheel and source distribution
         run: uv build
+
+  evaluator:
+    name: evaluator / ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26]
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install uv and Python
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.11.28"
+          python-version: "3.13"
+          enable-cache: true
+
+      - name: Sync evaluator dependencies
+        run: uv sync --directory evaluator --locked
+
+      - name: Verify evaluator on exact hosted tuple
+        run: |
+          sw_vers -productVersion
+          sw_vers -buildVersion
+          uname -rm
+          uv lock --directory evaluator --check
+          uv run --directory evaluator pytest tests -q
+          uv run --directory evaluator ruff format --check .
+          uv run --directory evaluator ruff check .
+          uv run --directory evaluator pyright

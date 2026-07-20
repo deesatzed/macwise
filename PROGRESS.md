@@ -344,3 +344,9 @@ aggregate-data-return approval; it does not block the local evaluator build.
   is a capture proof, not an accuracy, safety, or population claim. An initial relative output path
   was resolved under the evaluator working directory; its ignored location is now covered and the
   accepted capture used an absolute ignored path.
+- 2026-07-20 MW-604 hosted/pilot readiness: CI now has an isolated evaluator job on both available
+  hosted macOS 15 and 26 images, recording `sw_vers` and Darwin output before locked evaluator
+  tests, formatting, lint, and type checks. The separate pilot protocol is dry-run only and
+  prohibits recruitment, compensation, uploads, real actions, and release claims pending explicit
+  later approval. Local `uv sync --directory evaluator --locked`, evaluator version smoke, and
+  workflow YAML parsing pass; hosted evidence requires a pushed branch and completed run.
