@@ -1,6 +1,7 @@
 """Strict contracts for privacy-bounded public app identification."""
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import pytest
 from pydantic import ValidationError
@@ -28,7 +29,7 @@ def identity() -> LookupIdentity:
 
 
 def claim(**overrides: object) -> PublicPurposeClaim:
-    values: dict[str, object] = {
+    values: dict[str, Any] = {
         "identity": identity(),
         "purpose": "A focused writing application.",
         "source_url": "https://example.com/focus",
@@ -51,13 +52,39 @@ def test_lookup_identity_accepts_only_allowed_app_identifiers() -> None:
     assert item.publisher == "Example, Inc."
     assert item.version == "2.4.1"
     with pytest.raises(ValidationError):
-        LookupIdentity(name="Focus", path="/Applications/Focus.app")
+        LookupIdentity(name="Focus", path="/Applications/Focus.app")  # type: ignore[reportCallIssue]
 
 
 @pytest.mark.parametrize("field", ["bundle_id", "name", "publisher", "version"])
 def test_lookup_identity_rejects_control_text(field: str) -> None:
     values = identity().model_dump()
     values[field] = "Focus\nInjected"
+
+    with pytest.raises(ValidationError):
+        LookupIdentity(**values)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("bundle_id", "com.example/focus"),
+        ("bundle_id", "https://example.com/focus"),
+        ("bundle_id", "focus@host.example"),
+        ("bundle_id", "not a bundle id"),
+        ("name", "/Applications/Focus.app"),
+        ("name", "https://example.com/focus"),
+        ("name", "owner@example.com"),
+        ("publisher", "../private/publisher"),
+        ("publisher", "https://example.com"),
+        ("publisher", "owner@example.com"),
+        ("version", "../../private/version"),
+        ("version", "https://example.com/version"),
+        ("version", "owner@example.com"),
+    ],
+)
+def test_lookup_identity_rejects_path_url_and_account_like_values(field: str, value: str) -> None:
+    values = identity().model_dump()
+    values[field] = value
 
     with pytest.raises(ValidationError):
         LookupIdentity(**values)
@@ -198,4 +225,21 @@ def test_public_lookup_result_makes_each_failure_state_explicit() -> None:
     with pytest.raises(ValidationError):
         PublicLookupResult(
             identity=identity(), status=LookupStatus.UNAVAILABLE, claim=claim(), reason="wrong"
+        )
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "<html><body>source error</body></html>",
+        '{"error":"source failure"}',
+        "[\"raw\", \"source\", \"response\"]",
+    ],
+)
+def test_public_lookup_result_rejects_raw_source_payloads_in_reason(reason: str) -> None:
+    with pytest.raises(ValidationError):
+        PublicLookupResult(
+            identity=identity(),
+            status=LookupStatus.UNAVAILABLE,
+            reason=reason,
         )

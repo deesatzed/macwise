@@ -96,6 +96,21 @@ def test_recording_provider_rejects_non_identity_payloads(
     assert provider.calls == []
 
 
+def test_recording_provider_does_not_record_a_validation_bypassing_identity() -> None:
+    unsafe_identity = LookupIdentity.model_construct(
+        bundle_id="https://private.example/inventory",
+        name="Focus",
+        publisher="Example, Inc.",
+        version="2.4.1",
+    )
+    provider = RecordingPublicPurposeProvider([])
+
+    with pytest.raises(ValidationError):
+        provider.lookup(unsafe_identity)
+
+    assert provider.calls == []
+
+
 @pytest.mark.parametrize(
     ("status", "reason"),
     [

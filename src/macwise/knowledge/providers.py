@@ -30,12 +30,13 @@ class RecordingPublicPurposeProvider:
 
         if not isinstance(identity, LookupIdentity):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise TypeError("public lookup accepts exactly one LookupIdentity")
-        self.calls.append(identity)
+        validated_identity = LookupIdentity.model_validate(identity.model_dump())
+        self.calls.append(validated_identity)
         for result in self._results:
-            if result.identity == identity:
+            if result.identity == validated_identity:
                 return result
         return PublicLookupResult(
-            identity=identity,
+            identity=validated_identity,
             status=LookupStatus.UNRESOLVED,
             reason="No in-memory public result is configured for this identity.",
         )

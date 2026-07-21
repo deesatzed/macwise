@@ -11,6 +11,7 @@ from pydantic import (
     ConfigDict,
     Field,
     HttpUrl,
+    ValidationInfo,
     field_validator,
     model_validator,
 )
@@ -57,6 +58,27 @@ def _reject_control_text(value: str | None) -> str | None:
 
 
 _PERCENT_ENCODED_CONTROL = re.compile(r"%(?:0[0-9a-f]|1[0-9a-f]|7f)", re.IGNORECASE)
+_BUNDLE_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9-]*(?:\.[A-Za-z0-9][A-Za-z0-9-]*)+$")
+_EMAIL_ADDRESS = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+
+
+def _reject_lookup_transport_text(value: str, field: str) -> str:
+    _reject_control_text(value)
+    if "/" in value or "\\" in value or "://" in value:
+        raise ValueError(f"{field} must not contain a path or URL")
+    if _EMAIL_ADDRESS.fullmatch(value):
+        raise ValueError(f"{field} must not contain an account address")
+    return value
+
+
+def _reject_raw_source_payload(value: str) -> str:
+    _reject_control_text(value)
+    stripped = value.lstrip()
+    if stripped.startswith("<") or "<html" in stripped.casefold():
+        raise ValueError("reason must not contain raw markup")
+    if stripped.startswith("{") or stripped.startswith("["):
+        raise ValueError("reason must not contain a structured source payload")
+    return value
 
 
 class LookupIdentity(BaseModel):
@@ -69,10 +91,22 @@ class LookupIdentity(BaseModel):
     publisher: str | None = Field(default=None, min_length=1, max_length=160)
     version: str | None = Field(default=None, min_length=1, max_length=64)
 
-    @field_validator("bundle_id", "name", "publisher", "version")
+    @field_validator("bundle_id")
     @classmethod
-    def reject_control_text(cls, value: str | None) -> str | None:
-        return _reject_control_text(value)
+    def require_conservative_bundle_id(cls, value: str | None) -> str | None:
+        if value is not None and not _BUNDLE_ID.fullmatch(value):
+            raise ValueError("bundle_id must use conservative reverse-domain grammar")
+        return value
+
+    @field_validator("name", "publisher", "version")
+    @classmethod
+    def reject_lookup_transport_text(
+        cls, value: str | None, info: ValidationInfo
+    ) -> str | None:
+        if value is None:
+            return None
+        field_name = getattr(info, "field_name", "identity field")
+        return _reject_lookup_transport_text(value, field_name)
 
 
 class PublicPurposeClaim(BaseModel):
@@ -164,7 +198,7 @@ class PublicLookupResult(BaseModel):
     @field_validator("reason")
     @classmethod
     def reject_control_text(cls, value: str) -> str:
-        return _reject_control_text(value) or ""
+        return _reject_raw_source_payload(value)
 
     @model_validator(mode="after")
     def keep_claim_consistent_with_status(self) -> "PublicLookupResult":
