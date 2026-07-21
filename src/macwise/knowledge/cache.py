@@ -89,28 +89,48 @@ class PublicClaimCache:
             reason="No fresh public app information is stored in the local cache.",
         )
 
-    def _validate_cache_directory(self, *, create: bool) -> None:
+    @staticmethod
+    def _require_owner_only(directory_stat: os.stat_result) -> None:
+        if not stat.S_ISDIR(directory_stat.st_mode):
+            raise OSError("cache path is not a directory")
+        if directory_stat.st_uid != os.getuid() or stat.S_IMODE(directory_stat.st_mode) & 0o077:
+            raise OSError("cache directory is not owner-only")
+
+    def _open_cache_directory(self, *, create: bool) -> int:
         self._reject_symlink_ancestors(self.state_root)
         if self.state_root.exists() and not self.state_root.is_dir():
             raise OSError("cache state root is not a directory")
         if create:
             self.state_root.mkdir(mode=0o700, parents=True, exist_ok=True)
             self._reject_symlink_ancestors(self.state_root)
-            self.cache_dir.mkdir(mode=0o700, exist_ok=True)
-        if self.cache_dir.is_symlink():
-            raise OSError("cache directory is a symbolic link")
-        if self.cache_dir.exists() and not self.cache_dir.is_dir():
-            raise OSError("cache directory is not a directory")
-        self._reject_symlink_ancestors(self.cache_dir.parent)
+        flags = os.O_RDONLY
+        if hasattr(os, "O_DIRECTORY"):
+            flags |= os.O_DIRECTORY
+        if hasattr(os, "O_NOFOLLOW"):
+            flags |= os.O_NOFOLLOW
+        root_descriptor = os.open(self.state_root, flags)
+        descriptor: int | None = None
+        try:
+            self._require_owner_only(os.fstat(root_descriptor))
+            if create:
+                with suppress(FileExistsError):
+                    os.mkdir(_CACHE_DIRECTORY_NAME, mode=0o700, dir_fd=root_descriptor)
+            descriptor = os.open(_CACHE_DIRECTORY_NAME, flags, dir_fd=root_descriptor)
+            self._require_owner_only(os.fstat(descriptor))
+        except BaseException:
+            if descriptor is not None:
+                os.close(descriptor)
+            raise
+        finally:
+            os.close(root_descriptor)
+        return descriptor
 
     @staticmethod
-    def _read_regular_file(path: Path) -> bytes:
-        if path.is_symlink():
-            raise OSError("cache entry is a symbolic link")
+    def _read_regular_file(directory_descriptor: int, name: str) -> bytes:
         flags = os.O_RDONLY
         if hasattr(os, "O_NOFOLLOW"):
             flags |= os.O_NOFOLLOW
-        descriptor = os.open(path, flags)
+        descriptor = os.open(name, flags, dir_fd=directory_descriptor)
         try:
             if not stat.S_ISREG(os.fstat(descriptor).st_mode):
                 raise OSError("cache entry is not a regular file")
@@ -129,10 +149,13 @@ class PublicClaimCache:
             raise ValueError("now must be timezone-aware")
         entry = self.path_for(identity)
         try:
-            self._validate_cache_directory(create=False)
-            if not entry.exists() and not entry.is_symlink():
-                return self._unresolved(identity)
-            claim = PublicPurposeClaim.model_validate_json(self._read_regular_file(entry))
+            directory_descriptor = self._open_cache_directory(create=False)
+            try:
+                claim = PublicPurposeClaim.model_validate_json(
+                    self._read_regular_file(directory_descriptor, entry.name)
+                )
+            finally:
+                os.close(directory_descriptor)
         except FileNotFoundError:
             return self._unresolved(identity)
         except (OSError, UnicodeDecodeError, json.JSONDecodeError, ValidationError, ValueError):
@@ -145,11 +168,10 @@ class PublicClaimCache:
                 identity,
                 "Stored public app information did not match or is no longer current.",
             )
-        return PublicLookupResult(
-            identity=identity,
-            status=LookupStatus.RESOLVED,
-            claim=claim,
-            reason="Found fresh public app information in the local cache.",
+        return self._resolved(
+            identity,
+            claim,
+            "Found fresh public app information in the local cache.",
         )
 
     def store(self, claim: PublicPurposeClaim) -> PublicLookupResult:
@@ -157,17 +179,20 @@ class PublicClaimCache:
 
         identity = claim.identity
         entry = self.path_for(identity)
-        temporary: Path | None = None
+        temporary_name: str | None = None
+        directory_descriptor: int | None = None
         try:
-            self._validate_cache_directory(create=True)
+            if not claim.is_fresh(datetime.now(UTC)):
+                raise ValueError("claim is already expired")
+            directory_descriptor = self._open_cache_directory(create=True)
             payload = claim.model_dump_json().encode()
             if len(payload) > _MAX_RECORD_BYTES:
                 raise OSError("claim exceeds cache entry size limit")
-            temporary = self.cache_dir / f".{entry.name}.{secrets.token_hex(16)}.tmp"
+            temporary_name = f".{entry.name}.{secrets.token_hex(16)}.tmp"
             flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
             if hasattr(os, "O_NOFOLLOW"):
                 flags |= os.O_NOFOLLOW
-            descriptor = os.open(temporary, flags, 0o600)
+            descriptor = os.open(temporary_name, flags, 0o600, dir_fd=directory_descriptor)
             try:
                 if not stat.S_ISREG(os.fstat(descriptor).st_mode):
                     raise OSError("cache staging path is not a regular file")
@@ -175,31 +200,56 @@ class PublicClaimCache:
                 os.fsync(descriptor)
             finally:
                 os.close(descriptor)
-            os.replace(temporary, entry)
-            temporary = None
-            self._prune()
+            os.replace(
+                temporary_name,
+                entry.name,
+                src_dir_fd=directory_descriptor,
+                dst_dir_fd=directory_descriptor,
+            )
+            temporary_name = None
+            with suppress(OSError):
+                self._prune(directory_descriptor)
         except (OSError, ValueError):
             return self._unavailable(
                 identity,
                 "Public app information could not be saved to the local cache.",
             )
         finally:
-            if temporary is not None:
+            if temporary_name is not None and directory_descriptor is not None:
                 with suppress(OSError):
-                    temporary.unlink(missing_ok=True)
-        return PublicLookupResult(
+                    os.unlink(temporary_name, dir_fd=directory_descriptor)
+            if directory_descriptor is not None:
+                os.close(directory_descriptor)
+        return self._resolved(
             identity=identity,
-            status=LookupStatus.RESOLVED,
             claim=claim,
             reason="Saved verified public app information in the local cache.",
         )
 
-    def _prune(self) -> None:
-        entries = [
-            path
-            for path in self.cache_dir.glob("*.json")
-            if not path.is_symlink() and path.is_file()
-        ]
-        entries.sort(key=lambda path: path.stat().st_mtime_ns, reverse=True)
-        for entry in entries[self.max_entries :]:
-            entry.unlink()
+    def _resolved(
+        self, identity: LookupIdentity, claim: PublicPurposeClaim, reason: str
+    ) -> PublicLookupResult:
+        try:
+            return PublicLookupResult(
+                identity=identity,
+                status=LookupStatus.RESOLVED,
+                claim=claim,
+                reason=reason,
+            )
+        except ValidationError:
+            return self._unavailable(
+                identity,
+                "Stored public app information is no longer current.",
+            )
+
+    def _prune(self, directory_descriptor: int) -> None:
+        entries: list[tuple[str, int]] = []
+        for name in os.listdir(directory_descriptor):
+            if not name.endswith(".json"):
+                continue
+            entry_stat = os.stat(name, dir_fd=directory_descriptor, follow_symlinks=False)
+            if stat.S_ISREG(entry_stat.st_mode):
+                entries.append((name, entry_stat.st_mtime_ns))
+        entries.sort(key=lambda entry: entry[1], reverse=True)
+        for name, _ in entries[self.max_entries :]:
+            os.unlink(name, dir_fd=directory_descriptor)
