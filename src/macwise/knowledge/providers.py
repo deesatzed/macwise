@@ -25,10 +25,10 @@ class RecordingPublicPurposeProvider:
         self._results = tuple(results)
         self.calls: list[LookupIdentity] = []
 
-    def lookup(self, identity: object) -> PublicLookupResult:
+    def lookup(self, identity: LookupIdentity) -> PublicLookupResult:
         """Record one identity and return its configured typed outcome."""
 
-        if not isinstance(identity, LookupIdentity):
+        if not isinstance(identity, LookupIdentity):  # pyright: ignore[reportUnnecessaryIsInstance]
             raise TypeError("public lookup accepts exactly one LookupIdentity")
         self.calls.append(identity)
         for result in self._results:
